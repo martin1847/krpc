@@ -1,0 +1,17 @@
+
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
+
+
+dependencies {
+
+    api project(':rpc-api')
+    api project(':rpc-common')
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+//    implementation "io.grpc:grpc-netty:${grpcVersion}"
+//    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    
+    /// TEST
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+}

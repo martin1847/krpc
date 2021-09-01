@@ -1,0 +1,14 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
+
+//rootProject.name = 'users.dao'
+
+include 'demo-api','demo-java-server','demo-java-client'
+
+include 'rpc-api','rpc-common','rpc-client','rpc-server'
+//include 'grpc-server-spring'
+

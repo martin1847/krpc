@@ -1,0 +1,17 @@
+rpc:
+  name: Test Demo Server
+  port: 50051
+#  plugin:
+#    openTracing:
+#      rank: 90
+#      disable: true
+#    chen:
+#      rank: 90
+#      disable: false
+#    tang:
+#      rank: 91
+#      disable: false
+#    yi:
+#      rank: 92
+#    hong:
+#      disable: true

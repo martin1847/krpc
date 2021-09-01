@@ -1,0 +1,13 @@
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
+
+artifactoryPublish.skip = true
+dependencies {
+
+    api project(':rpc-api')
+
+    api 'javax.validation:validation-api:2.0.1.Final'
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+}

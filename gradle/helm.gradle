@@ -1,0 +1,72 @@
+import java.text.SimpleDateFormat
+
+task docker(type:Exec) {
+    //name "spring-rpc/$project.name:$project.version"
+//        name "${project.group}/${bootJar.baseName}:$project.version"
+//        tags 'latest'
+//
+//    plugins.withId("spring-boot") {
+//        dependsOn bootJar
+//    }
+//        files tasks.bootJar.outputs.files
+//        buildArgs(['BASE_DIR': ".."])
+
+//    if(file('src/main/resources/application.properties').exists()){
+//        dependsOn bootJar
+//    }
+    if(file('Dockerfile').exists()){
+        def imgName = "${helmPrefix}/${project.name}"
+        def mainName = "$imgName:${version}_${new SimpleDateFormat("MMddHHmm").format(new Date())}"
+        def cmd = "docker build  --build-arg DEPENDENCY=. -t  $mainName -t $imgName:latest  ."
+        commandLine cmd.split("\\s+")
+    }else{
+        commandLine "echo","Skip Docker Image Build."
+    }
+}
+
+
+task helmd(type:Exec) {
+    commandLine "helm", "del" , "$project.name"
+}
+
+task helmi(type:Exec) {
+    dependsOn "docker"
+    commandLine "helm upgrade --install --force --recreate-pods --namespace ${helmNamespace} $project.name ${file('src/main/helm')} --set ${helmConfig()}".split("\\s+")
+}
+
+task helmii(type:Exec) {
+    dependsOn "docker"
+    commandLine "helm install --namespace ${helmNamespace} --name $project.name --set ${helmConfig()}  ${file('src/main/helm')}".split("\\s+")
+}
+
+def helmConfig(){
+    def clusterName = "test-cluster"
+    try{
+        def hashStdOut = new ByteArrayOutputStream()
+        exec {
+            commandLine "kubectl", "config", "current-context"
+            standardOutput = hashStdOut
+        }
+        clusterName = hashStdOut.toString().trim()
+    }catch(e){
+        //e.printStackTrace()
+    }
+    //,service.type=NodePort
+    //deployment.image.pullPolicy=Always
+
+    """
+        deployment.replicas=1
+        platform.cd.cluster=${clusterName}
+        resources.limits.cpu=500m
+        resources.limits.memory=2Gi
+        resources.requests.cpu=300m
+        resources.requests.memory=1024Mi
+        persistence.size=1Gi
+    """.trim().split("\\s+").join(",")
+}
+
+task pushj(type:Exec) {
+    dependsOn "docker"
+    commandLine "docker", "push", "${helmPrefix}/${project.name}:latest"
+}
+

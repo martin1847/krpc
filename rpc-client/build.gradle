@@ -1,0 +1,18 @@
+
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
+
+
+dependencies {
+    api project(':rpc-common')
+//    api "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
+
+    
+    ////  TEST //////
+
+    testImplementation project(':demo-api')
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+}

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+//import "google/protobuf/any.proto";
+//import "google/rpc/code.proto";
+
+//repeated google.protobuf.Any args = 2;
+
+//https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/struct.proto
+
+
+option csharp_namespace = "Com.Bt.Rpc.Internal";
+option java_package = "com.bt.rpc.internal";
+option java_multiple_files = true;
+
+package com.bt.rpc.internal;
+
+
+// service Mailer {
+//   rpc Mailbox (stream InputMessage) returns (stream OutputMessage) {}
+// }
+
+enum SerEnum {
+    NONE = 0;
+    JSON = 1;
+    MSG_PACK = 2;
+    HESSIAN = 3;
+    KRYO = 4;
+    PSR = 5;
+}
+
+
+message InputMessage {
+  SerEnum se = 1; 
+  bytes b  = 2;
+}
+
+message OutputMessage {
+  //google.rpc.Code  see https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
+  int32 c = 1;
+  //detail  message if there is a error ,otherwise  null 
+  string m = 2;
+  // Serialization that support both java and c# , and code first , without IDL/proto file
+  SerEnum se = 3;
+  // payload data , oneof  string or bytes
+  oneof p {
+	string s = 4;
+ 	bytes b = 5;
+  }
+}

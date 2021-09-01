@@ -1,0 +1,5 @@
+[
+  ["com.bt.demo.TimeService"],
+  ["com.bt.rpc.common.RpcMetaService"],
+  ["com.bt.demo.service.HelloService"]
+]

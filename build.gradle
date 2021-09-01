@@ -1,0 +1,62 @@
+buildscript {
+    ext {
+        springBootVersion = "2.5.2"//"2.3.3.RELEASE"
+//        dubboVersion = "2.7.3"
+//        springCloudVersion = "Greenwich.RELEASE"
+        grpcVersion = '1.39.0'// quakus support 1.35.0
+        lombokVersion = "1.18.20"
+        helmNamespace = "auth"
+        helmPrefix = "docker-local.jfrog.io/$helmNamespace"
+	    protoPluginVersion = "0.8.17"
+        slf4jVersion = "1.7.30"
+    }
+    dependencies {
+        classpath "com.google.protobuf:protobuf-gradle-plugin:$protoPluginVersion"
+
+
+    }
+//   ## dependencies {
+//   ##      classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
+//   ## }
+}
+
+plugins {
+    id "com.jfrog.artifactory" version "4.9.6" apply false
+    id 'java-library'
+    id 'com.google.protobuf' version '0.8.17' apply false
+    id 'io.quarkus'  version "$quarkusPluginVersion" apply false
+}
+
+allprojects {
+
+    repositories {
+//        mavenLocal()
+        mavenCentral()
+        jcenter()
+ //       maven { 
+  //          url "https://jfrog.io/gradle-dev/"
+  //          credentials {
+  //              username = "${artifactory_user}"
+  //              password = "${artifactory_password}"
+  //          }
+  //      }
+        maven {
+            url 'https://repo.maven.apache.org/maven2'
+            name 'Maven Central'
+        }
+    }
+
+
+
+
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    
+    group = "com.bt.rpc"
+    version = '1.0.0-SNAPSHOT'
+    
+    sourceCompatibility = '11'
+    targetCompatibility = "11"
+}

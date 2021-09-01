@@ -1,0 +1,227 @@
+[
+  {
+    "name" : "java.lang.Integer",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "java.lang.String",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "java.util.Map",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "java.util.List",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "java.util.HashMap",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.netty.NettyChannelProvider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+
+  {
+    "name" : "io.netty.channel.epoll.Epoll",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+
+  {
+    "name" : "io.grpc.netty.NettyServer$1",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "io.grpc.netty.WriteBufferingAndExceptionHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+  {
+    "name" : "io.grpc.netty.ProtocolNegotiators$WaitUntilActiveHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+  {
+    "name" : "io.grpc.netty.ProtocolNegotiators$GrpcNegotiationHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "io.grpc.netty.NettyServerHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+  {
+    "name" : "io.netty.channel.epoll.Native",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+  {
+    "name" : "io.grpc.util.SecretRoundRobinLoadBalancerProvider$Provider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.internal.DnsNameResolverProvider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.census.InternalCensusTracingAccessor",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.census.InternalCensusStatsAccessor",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "io.netty.channel.DefaultChannelPipeline$HeadContext",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "io.netty.channel.DefaultChannelPipeline$TailContext",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "io.netty.bootstrap.ServerBootstrap$1",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+
+
+
+  {
+    "name" : "io.grpc.internal.PickFirstLoadBalancerProvider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+
+
+  {
+    "name" : "com.bt.rpc.common.RpcMetaService",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.common.meta.ApiMeta",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.common.meta.Api",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.common.meta.Dto",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.common.meta.Method",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.common.meta.Property",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  }
+
+
+
+
+
+
+]

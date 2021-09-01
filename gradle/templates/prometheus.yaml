@@ -1,0 +1,52 @@
+{{ if .Values.service.monitor }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.app_name }}
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.app_name }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: {{ .Values.service.monitor.port | default "first" }}
+      path: {{ .Values.service.monitor.path | default "/metrics" }}
+      interval: {{ .Values.service.monitor.interval | default "60s" }}
+
+
+{{- if .Values.service.monitor.rules }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: prometheus-operator
+    release: monitoring
+  name: {{ .Values.app_name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: {{ .Values.app_name }}
+      rules:
+      {{- range .Values.service.monitor.rules }}
+      - alert: {{ .alert }}:{{ $.Values.app_name }}:{{ $.Release.Namespace }}
+        annotations:
+          summary: {{ .annotations.summary | quote }}
+          description: {{ .annotations.description |  quote  }}
+          runbook_url: {{ .annotations.runbook_url | default "" }}
+          dashboard_url: {{ .annotations.dashboard_url | default "" }}
+        expr: {{ .expr }}
+        for: {{ .for }}
+        labels:
+        {{- range $key, $val := .labels }}
+          {{ $key }}: {{ $val | quote }}
+        {{- end }}
+      {{- end }}
+{{- end }}
+
+{{ end }}

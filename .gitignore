@@ -1,0 +1,58 @@
+/.idea/
+/java-grpc/.DS_Store
+/java-grpc/.gradle/
+/java-grpc/.idea/
+/java-grpc/build/
+/java-grpc/example-server/out/
+/java-grpc/grpc-sdk/build/
+/java-grpc/grpc-sdk/out/
+/java-grpc/grpc-sdk-spring/out/
+
+.DS_Store
+-*.swp
+-*.*~
+-project.lock.json
+*.pyc
+nupkg/
+
+target/
+
+# Visual Studio Code
+.vscode
+
+# Rider
+.idea
+.svn
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Visual Studio 2015
+.vs/
+
+
+.gradle
+/build/
+gradlew*
+/java-grpc/gradle/
+
+

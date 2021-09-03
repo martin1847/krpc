@@ -96,7 +96,9 @@ quarkusBuild {
 //        }else{
 //            println "dynamic-proxy.json NOT found...."
 //        }
-        additionalBuildArgs = "--allow-incomplete-classpath," +
+        additionalBuildArgs = "--verbose"
+        //,-H:DynamicProxyConfigurationFiles=dynamic-proxy.json"
+        additionalBuildArgs3 = "--allow-incomplete-classpath," +
                 "-H:DynamicProxyConfigurationFiles=dynamic-proxy.json,"+
                 "-H:ReflectionConfigurationFiles=reflection-config.json," +
                 "--initialize-at-build-time=com.bt.RuntimeToNativeBuild,"+

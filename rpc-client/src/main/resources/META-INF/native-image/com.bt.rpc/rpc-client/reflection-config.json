@@ -1,49 +1,5 @@
 [
-  {
-    "name" : "java.lang.Integer",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "java.lang.String",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "java.util.Map",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "java.util.List",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-  {
-    "name" : "java.util.HashMap",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
+
 
   {
     "name" : "io.grpc.netty.NettyChannelProvider",
@@ -188,40 +144,18 @@
   },
 
 
+  {
+    "name" : "io.netty.channel.socket.nio.NioSocketChannel",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
 
   {
-    "name" : "com.bt.rpc.common.RpcMetaService",
-    "allPublicMethods" : true
-  },
-  {
-    "name" : "com.bt.rpc.common.meta.ApiMeta",
-    "allPublicConstructors" : true,
-    "allPublicMethods" : true
-  },
-  {
-    "name" : "com.bt.rpc.common.meta.Api",
-    "allPublicConstructors" : true,
-    "allPublicMethods" : true
-  },
-  {
-    "name" : "com.bt.rpc.common.meta.Dto",
-    "allPublicConstructors" : true,
-    "allPublicMethods" : true
-  },
-  {
-    "name" : "com.bt.rpc.common.meta.Method",
-    "allPublicConstructors" : true,
-    "allPublicMethods" : true
-  },
-  {
-    "name" : "com.bt.rpc.common.meta.Property",
-    "allPublicConstructors" : true,
+    "name" : "io.grpc.netty.NettyClientHandler",
+    "allDeclaredMethods" : true,
     "allPublicMethods" : true
   }
-
-
-
-
-
 
 ]

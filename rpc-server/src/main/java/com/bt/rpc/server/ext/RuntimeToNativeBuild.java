@@ -1,4 +1,4 @@
-package com.bt;
+package com.bt.rpc.server.ext;
 
 import io.grpc.ServerProvider;
 
@@ -10,7 +10,7 @@ import io.grpc.ServerProvider;
 public class RuntimeToNativeBuild {
 
     static {
-        System.out.println("[ RPC Server ] ServerProvider :" + ServerProvider.provider());
+        System.out.println("[ RPC Server For GraalVM ] ServerProvider :" + ServerProvider.provider());
     }
 
 }

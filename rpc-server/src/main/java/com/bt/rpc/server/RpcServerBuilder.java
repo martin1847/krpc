@@ -106,7 +106,7 @@ public class RpcServerBuilder {
 
 		protoService.forEach(it->{
 			serverBuilder.addService(it);
-			log.info("Origin RpcService Export: : {}" , it.bindService().getServiceDescriptor());
+			log.info("[ Origin RpcService Expose: ] {}" , it.bindService().getServiceDescriptor());
 		});
 
 
@@ -158,7 +158,7 @@ public class RpcServerBuilder {
 				serverBuilder.addService(srv);
 				if(needMeta){
 					var sd = srv.getServiceDescriptor();
-					log.info("RpcService Export: {}",  sd.getName());
+					log.info("[ RpcService Expose: ] {}",  sd.getName());
 					var index = new AtomicInteger();
 					sd.getMethods().forEach(it->
 							log.info("     {}). {}",index.incrementAndGet(), it.getFullMethodName() )

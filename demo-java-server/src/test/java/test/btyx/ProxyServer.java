@@ -1,4 +1,4 @@
-package com.bt;
+package test.btyx;
 
 import com.bt.demo.impl.MyTimeService;
 import com.bt.rpc.common.RpcConstants;

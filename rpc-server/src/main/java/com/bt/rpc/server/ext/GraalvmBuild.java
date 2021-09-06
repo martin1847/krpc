@@ -7,10 +7,10 @@ import io.grpc.ServerProvider;
  *
  * @author Martin.C
  */
-public class RuntimeToNativeBuild {
+public class GraalvmBuild {
 
     static {
-        System.out.println("[ RPC Server For GraalVM ] ServerProvider :" + ServerProvider.provider());
+        System.out.println("[ RPC Server For GraalvmBuild ] ServerProvider :" + ServerProvider.provider());
     }
 
 }

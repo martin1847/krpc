@@ -71,26 +71,6 @@
     "allDeclaredFields" : true,
     "allPublicFields" : true
   },
-
-  {
-    "name" : "io.grpc.census.InternalCensusTracingAccessor",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
-
-  {
-    "name" : "io.grpc.census.InternalCensusStatsAccessor",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true,
-    "allPublicFields" : true
-  },
   {
     "name" : "io.netty.channel.DefaultChannelPipeline$HeadContext",
     "allDeclaredConstructors" : true,
@@ -140,7 +120,26 @@
     "allPublicMethods" : true,
     "allDeclaredFields" : true,
     "allPublicFields" : true
-  }
+  },
 
+  {
+    "name" : "io.grpc.census.InternalCensusTracingAccessor",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.census.InternalCensusStatsAccessor",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  }
 
 ]

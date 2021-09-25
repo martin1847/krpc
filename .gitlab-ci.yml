@@ -2,7 +2,7 @@
 
 image: "younglove/graalvm-gradle:7"
 stages:
-  - build
+#  - build
 #  - test
   - release
 #  - deploy
@@ -11,28 +11,29 @@ variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 #  DOCKER_HOST: tcp://docker:2376
 #  DOCKER_TLS_CERTDIR: "/certs"
-#  REPO: registry.botaoyx.com/pkg/docker
-  REPO: $CI_REGISTRY/pkg/docker
-  DEMO_JAVA_SERVER_TAG: $REPO/demo-java-server:$CI_COMMIT_REF_SLUG
-  DEMO_JAVA_CLIENT_TAG: $REPO/demo-java-client:$CI_COMMIT_REF_SLUG
-
-build:
-  stage: build
-  script:
-    - gradle build -Dquarkus.package.type=native
+#
+#build:
+#  stage: build
+#  script:
+#    - gradle build -Dquarkus.package.type=native
 
 
-
-release-maven:
-  stage: release
-  script:
-    - gradle publish
+#
+#release-maven:
+#  stage: release
+#  script:
+#    - gradle publish
 
 release-image:
   stage: release
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
+  variables:
+    REPO: $CI_REGISTRY/pkg/docker/pkg/docker
+    #  REPO: registry.botaoyx.com/pkg/docker
+    DEMO_JAVA_SERVER_TAG: $REPO/demo-java-server:$CI_COMMIT_REF_SLUG
+    DEMO_JAVA_CLIENT_TAG: $REPO/demo-java-client:$CI_COMMIT_REF_SLUG
   script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json

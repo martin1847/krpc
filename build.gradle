@@ -17,7 +17,7 @@ allprojects {
         maven {
             url 'https://maven.aliyun.com/repository/spring/'
         }
-        // https://maven.aliyun.com/repository/gradle-plugin
+
         mavenCentral()
         maven {
             // use https://gitlab.botaoyx.com/api/v4/packages/maven

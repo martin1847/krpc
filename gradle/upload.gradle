@@ -13,7 +13,7 @@ publishing {
             def tokenName = "Private-Token"
             def tokenValue = ""
             if(System.getenv("CI_JOB_TOKEN")!=null){
-                urlPrefix = "${CI_API_V4_URL}"
+                urlPrefix = System.getenv("CI_API_V4_URL")
                 tokenName =  'Job-Token'
                 tokenValue = System.getenv("CI_JOB_TOKEN")
             }else {

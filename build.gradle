@@ -1,6 +1,6 @@
 
 plugins {
-    id "com.jfrog.artifactory" version "4.9.6" apply false
+//    id "com.jfrog.artifactory" version "4.9.6" apply false
     id 'java-library'
 //    id 'com.google.protobuf' version '0.8.17' apply false
     id 'io.quarkus'  version "$quarkusPluginVersion" apply false
@@ -13,18 +13,16 @@ allprojects {
         maven {
             url 'https://jfrog.botaoyx.com/artifactory/public/'
         }
-//        maven {
-//            // central仓和jcenter仓的聚合仓 https://developer.aliyun.com/mvn/guide
-//            url 'https://maven.aliyun.com/repository/public/'
-//        }
-//
-
-        mavenCentral()
+        maven {
+            // central仓和jcenter仓的聚合仓 https://developer.aliyun.com/mvn/guide
+            url 'https://maven.aliyun.com/repository/public/'
+        }
         maven {
             // use https://gitlab.botaoyx.com/api/v4/packages/maven
             url "https://gitlab.botaoyx.com/api/v4/groups/11/-/packages/maven"
             name "botaoyx"
         }
+        mavenCentral()
  //       maven {
   //          url "https://jfrog.io/gradle-dev/"
   //          credentials {
@@ -32,10 +30,6 @@ allprojects {
   //              password = "${artifactory_password}"
   //          }
   //      }
-        maven {
-            url 'https://repo.maven.apache.org/maven2'
-            name 'Maven Central'
-        }
     }
 
 

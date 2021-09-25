@@ -1,4 +1,4 @@
-FROM docker-local.jfrog.io/cibuildslave/apt:lts
+FROM younglove/ubuntu:latest
 
 
 # COPY --from=build /project/build/*-runner /work/application

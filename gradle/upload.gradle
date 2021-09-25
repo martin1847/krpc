@@ -11,15 +11,17 @@ publishing {
 
             def urlPrefix = "https://gitlab.botaoyx.com/api/v4"
             def tokenName = "Private-Token"
-            def tokenValue = System.getProperty(tokenName)
+            def tokenValue = ""
             if(System.getenv("CI_JOB_TOKEN")!=null){
                 urlPrefix = "${CI_API_V4_URL}"
                 tokenName =  'Job-Token'
                 tokenValue = System.getenv("CI_JOB_TOKEN")
+            }else {
+                tokenValue = "${bt_gitlab_private_token}"
             }
 
             maven {
-                url "$urlPrefix/projects/4/packages/maven"
+                url "$urlPrefix/projects/7/packages/maven"
                 credentials(HttpHeaderCredentials) {
                     name = tokenName
                     value = tokenValue
@@ -55,18 +57,18 @@ publishing {
 //    published
 //}
 
-task sourceJar(type: Jar) {
-    from sourceSets.main.allSource
-    classifier = 'sources'
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-
-artifacts {
-    archives sourceJar
-    archives javadocJar
-}
+//task sourceJar(type: Jar) {
+//    from sourceSets.main.allSource
+//    classifier = 'sources'
+//}
+//
+//task javadocJar(type: Jar, dependsOn: javadoc) {
+//    classifier = 'javadoc'
+//    from javadoc.destinationDir
+//}
+//
+//
+//artifacts {
+//    archives sourceJar
+//    archives javadocJar
+//}

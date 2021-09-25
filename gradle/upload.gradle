@@ -1,26 +1,55 @@
 
-apply plugin: 'com.jfrog.artifactory'
-//apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
-artifactory {
-    contextUrl = "https://jfrog.io/bt"
-    publish {
-        repository {
-            repoKey = 'gradle-local-dev'
-//            username = "${artifactory_user}"
-//            password = "${artifactory_password}"
-            maven = true
-        }
-
-        defaults {
-            // Reference to Gradle configurations defined in the build script.
-            // This is how we tell the Artifactory Plugin which artifacts should be
-            // published to Artifactory.
-            publishConfigs('archives', 'published')
-            publishIvy = false
+publishing {
+    publications {
+        library(MavenPublication) {
+            from components.java
         }
     }
+    repositories {
+
+            def urlPrefix = "https://gitlab.botaoyx.com/api/v4"
+            def tokenName = "Private-Token"
+            def tokenValue = System.getProperty(tokenName)
+            if(System.getenv("CI_JOB_TOKEN")!=null){
+                urlPrefix = "${CI_API_V4_URL}"
+                tokenName =  'Job-Token'
+                tokenValue = System.getenv("CI_JOB_TOKEN")
+            }
+
+            maven {
+                url "$urlPrefix/projects/4/packages/maven"
+                credentials(HttpHeaderCredentials) {
+                    name = tokenName
+                    value = tokenValue
+                }
+                authentication {
+                    header(HttpHeaderAuthentication)
+                }
+            }
+    }
 }
+
+
+//apply plugin: 'com.jfrog.artifactory'
+//
+//artifactory {
+//    contextUrl = "https://jfrog.io/bt"
+//    publish {
+//        repository {
+//            repoKey = 'gradle-local-dev'
+////            username = "${artifactory_user}"
+////            password = "${artifactory_password}"
+//            maven = true
+//        }
+//
+//        defaults {
+//            publishConfigs('archives', 'published')
+//            publishIvy = false
+//        }
+//    }
+//}
 
 //configurations {
 //    published
@@ -36,9 +65,6 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
-//artifactoryPublish {
-//    dependsOn sourceJar, javadocJar
-//}
 
 artifacts {
     archives sourceJar

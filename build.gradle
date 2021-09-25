@@ -10,9 +10,21 @@ allprojects {
 
     repositories {
 //        mavenLocal()
+        maven {
+            // central仓和jcenter仓的聚合仓 https://developer.aliyun.com/mvn/guide
+            url 'https://maven.aliyun.com/repository/public/'
+        }
+        maven {
+            url 'https://maven.aliyun.com/repository/spring/'
+        }
+        // https://maven.aliyun.com/repository/gradle-plugin
         mavenCentral()
-        jcenter()
- //       maven { 
+        maven {
+            // use https://gitlab.botaoyx.com/api/v4/packages/maven
+            url "https://gitlab.botaoyx.com/api/v4/projects/4/packages/maven"
+            name "botaoyx"
+        }
+ //       maven {
   //          url "https://jfrog.io/gradle-dev/"
   //          credentials {
   //              username = "${artifactory_user}"

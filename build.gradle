@@ -11,12 +11,13 @@ allprojects {
     repositories {
 //        mavenLocal()
         maven {
-            // central仓和jcenter仓的聚合仓 https://developer.aliyun.com/mvn/guide
-            url 'https://maven.aliyun.com/repository/public/'
+            url 'https://jfrog.botaoyx.com/artifactory/public/'
         }
-        maven {
-            url 'https://maven.aliyun.com/repository/spring/'
-        }
+//        maven {
+//            // central仓和jcenter仓的聚合仓 https://developer.aliyun.com/mvn/guide
+//            url 'https://maven.aliyun.com/repository/public/'
+//        }
+//
 
         mavenCentral()
         maven {

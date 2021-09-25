@@ -1,0 +1,43 @@
+#image:  "quay.io/quarkus/ubi-quarkus-native-image:21.2-java11"
+
+image: "younglove/graalvm-gradle:7"
+stages:
+  - build
+#  - test
+  - release
+#  - deploy
+
+
+#before_script:
+#  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  REPO: registry.botaoyx.com/pkg/docker
+  DEMO_JAVA_SERVER_TAG: $REPO/demo-java-server:$CI_COMMIT_REF_SLUG
+  DEMO_JAVA_CLIENT_TAG: $REPO/demo-java-client:$CI_COMMIT_REF_SLUG
+
+build:
+  stage: build
+  script:
+    - gradle build -Dquarkus.package.type=native
+
+
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Docker.gitlab-ci.yml
+release-image:
+  image: docker:19.03.12
+  stage: release
+  services:
+    - docker:19.03.12-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo "CI_REGISTRY --> $CI_REGISTRY"
+    - echo "cd ./demo-java-server"
+    - cd ./demo-java-server && docker build -t $DEMO_JAVA_SERVER_TAG .
+    - echo "cd ./demo-java-client"
+    - cd ../demo-java-client && docker build -t $DEMO_JAVA_CLIENT_TAG .
+    - cd ..
+    - docker push $DEMO_JAVA_SERVER_TAG
+    - docker push $DEMO_JAVA_CLIENT_TAG
+#  only:
+#    - main

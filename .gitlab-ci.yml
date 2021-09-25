@@ -31,7 +31,7 @@ release-image:
     entrypoint: [""]
   variables:
     KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
-    REPO: registry.gitlab.botaoyx.com/pkg/docker
+    REPO: registry.botaoyx.com/pkg/docker
     DEMO_JAVA_SERVER_TAG: "$REPO/demo-java-server:$CI_COMMIT_REF_SLUG"
     DEMO_JAVA_CLIENT_TAG: "$REPO/demo-java-client:$CI_COMMIT_REF_SLUG"
   script:

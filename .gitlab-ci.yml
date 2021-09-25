@@ -7,10 +7,6 @@ stages:
   - release
 #  - deploy
 
-
-#before_script:
-#  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 #  DOCKER_HOST: tcp://docker:2376
@@ -47,21 +43,21 @@ release-image:
 
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Docker.gitlab-ci.yml
 # https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#docker-in-docker-with-tls-enabled-in-kubernetes
-release-use-docker:
-  image: docker:19.03.13
-  stage: release-use-docker
-  services:
-    - docker:19.03.13-dind
-  before_script:
-    - docker info
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - pwd && echo " -> begin cd ./demo-java-server"
-    - cd ./demo-java-server && docker build -t $DEMO_JAVA_SERVER_TAG .
-    - pwd && echo " -> begin cd ../demo-java-client"
-    - cd ../demo-java-client && docker build -t $DEMO_JAVA_CLIENT_TAG .
-    - cd .. && pwd
-    - docker push $DEMO_JAVA_SERVER_TAG
-    - docker push $DEMO_JAVA_CLIENT_TAG
+#release-use-docker:
+#  image: docker:19.03.13
+#  stage: release-use-docker
+#  services:
+#    - docker:19.03.13-dind
+#  before_script:
+#    - docker info
+#  script:
+#    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#    - pwd && echo " -> begin cd ./demo-java-server"
+#    - cd ./demo-java-server && docker build -t $DEMO_JAVA_SERVER_TAG .
+#    - pwd && echo " -> begin cd ../demo-java-client"
+#    - cd ../demo-java-client && docker build -t $DEMO_JAVA_CLIENT_TAG .
+#    - cd .. && pwd
+#    - docker push $DEMO_JAVA_SERVER_TAG
+#    - docker push $DEMO_JAVA_CLIENT_TAG
 #  only:
 #    - main

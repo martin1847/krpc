@@ -30,10 +30,9 @@ release-image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   variables:
-    REPO: $CI_REGISTRY/pkg/docker/pkg/docker
-    #  REPO: registry.botaoyx.com/pkg/docker
-    DEMO_JAVA_SERVER_TAG: $REPO/demo-java-server:$CI_COMMIT_REF_SLUG
-    DEMO_JAVA_CLIENT_TAG: $REPO/demo-java-client:$CI_COMMIT_REF_SLUG
+    REPO: registry.botaoyx.com/pkg/docker
+    DEMO_JAVA_SERVER_TAG: "$REPO/demo-java-server:$CI_COMMIT_REF_SLUG"
+    DEMO_JAVA_CLIENT_TAG: "$REPO/demo-java-client:$CI_COMMIT_REF_SLUG"
   script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json

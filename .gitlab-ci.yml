@@ -10,17 +10,17 @@ before_script:
   - export GRADLE_USER_HOME=`pwd`/.gradle
 #
 cache:
-  key: $CI_COMMIT_REF_SLUG
+#  key: $CI_COMMIT_REF_SLUG
   paths:
 #    - node_modules/
     - ./*/build/*
     - .gradle/caches
 
 variables:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  DEPLOY_NS: example
   DOCKER_MODULES: "demo-java-server demo-java-client"
-  IMAGE_TAG: "$CI_COMMIT_REF_SLUG-$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA"
+  CHART_NS: example
+  CHART_VERSION: "1.0.$CI_PIPELINE_IID"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
 build:
   stage: build
@@ -49,7 +49,7 @@ deploy-image:
     - |
       for module in ${DOCKER_MODULES}
       do
-        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$IMAGE_TAG
+        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$CHART_VERSION-$CI_COMMIT_SHORT_SHA
       done
 
 #        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
@@ -69,12 +69,12 @@ deploy-helm:
       for module in ${DOCKER_MODULES}
       do
         chart=./$module/src/main/helm
-        yq e -i ".name= \"$module\" | .version= \"1.0.$CI_PIPELINE_IID\"" $chart/Chart.yaml
-        yq e -i ".appName= \"$module\" | .deployment.image.name = \"$CI_JCR/img/$module:$IMAGE_TAG\""  $chart/values.yaml
+        yq e -i ".name= \"$module\" | .version= \"$CHART_VERSION\"" $chart/Chart.yaml
+        yq e -i ".appName= \"$module\" | .deployment.image.name = \"$CI_JCR/img/$module:$CHART_VERSION-$CI_COMMIT_SHORT_SHA\""  $chart/values.yaml
         helm template --debug  --dry-run "$chart"
         helm package "$chart"
-        curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-1.0.$CI_PIPELINE_IID.tgz" \
-          "https://${CI_JCR}/artifactory/charts/${DEPLOY_NS}/"
+        curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-$CHART_VERSION.tgz" \
+          "https://${CI_JCR}/artifactory/charts/${CHART_NS}/"
       done
 #  only:
 #    refs:

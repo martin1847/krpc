@@ -6,7 +6,7 @@ variables:
   CHART_NAMESPACE: example
   CHART_VERSION: "1.$CI_PROJECT_ID.$CI_PIPELINE_ID"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  DOCKER_TAG: "$CHART_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+
 
 
 cache:
@@ -15,11 +15,11 @@ cache:
     - ./*/build/*
     - .gradle/caches
 
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
 
 build:
   stage: build
-  before_script:
-    - export GRADLE_USER_HOME=`pwd`/.gradle
   script:
     - gradle build -Dquarkus.package.type=native
 
@@ -42,7 +42,8 @@ docker:
     - |
       for module in ${DOCKER_MODULES}
       do
-        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$DOCKER_TAG
+        IMAGE_NAME="$CI_JCR/img/$module:$CHART_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $IMAGE_NAME
       done
 
 #        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
@@ -59,13 +60,15 @@ chart:
     name: jcr.botaoyx.com/img/helm-kubectl:3.5.3
   script:
     - |
+      DOCKER_TAG="$CHART_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
       for module in ${DOCKER_MODULES}
       do
-        chart=./$module/src/main/helm
-        yq e -i ".name= \"$module\" | .version= \"$CHART_VERSION\"" $chart/Chart.yaml
-        yq e -i ".appName= \"$module\" | .deployment.image.name = \"$CI_JCR/img/$module:$DOCKER_TAG\""  $chart/values.yaml
-        helm template --debug  --dry-run "$chart"
-        helm package "$chart"
+        CHART=./$module/src/main/helm
+        IMAGE_NAME="$CI_JCR/img/$module:$CHART_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+        yq e -i ".name= \"$module\" | .version= \"$CHART_VERSION\"" $CHART/Chart.yaml
+        yq e -i ".appName= \"$module\" | .deployment.image.name = \"$IMAGE_NAME\""  $CHART/values.yaml
+        helm template --debug  --dry-run $CHART
+        helm package $CHART
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-$CHART_VERSION.tgz" \
           "https://${CI_JCR}/artifactory/charts/${CHART_NAMESPACE}/"
       done

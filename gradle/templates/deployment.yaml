@@ -22,7 +22,7 @@ spec:
 #        fsGroup: 1000
       containers:
         - name: {{ .Values.appName  }}
-          image: {{ .Values.deployment.image.imageName }}
+          image: {{ .Values.deployment.image.name }}
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
           command: ["/bin/bash","-c","{{ .Values.deployment.image.command  | default "./application" }}" ]
           env:

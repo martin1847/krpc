@@ -23,7 +23,7 @@ deployment:
   replicas: 1
   image:
     pullPolicy: IfNotPresent
-    imageName: "docker-local.jfrog.io/demo-java-server:latest"
+    name: "docker-local.jfrog.io/demo-java-server:latest"
     command: "./application -Dquarkus.http.host=0.0.0.0"
   env:
     APP_ENV: TEST

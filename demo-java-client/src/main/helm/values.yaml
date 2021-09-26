@@ -1,4 +1,4 @@
-app_name: demo-java-server
+appName: demo-java-server
 
 service:
   type: ClusterIP
@@ -13,9 +13,8 @@ resources:
     cpu: 100m
     memory: 500Mi
 
-platform:
-  cd:
-    cluster: local-test
+cd:
+  cluster: local-test
 
 deployment:
   replicas: 1

@@ -1,7 +1,7 @@
 FROM jcr.botaoyx.com/img/ubuntu:latest
 
-# ARG TARGET=.
-# COPY ${TARGET}/build/*-runner ./application
+ARG TARGET=.
+COPY ${TARGET}/build/*-runner ./application
 #
 
 CMD ["./application"]

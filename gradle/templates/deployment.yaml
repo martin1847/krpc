@@ -2,32 +2,32 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    name: {{ .Values.app_name }}
+    name: {{ .Values.appName }}
     revision: {{ .Chart.Version | replace "+" "_"  }}
-  name: {{ .Values.app_name  }}
+  name: {{ .Values.appName  }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Values.app_name  }}
+      app: {{ .Values.appName  }}
   replicas: {{ .Values.deployment.replicas | default 1 }}
   template:
     metadata:
       annotations: 
-        sidecar.istio.io/inject: "{{ .Values.deployment.istio_inject | default true }}"
+        sidecar.istio.io/inject: "{{ .Values.deployment.istioInject | default true }}"
       labels:
-        app: {{ .Values.app_name }}
+        app: {{ .Values.appName }}
     spec:
       # serviceAccountName: {{ .Values.deployment.serviceAccount | default "fabric8-service-account" }}
-      securityContext:
-        fsGroup: 1000
+#      securityContext:
+#        fsGroup: 1000
       containers:
-        - name: {{ .Values.app_name  }}
-          image: {{ .Values.deployment.image.name }}
+        - name: {{ .Values.appName  }}
+          image: {{ .Values.deployment.image.imageName }}
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
-          command: ["/bin/bash","-c","{{ .Values.deployment.image.command  | default "dotnet ${DLL_NAME:-`ls|grep runtimeconfig.json|awk -F. '{print $1}'`}.dll" }}" ]
+          command: ["/bin/bash","-c","{{ .Values.deployment.image.command  | default "./application" }}" ]
           env:
           - name: CLUSTER_NAME
-            value: {{.Values.platform.cd.cluster}}
+            value: {{.Values.cd.cluster}}
           {{- range $key, $val := .Values.deployment.env }}
           - name: {{ $key }}
             value: {{ $val | quote}}
@@ -35,7 +35,7 @@ spec:
           {{- if .Values.secret }}
           envFrom:
             - secretRef:
-                name: {{ .Values.app_name }}
+                name: {{ .Values.appName }}
           {{- end }}
           ports:
           {{- range $key, $val := .Values.service.ports }}

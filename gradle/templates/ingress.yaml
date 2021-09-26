@@ -9,21 +9,21 @@ metadata:
       {{ $key }}: {{ $val | quote}}
     {{- end }}
   labels:
-    name: {{ .Values.app_name }}
+    name: {{ .Values.appName }}
     revision: {{ .Release.Revision | quote }}
-  name: {{ .Values.app_name }}
+  name: {{ .Values.appName }}
 spec:
   {{ if .Values.ingress.tls }}
   tls:
   - hosts:
-    - {{ .Values.app_name }}.{{ .Values.ingress.domain }}
+    - {{ .Values.appName }}.{{ .Values.ingress.domain }}
   {{ end }}
   rules:
-  - host: {{ .Values.app_name }}.{{ .Values.ingress.domain }}
+  - host: {{ .Values.appName }}.{{ .Values.ingress.domain }}
     http:
       paths:
       - backend:
-          serviceName: {{ .Values.app_name }}
+          serviceName: {{ .Values.appName }}
           servicePort: {{ .Values.service.ports.http  }}
         path: /
 {{ end }}

@@ -7,14 +7,15 @@ stages:
 
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  DEPLOY_NS: middleware
   DOCKER_MODULES: "demo-java-server demo-java-client"
-
+  IMAGE_TAG: "$CI_COMMIT_REF_SLUG.$CI_COMMIT_SHORT_SHA"
 
 #build:
 #  stage: build
 #  script:
 #    - gradle build -Dquarkus.package.type=native
-
+#
 #release-maven:
 #  stage: release
 #  script:
@@ -28,7 +29,6 @@ release-image:
   variables:
     KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
     CONTEXT_PREFIX: "$KANIKO_CACHE_ARGS --dockerfile ./Dockerfile  --context $CI_PROJECT_DIR"
-    IMAGE_TAG: "$CI_COMMIT_REF_SLUG.$CI_COMMIT_SHORT_SHA"
   before_script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_JCR\":{\"auth\":\"$(echo -n gitlab:${CI_JCR_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
@@ -40,24 +40,36 @@ release-image:
       done
 #  rules:
 #    - if: $CI_COMMIT_TAG
+# if src/main/changed
 
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Docker.gitlab-ci.yml
-# https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#docker-in-docker-with-tls-enabled-in-kubernetes
-#release-use-docker:
-#  image: docker:19.03.13
-#  stage: release-use-docker
-#  services:
-#    - docker:19.03.13-dind
-#  before_script:
-#    - docker info
-#  script:
-#    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-#    - pwd && echo " -> begin cd ./demo-java-server"
-#    - cd ./demo-java-server && docker build -t $DEMO_JAVA_SERVER_TAG .
-#    - pwd && echo " -> begin cd ../demo-java-client"
-#    - cd ../demo-java-client && docker build -t $DEMO_JAVA_CLIENT_TAG .
-#    - cd .. && pwd
-#    - docker push $DEMO_JAVA_SERVER_TAG
-#    - docker push $DEMO_JAVA_CLIENT_TAG
-#  only:
-#    - main
+
+# helm
+
+release-helm:
+  stage: release
+  image:
+    name: dtzar/helm-kubectl:3.5.3
+  script:
+#    - helm init --client-only
+    - |
+      for module in ${DOCKER_MODULES}
+      do
+        chart=$CONTEXT_PREFIX/$module/src/main/helm
+        image=$CI_JCR/img/$module:$IMAGE_TAG
+        sed -i "" "/^\([[:space:]]*name: \).*/s//\1$module/" $chart/Chart.yaml
+        sed -i "" "/^\([[:space:]]*appName: \).*/s//\1$module/" $chart/values.yaml
+        sed -i "" "/^\([[:space:]]*imageName: \).*/s//\1$image/" $chart/values.yaml
+        helm template --debug  --dry-run $chart -n $HELM_NS
+        helm package ${chart}  --version 1.0.$CI_PIPELINE_IID -n $DEPLOY_NS
+        curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T ./$module-1.0.$CI_PIPELINE_IID.tgz \
+          "https://$CI_JCR/artifactory/charts/$DEPLOY_NS"
+      done
+
+#  except:
+#    - tags
+
+
+# deploy
+# helm repo add charts https://jcr.botaoyx.com/artifactory/api/helm/charts \
+#--username <USERNAME> --password <PASSWORD>
+

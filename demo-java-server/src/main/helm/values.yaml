@@ -1,4 +1,7 @@
-app_name: demo-java-server
+
+
+# default the module name
+appName: demo-java-server
 
 service:
   type: ClusterIP
@@ -13,15 +16,14 @@ resources:
     cpu: 100m
     memory: 500Mi
 
-platform:
-  cd:
-    cluster: local-test
+cd:
+  cluster: local-test
 
 deployment:
   replicas: 1
   image:
     pullPolicy: IfNotPresent
-    name: "docker-local.jfrog.io/demo-java-server:latest"
+    imageName: "docker-local.jfrog.io/demo-java-server:latest"
     command: "./application -Dquarkus.http.host=0.0.0.0"
   env:
     APP_ENV: TEST

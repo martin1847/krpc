@@ -18,8 +18,8 @@ cache:
 
 variables:
   DOCKER_MODULES: "demo-java-server demo-java-client"
-  CHART_NS: example
-  CHART_VERSION: "1.0.$CI_PIPELINE_IID"
+  CHART_NAMESPACE: example
+  CHART_VERSION: "1.$CI_PROJECT_ID.$CI_PIPELINE_ID"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
 build:
@@ -74,7 +74,7 @@ deploy-helm:
         helm template --debug  --dry-run "$chart"
         helm package "$chart"
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-$CHART_VERSION.tgz" \
-          "https://${CI_JCR}/artifactory/charts/${CHART_NS}/"
+          "https://${CI_JCR}/artifactory/charts/${CHART_NAMESPACE}/"
       done
 #  only:
 #    refs:

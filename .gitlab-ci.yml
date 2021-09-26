@@ -49,9 +49,10 @@ deploy-image:
     - |
       for module in ${DOCKER_MODULES}
       do
-#        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
         /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$IMAGE_TAG
       done
+
+#        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
 #  rules:
 #    - if: $CI_COMMIT_TAG
 # if src/main/changed

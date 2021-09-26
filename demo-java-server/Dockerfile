@@ -1,8 +1,8 @@
 FROM jcr.botaoyx.com/img/ubuntu:latest
 
 # COPY --from=build /project/build/*-runner /work/application
-ARG TARGET=.
-COPY ${TARGET}/build/*-runner ./application
+# ARG TARGET=.
+# COPY ${TARGET}/build/*-runner ./application
 # COPY ./application ./application
 # RUN chmod 775 ./application
 # set up permissions for user `1001`

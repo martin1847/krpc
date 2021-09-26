@@ -1,43 +1,43 @@
 image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
 stages:
-#  - build
+  - build
 #  - test
   - release
 #  - deploy
 
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-  DEPLOY_NS: middleware
+  DEPLOY_NS: example
   DOCKER_MODULES: "demo-java-server demo-java-client"
   IMAGE_TAG: "$CI_COMMIT_REF_SLUG.$CI_COMMIT_SHORT_SHA"
 
-#build:
-#  stage: build
-#  script:
-#    - gradle build -Dquarkus.package.type=native
-#
-#release-maven:
-#  stage: release
-#  script:
-#    - gradle publish
-#
-#release-image:
-#  stage: release
-#  image:
-#    name: gcr.io/kaniko-project/executor:debug
-#    entrypoint: [""]
-#  variables:
-#    KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
-#    CONTEXT_PREFIX: "$KANIKO_CACHE_ARGS --dockerfile ./Dockerfile  --context $CI_PROJECT_DIR"
-#  before_script:
-#    - mkdir -p /kaniko/.docker
-#    - echo "{\"auths\":{\"$CI_JCR\":{\"auth\":\"$(echo -n gitlab:${CI_JCR_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
-#  script:
-#    - |
-#      for module in ${DOCKER_MODULES}
-#      do
-#        /kaniko/executor $CONTEXT_PREFIX/$module --destination $CI_JCR/img/$module:$IMAGE_TAG
-#      done
+build:
+  stage: build
+  script:
+    - gradle build -Dquarkus.package.type=native
+
+release-maven:
+  stage: release
+  script:
+    - gradle publish
+
+release-image:
+  stage: release
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  variables:
+    KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
+    CONTEXT_PREFIX: "$KANIKO_CACHE_ARGS --dockerfile ./Dockerfile  --context $CI_PROJECT_DIR"
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_JCR\":{\"auth\":\"$(echo -n gitlab:${CI_JCR_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
+  script:
+    - |
+      for module in ${DOCKER_MODULES}
+      do
+        /kaniko/executor $CONTEXT_PREFIX/$module --destination $CI_JCR/img/$module:$IMAGE_TAG
+      done
 #  rules:
 #    - if: $CI_COMMIT_TAG
 # if src/main/changed

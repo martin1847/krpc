@@ -1,47 +1,40 @@
 image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
-#stages:
-#  .pre
-#  build
-#  test
-#  deploy
-#  .post
-
-before_script:
-  - export GRADLE_USER_HOME=`pwd`/.gradle
-#
-cache:
-#  key: $CI_COMMIT_REF_SLUG
-  paths:
-#    - node_modules/
-    - ./*/build/*
-    - .gradle/caches
+#stages: .pre build  test  deploy .post
 
 variables:
   DOCKER_MODULES: "demo-java-server demo-java-client"
   CHART_NAMESPACE: example
   CHART_VERSION: "1.$CI_PROJECT_ID.$CI_PIPELINE_ID"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  DOCKER_TAG: "$CHART_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA"
+
+
+cache:
+  key: $CI_COMMIT_REF_SLUG
+  paths:
+    - ./*/build/*
+    - .gradle/caches
+
 
 build:
   stage: build
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
   script:
     - gradle build -Dquarkus.package.type=native
 
-deploy-maven:
+maven:
   stage: deploy
   script:
     - gradle publish
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
 
-deploy-image:
+docker:
   stage: deploy
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
-#  variables:
-#    KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
-#    CONTEXT_PREFIX: "$KANIKO_CACHE_ARGS -f ./Dockerfile  --context $CI_PROJECT_DIR"
   before_script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_JCR\":{\"auth\":\"$(echo -n gitlab:${CI_JCR_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
@@ -49,7 +42,7 @@ deploy-image:
     - |
       for module in ${DOCKER_MODULES}
       do
-        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$CHART_VERSION-$CI_COMMIT_SHORT_SHA
+        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$DOCKER_TAG
       done
 
 #        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
@@ -60,7 +53,7 @@ deploy-image:
 
 # helm
 
-deploy-helm:
+chart:
   stage: deploy
   image:
     name: jcr.botaoyx.com/img/helm-kubectl:3.5.3
@@ -70,7 +63,7 @@ deploy-helm:
       do
         chart=./$module/src/main/helm
         yq e -i ".name= \"$module\" | .version= \"$CHART_VERSION\"" $chart/Chart.yaml
-        yq e -i ".appName= \"$module\" | .deployment.image.name = \"$CI_JCR/img/$module:$CHART_VERSION-$CI_COMMIT_SHORT_SHA\""  $chart/values.yaml
+        yq e -i ".appName= \"$module\" | .deployment.image.name = \"$CI_JCR/img/$module:$DOCKER_TAG\""  $chart/values.yaml
         helm template --debug  --dry-run "$chart"
         helm package "$chart"
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-$CHART_VERSION.tgz" \

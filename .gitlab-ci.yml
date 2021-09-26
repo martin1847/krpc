@@ -48,18 +48,15 @@ variables:
 release-helm:
   stage: release
   image:
-    name: dtzar/helm-kubectl:3.5.3
+    name: jcr.botaoyx.com/img/helm-kubectl:3.5.3
   script:
-    - pwd
     - |
       for module in ${DOCKER_MODULES}
       do
-        export chart=./$module/src/main/helm
-        export image="$CI_JCR/img/$module:$IMAGE_TAG"
+        chart=./$module/src/main/helm
         ls -la "$chart/Chart.yaml"
-        'sed -i "" "/^\([[:space:]]*name: \).*/s//\1$module/" $chart/Chart.yaml'
-        'sed -i "" "/^\([[:space:]]*appName: \).*/s//\1$module/" $chart/values.yaml'
-        'sed -i "" "/^\([[:space:]]*imageName: \).*/s//\1$image/" $chart/values.yaml'
+        yq e -i '.name= "$module"' $chart/Chart.yaml
+        yq e -i '.appName= "$module" | .deployment.image.imageName = "$CI_JCR/img/$module:$IMAGE_TAG"'  $chart/values.yaml
         helm template --debug  --dry-run $chart -n $HELM_NS
         helm package ${chart}  --version 1.0.$CI_PIPELINE_IID -n $DEPLOY_NS
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T ./$module-1.0.$CI_PIPELINE_IID.tgz \

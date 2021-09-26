@@ -54,13 +54,12 @@ release-helm:
       for module in ${DOCKER_MODULES}
       do
         chart=./$module/src/main/helm
-        ls -la "$chart/Chart.yaml"
-        yq e -i '.name= "$module"' $chart/Chart.yaml
-        yq e -i '.appName= "$module" | .deployment.image.imageName = "$CI_JCR/img/$module:$IMAGE_TAG"'  $chart/values.yaml
-        helm template --debug  --dry-run $chart
-        helm package ${chart}  --version 1.0.$CI_PIPELINE_IID
-        curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T ./$module-1.0.$CI_PIPELINE_IID.tgz \
-          "https://$CI_JCR/artifactory/charts/$DEPLOY_NS"
+        yq e -i ".name= "$module"" $chart/Chart.yaml
+        yq e -i ".appName= "$module" | .deployment.image.imageName = "$CI_JCR/img/$module:$IMAGE_TAG""  $chart/values.yaml
+        helm template --debug  --dry-run "$chart"
+        helm package "$chart" --version "1.0.$CI_PIPELINE_IID"
+        curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-1.0.$CI_PIPELINE_IID.tgz" \
+          "https://${CI_JCR}/artifactory/charts/${DEPLOY_NS}"
       done
 
 #  except:

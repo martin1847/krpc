@@ -1,9 +1,20 @@
 image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
-stages:
-  - build
-#  - test
-  - release
+#stages:
+#  - build
+##  - test
 #  - deploy
+##  - deploy
+#
+#  .pre
+#  build
+#  test
+#  deploy
+#  .post
+
+cache:
+  paths:
+    - node_modules/
+    - build/
 
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
@@ -17,13 +28,15 @@ build:
     - gradle build
       #-Dquarkus.package.type=native
 
-#release-maven:
-#  stage: release
+#deploy-maven:
+#  stage: deploy
 #  script:
 #    - gradle publish
 
-release-image:
-  stage: release
+# https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
+
+deploy-image:
+  stage: deploy
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
@@ -47,8 +60,8 @@ release-image:
 
 # helm
 
-release-helm:
-  stage: release
+deploy-helm:
+  stage: deploy
   image:
     name: jcr.botaoyx.com/img/helm-kubectl:3.5.3
   script:
@@ -63,7 +76,13 @@ release-helm:
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${module}-1.0.$CI_PIPELINE_IID.tgz" \
           "https://${CI_JCR}/artifactory/charts/${DEPLOY_NS}/"
       done
-
+#  only:
+#    refs:
+#      - branches
+#    changes:
+#      - Dockerfile
+#      - docker/scripts/*
+#      - dockerfiles/**/*
 #  except:
 #    - tags
 

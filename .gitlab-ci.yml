@@ -6,14 +6,13 @@ image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
 #  deploy
 #  .post
 
-#before_script:
-#  - export GRADLE_USER_HOME=`pwd`/.gradle
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
 #
 cache:
   key: $CI_COMMIT_REF_SLUG
   paths:
-    - node_modules/
-    - '*/build/'
+#    - node_modules/
     - ./*/build/*
     - .gradle/caches
 
@@ -26,13 +25,12 @@ variables:
 build:
   stage: build
   script:
-    - gradle build
-      #-Dquarkus.package.type=native
+    - gradle build -Dquarkus.package.type=native
 
-#deploy-maven:
-#  stage: deploy
-#  script:
-#    - gradle publish
+deploy-maven:
+  stage: deploy
+  script:
+    - gradle publish
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
 
@@ -51,7 +49,7 @@ deploy-image:
     - |
       for module in ${DOCKER_MODULES}
       do
-        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
+#        cd $CI_PROJECT_DIR/$module && pwd && ls -la ./build
         /kaniko/executor --cache  -c $CI_PROJECT_DIR/$module -d $CI_JCR/img/$module:$IMAGE_TAG
       done
 #  rules:

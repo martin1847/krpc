@@ -57,9 +57,9 @@ release-helm:
         export chart=./$module/src/main/helm
         export image="$CI_JCR/img/$module:$IMAGE_TAG"
         ls "$chart/Chart.yaml"
-        sed -i '' '/^\([[:space:]]*name: \).*/s//\1$module/' '$chart/Chart.yaml'
-        sed -i '' '/^\([[:space:]]*appName: \).*/s//\1$module/' '$chart/values.yaml'
-        sed -i '' '/^\([[:space:]]*imageName: \).*/s//\1$image/' '$chart/values.yaml'
+        "sed -i '' '/^\([[:space:]]*name: \).*/s//\1$module/' '$chart/Chart.yaml'"
+        "sed -i '' '/^\([[:space:]]*appName: \).*/s//\1$module/' '$chart/values.yaml'"
+        "sed -i '' '/^\([[:space:]]*imageName: \).*/s//\1$image/' '$chart/values.yaml'"
         helm template --debug  --dry-run $chart -n $HELM_NS
         helm package ${chart}  --version 1.0.$CI_PIPELINE_IID -n $DEPLOY_NS
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T ./$module-1.0.$CI_PIPELINE_IID.tgz \

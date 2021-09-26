@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
         maven {
-            url 'https://jfrog.botaoyx.com/artifactory/public/'
+            url "$MAVEN_REPO"
         }
         gradlePluginPortal()
     }

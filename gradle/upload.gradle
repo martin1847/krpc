@@ -8,30 +8,27 @@ publishing {
     }
     repositories {
 
-
-        def repo = "https://jfrog.botaoyx.com/artifactory/public"
         // config default deploy repo first in jfrog
 //        def repo = "https://jfrog.botaoyx.com/artifactory/btyx-local/"
         def tokenName = "X-JFrog-Art-API"
+        def JFROG_TOKEN = "JFROG_TOKEN"
         def tokenValue = ""
 
 
-        if (project.hasProperty("token_value")) {
-            tokenName = project.getProperty("token_name")
-            tokenValue = project.getProperty("token_value")
-            if (project.hasProperty("repo_url")) {
-                repo = project.getProperty("repo_url")
-            }
-        } else if (System.getenv("JFROG_TOKEN") != null) {
-            tokenValue = System.getenv("JFROG_TOKEN")
-        } else if (System.getenv("CI_JOB_TOKEN") != null) {
-            repo = System.getenv("CI_API_V4_URL") + "/projects/7/packages/maven"
-            tokenName = 'Job-Token'
-            tokenValue = System.getenv("CI_JOB_TOKEN")
+        if (project.hasProperty(JFROG_TOKEN)) {
+            tokenValue = project.getProperty(JFROG_TOKEN)
+//            }
+        } else if (System.getenv(JFROG_TOKEN) != null) {
+            tokenValue = System.getenv(JFROG_TOKEN)
         }
+//        else if (System.getenv("CI_JOB_TOKEN") != null) {
+//            repo = System.getenv("CI_API_V4_URL") + "/projects/7/packages/maven"
+//            tokenName = 'Job-Token'
+//            tokenValue = System.getenv("CI_JOB_TOKEN")
+//        }
 
         maven {
-            url repo
+            url "$MAVEN_REPO"
             credentials(HttpHeaderCredentials) {
                 name = tokenName
                 value = tokenValue
@@ -80,5 +77,5 @@ publishing {
 //
 //artifacts {
 //    archives sourceJar
-//    archives javadocJar
+////    archives javadocJar
 //}

@@ -6,11 +6,16 @@ image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
 #  deploy
 #  .post
 
+#before_script:
+#  - export GRADLE_USER_HOME=`pwd`/.gradle
+#
 cache:
   key: $CI_COMMIT_REF_SLUG
   paths:
     - node_modules/
-    - build/
+    - '*/build/'
+    - ./*/build/*
+    - .gradle/caches
 
 variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"

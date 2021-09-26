@@ -1,10 +1,5 @@
 image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
 #stages:
-#  - build
-##  - test
-#  - deploy
-##  - deploy
-#
 #  .pre
 #  build
 #  test

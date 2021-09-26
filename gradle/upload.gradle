@@ -1,4 +1,3 @@
-
 apply plugin: 'maven-publish'
 
 publishing {
@@ -9,27 +8,38 @@ publishing {
     }
     repositories {
 
-            def urlPrefix = "https://gitlab.botaoyx.com/api/v4"
-            def tokenName = "Private-Token"
-            def tokenValue = ""
-            if(System.getenv("CI_JOB_TOKEN")!=null){
-                urlPrefix = System.getenv("CI_API_V4_URL")
-                tokenName =  'Job-Token'
-                tokenValue = System.getenv("CI_JOB_TOKEN")
-            }else {
-                tokenValue = "${bt_gitlab_private_token}"
-            }
 
-            maven {
-                url "$urlPrefix/projects/7/packages/maven"
-                credentials(HttpHeaderCredentials) {
-                    name = tokenName
-                    value = tokenValue
-                }
-                authentication {
-                    header(HttpHeaderAuthentication)
-                }
+        def repo = "https://jfrog.botaoyx.com/artifactory/public"
+        // config default deploy repo first in jfrog
+//        def repo = "https://jfrog.botaoyx.com/artifactory/btyx-local/"
+        def tokenName = "X-JFrog-Art-API"
+        def tokenValue = ""
+
+
+        if (project.hasProperty("token_value")) {
+            tokenName = project.getProperty("token_name")
+            tokenValue = project.getProperty("token_value")
+            if (project.hasProperty("repo_url")) {
+                repo = project.getProperty("repo_url")
             }
+        } else if (System.getenv("JFROG_TOKEN") != null) {
+            tokenValue = System.getenv("JFROG_TOKEN")
+        } else if (System.getenv("CI_JOB_TOKEN") != null) {
+            repo = System.getenv("CI_API_V4_URL") + "/projects/7/packages/maven"
+            tokenName = 'Job-Token'
+            tokenValue = System.getenv("CI_JOB_TOKEN")
+        }
+
+        maven {
+            url repo
+            credentials(HttpHeaderCredentials) {
+                name = tokenName
+                value = tokenValue
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
     }
 }
 

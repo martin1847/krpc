@@ -1,6 +1,6 @@
 #image:  "quay.io/quarkus/ubi-quarkus-native-image:21.2-java11"
 
-image: "younglove/graalvm-gradle:7"
+image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
 stages:
 #  - build
 #  - test
@@ -31,12 +31,11 @@ release-image:
     entrypoint: [""]
   variables:
     KANIKO_CACHE_ARGS: "--cache=true --cache-copy-layers=true --cache-ttl=24h"
-    REPO: registry.botaoyx.com/pkg/docker
-    DEMO_JAVA_SERVER_TAG: "$REPO/demo-java-server:$CI_COMMIT_REF_SLUG"
-    DEMO_JAVA_CLIENT_TAG: "$REPO/demo-java-client:$CI_COMMIT_REF_SLUG"
+    DEMO_JAVA_SERVER_TAG: "$CI_JCR/img/demo-java-server:$CI_COMMIT_REF_SLUG.$CI_COMMIT_SHORT_SHA"
+    DEMO_JAVA_CLIENT_TAG: "$CI_JCR/img/demo-java-client:$CI_COMMIT_REF_SLUG.$CI_COMMIT_SHORT_SHA"
   script:
     - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
+    - echo "{\"auths\":{\"$CI_JCR\":{\"auth\":\"$(echo -n gitlab:${CI_JCR_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
     - echo "mytag ->  $DEMO_JAVA_SERVER_TAG"
     - cat /kaniko/.docker/config.json
     - /kaniko/executor $KANIKO_CACHE_ARGS --context $CI_PROJECT_DIR/demo-java-server --dockerfile ./Dockerfile --destination $DEMO_JAVA_SERVER_TAG

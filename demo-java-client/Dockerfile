@@ -1,4 +1,5 @@
-FROM younglove/ubuntu:latest
+# FROM younglove/ubuntu:latest
+FROM jcr.botaoyx.com/img/ubuntu:latest
 
 
 # COPY --from=build /project/build/*-runner /work/application

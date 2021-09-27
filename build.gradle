@@ -5,9 +5,6 @@ plugins {
 //    id 'maven-publish' //apply false
 }
 
-ext{
-    repoToken =  project.findProperty("JCR_TOKEN" )?:System.getenv("JCR_TOKEN" )
-}
 
 
 allprojects {
@@ -17,7 +14,7 @@ allprojects {
             url "$MAVEN_REPO"
             credentials(HttpHeaderCredentials) {
                 name = "X-JFrog-Art-API"
-                value = "$repoToken"
+                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
             }
             authentication {
                 header(HttpHeaderAuthentication)

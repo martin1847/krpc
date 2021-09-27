@@ -4,6 +4,16 @@ pluginManagement {
             // must auth
 //            url "https://jcr.botaoyx.com/artifactory/gradle-plugins/"
 //        }
+        maven{
+            url "$MAVEN_REPO"
+            credentials(HttpHeaderCredentials) {
+                name = "X-JFrog-Art-API"
+                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
         gradlePluginPortal()
     }
 }

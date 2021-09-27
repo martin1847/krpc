@@ -17,7 +17,7 @@ publishing {
             url "$MAVEN_REPO"
             credentials(HttpHeaderCredentials) {
                 name = "X-JFrog-Art-API"
-                value = "$repoToken"
+                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
             }
             authentication {
                 header(HttpHeaderAuthentication)

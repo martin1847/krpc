@@ -4,7 +4,6 @@ image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
 variables:
   APP_NAMES: "demo-java-server demo-java-client"
   APP_NAMESPACE: example
-  APP_VERSION: "1.0.$CI_PIPELINE_ID"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 #  APP_NAME: course
 
@@ -12,8 +11,14 @@ variables:
 cache: &global_cache
   key: build-$CI_COMMIT_REF_SLUG
   paths:
-    - /*/build/*
+    - ./*/build/
   policy: push
+
+.docker-var:
+  variables:
+    APP_VERSION: 1.0.$CI_PIPELINE_ID
+    DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
+    DOCKER_TAG: $APP_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
 
 build:
   stage: build
@@ -29,12 +34,6 @@ build:
 #    - gradle publish
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
-
-
-.docker-var:
-  variables:
-    DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
-    DOCKER_TAG: $APP_VERSION-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
 
 docker:
   stage: deploy

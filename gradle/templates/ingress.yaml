@@ -1,7 +1,7 @@
 {{ if .Values.ingress }}
 {{ if .Values.ingress.enabled }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -9,23 +9,26 @@ metadata:
       {{ $key }}: {{ $val | quote}}
     {{- end }}
   labels:
-    name: {{ .Values.appName }}
+    app: {{ .Values.appName }}
     revision: {{ .Release.Revision | quote }}
   name: {{ .Values.appName }}
 spec:
   {{ if .Values.ingress.tls }}
   tls:
   - hosts:
-    - {{ .Values.appName }}.{{ .Values.ingress.domain }}
+    - {{ .Values.ingress.host }}
   {{ end }}
   rules:
-  - host: {{ .Values.appName }}.{{ .Values.ingress.domain }}
+  - host: {{ .Values.ingress.host }}
     http:
       paths:
-      - backend:
-          serviceName: {{ .Values.appName }}
-          servicePort: {{ .Values.service.ports.http  }}
-        path: /
+      - path: {{ .Values.ingress.path  | default "/" }}
+        pathType: {{ .Values.ingress.pathType  | default "ImplementationSpecific" }}
+        backend:
+          service:
+            name: {{ .Values.appName }}
+            port:
+              number: {{ .Values.service.ports.http | default 8080 }}
 {{ end }}
 {{ end }}
 

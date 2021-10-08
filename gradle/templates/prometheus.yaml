@@ -5,6 +5,7 @@ kind: ServiceMonitor
 metadata:
   name: {{ .Values.appName }}
   labels:
+    app: {{ .Values.appName }}
     release: monitoring
 spec:
   selector:
@@ -25,7 +26,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   labels:
-    app: prometheus-operator
+    app: {{ .Values.appName }}
     release: monitoring
   name: {{ .Values.appName }}
   namespace: {{ .Release.Namespace }}

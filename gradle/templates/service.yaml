@@ -3,15 +3,10 @@ kind: Service
 metadata:
   name: {{ .Values.appName  }}
   labels:
-    name: {{ .Values.appName }}
+    app: {{ .Values.appName }}
     revision: {{ .Chart.Version | replace "+" "_"  }}
-  # annotations:
-  #   service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
 spec:
   type: {{ .Values.service.type }}
-#  {{- if .Values.service.headless  }}
-#  clusterIP: None
-#  {{- end }}
   ports:
   {{- range $key, $val := .Values.service.ports }}
   - port: {{ $val }}

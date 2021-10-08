@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    name: {{ .Values.appName }}
+    app: {{ .Values.appName }}
     revision: {{ .Chart.Version | replace "+" "_"  }}
   name: {{ .Values.appName  }}
 spec:

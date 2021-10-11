@@ -10,17 +10,17 @@ service:
 
 resources:
   limits:
-    cpu: 1
-    memory: 1Gi
+    cpu: 500m
+    memory: 500Mi
   requests:
     cpu: 100m
-    memory: 500Mi
+    memory: 100Mi
 
 cd:
   cluster: local-test
 
 deployment:
-  replicas: 1
+  replicas: 2
   image:
     pullPolicy: IfNotPresent
     name: "docker-local.jfrog.io/demo-java-server:latest"

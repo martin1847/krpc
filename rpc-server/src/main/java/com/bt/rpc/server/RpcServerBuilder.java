@@ -137,8 +137,10 @@ public class RpcServerBuilder {
 				boolean needMeta = clz != RpcMetaService.class;
 				for(MethodStub stub : RefUtils.toRpcMethods(clz)){
 
-					MethodInvocation methodInvokation = new MethodInvocation(clz ,serviceToInvoke, stub, filterChain);
-					serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
+					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
+					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
+
+					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
 						var methodArgs = stub.method.getParameterTypes();
 

@@ -4,6 +4,7 @@ import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.internal.InputMessage;
 import io.grpc.Context;
+import io.grpc.Metadata;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -23,23 +24,28 @@ public class ServerContext extends AbstractContext<ServerResult, InputMessage,Se
 
     static String applicationName;
 
+    private Metadata headers;
+
     public static void regGlobalFilter(ServerFilter filter) {
         GLOBAL_FILTERS.add(filter);
     } //;//GlobalFilters.Add(filter);
 
 
+
     public ServerContext(Class service, String method, Type resDto, InputMessage arg,
                          FilterChain<ServerResult,ServerContext> lastChain,
-                         Function<InputMessage,Object> readInput) {
+                         Function<InputMessage,Object> readInput,Metadata headers) {
         super(service, method, resDto, arg, lastChain);
         this.readInput = readInput;
+        this.headers = headers;
     }
 
     public Function<InputMessage,Object> readInput;
 
-//    public void setReadInput(Function<InputMessage, Object[]> readInput) {
-//        this.readInput = readInput;
-//    }
+    public Metadata getHeaders(){
+        return headers;
+    }
+
 
     public static ServerContext current(){
         return  LOCAL.get();

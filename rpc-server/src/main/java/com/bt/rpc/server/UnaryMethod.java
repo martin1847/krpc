@@ -4,11 +4,13 @@ import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.internal.InputMessage;
 import com.bt.rpc.internal.OutputMessage;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.util.EnvUtils;
 import com.bt.rpc.util.MethodStub;
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
-import io.grpc.stub.ServerCalls.UnaryMethod;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,9 +18,9 @@ import java.lang.invoke.MethodHandles;
 
 
 @Slf4j
-public class MethodInvocation implements UnaryMethod<InputMessage, OutputMessage> {
+public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMessage, OutputMessage> {
     private final Class service;
-    private final Object serviceToInvoke;
+    //private final Object serviceToInvoke;
     private final MethodStub stub;
     private final FilterChain<ServerResult, ServerContext> filterChain;
 
@@ -39,8 +41,8 @@ public class MethodInvocation implements UnaryMethod<InputMessage, OutputMessage
 //    }
 
 
-    public MethodInvocation(Class service, Object serviceToInvoke, MethodStub stub, FilterChain<ServerResult, ServerContext> filterChain) {
-        this.serviceToInvoke = serviceToInvoke;
+    public UnaryMethod(Class service, Object serviceToInvoke, MethodStub stub, FilterChain<ServerResult, ServerContext> filterChain) {
+        //this.serviceToInvoke = serviceToInvoke;
         this.stub = stub;
         this.filterChain = filterChain;
         this.service = service;
@@ -100,39 +102,24 @@ public class MethodInvocation implements UnaryMethod<InputMessage, OutputMessage
 
 
     public ServerResult invoke(ServerContext req) throws Throwable {
-        //Object param = req.readInput.apply(req.getArg());
-
-//        try {
         var res = invoke.invoke(req);
         return new ServerResult( res, stub.writeOutput);
-//        } catch (Throwable e) {
-//            if(e instanceof RuntimeException){
-//                throw (RuntimeException)e;
-//            }
-//            throw new RuntimeException(e);t
-//        }
-
-//        try {
-        //RpcResult res = null;
-//        try {
-//            var res = (RpcResult) stub.method.invoke(serviceToInvoke, params);
-//            return new ServerResult(res,stub.writeOutput);
-//        } catch ( IllegalAccessException | InvocationTargetException e) {
-//            log.error("Unreached Code for IllegalAccess : ",e);
-//            throw  new RuntimeException("Unreached Code for IllegalAccess : ",e);
-//        }
-
-//        } catch (Exception e) {
-//            log.error("",e);
-//            throw  new RuntimeException(" Ref Invoke Failed !! ",e);
-//        }
     }
 
+    // https://github.com/openzipkin/brave
 
+
+    static final Key<String> TRACE_ID   = Metadata.Key.of(EnvUtils.env("TRACE_ID","x-b3-traceid")
+            , Metadata.ASCII_STRING_MARSHALLER);
+    static final Key<String> SPAN_ID   = Metadata.Key.of(EnvUtils.env("SPAN_ID","x-b3-spanid")
+                , Metadata.ASCII_STRING_MARSHALLER);
+    static final String      HOST_NAME = EnvUtils.hostName();
+    // [%X{traceId}/%X{spanId}]
     @Override
     public void invoke(InputMessage im, StreamObserver<OutputMessage> responseObserver) {
 
-        var ctx = new ServerContext(service, methodName, stub.returnType, im, this::invoke, stub.readInput);
+        var ctx = new ServerContext(service, methodName, stub.returnType,
+                im, this::invoke, stub.readInput, ((UnaryCallObserver)responseObserver).getHeaders());
         ServerContext.LOCAL.set(ctx);
 
         //1.  https://github.com/perfmark/perfmark
@@ -144,14 +131,21 @@ public class MethodInvocation implements UnaryMethod<InputMessage, OutputMessage
             var res = filterChain.invoke(ctx);
             responseObserver.onNext(res.output);
             responseObserver.onCompleted();
-        } catch (StatusException | StatusRuntimeException ex) {
-            log.error("Got Customer Status Rpc StatusException : ", ex);
-            responseObserver.onError(ex);
+        //} catch (StatusException | StatusRuntimeException ex) {
+        //    //var traceId = Context.key()
+        //    //var msg = [] +"" +ServerContext.applicationName() + ":"
+        //    log.error("Got Customer StatusException : ", ex);
+        //    responseObserver.onError(ex);
         } catch (Throwable ex) {
-            var msg = ServerContext.applicationName() + "(" + ex.getClass().getName() + "):" + ex.getMessage();
+            var msg = HOST_NAME;
+            var headers = ctx.getHeaders();
+            if(null!=headers){
+                msg += ":"+headers.get(TRACE_ID)+":"+headers.get(SPAN_ID);
+            }
+
             log.error(msg, ex);
-            responseObserver.onError(
-                    Status.INTERNAL.withDescription(msg).withCause(ex).asRuntimeException()
+            responseObserver.onError( ex
+                    //Status.INTERNAL.withDescription(msg).withCause(ex).asRuntimeException()
             );
         } finally {
             ServerContext.LOCAL.remove();

@@ -122,19 +122,17 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
             responseObserver.onCompleted();
         } catch (Throwable ex) {
             // will cached by GraalVM
-            var msg = EnvUtils.hostName();
             var headers = ctx.getHeaders();
-            if (null != headers) {
-                msg += ":" + headers.get(TRACE_ID) + ":" + headers.get(SPAN_ID);
-            }
-            log.error(msg, ex);
+            var msg = EnvUtils.hostName() + ":" + headers.get(TRACE_ID);
+            log.error(msg + ":" + headers.get(SPAN_ID), ex);
 
             Throwable wrapToClient = ex;
             if (ex instanceof InvocationTargetException) {
                 wrapToClient = ex.getCause();
             }
             if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
-                wrapToClient = Status.INTERNAL.withDescription(msg + " " + wrapToClient.getMessage())
+                wrapToClient = Status.INTERNAL.withDescription(
+                                msg + " - " + wrapToClient.getClass().getName() + ": " + wrapToClient.getMessage())
                         .withCause(wrapToClient).asRuntimeException();
             }
             responseObserver.onError(wrapToClient);

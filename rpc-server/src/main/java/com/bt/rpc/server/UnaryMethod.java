@@ -103,6 +103,8 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
             , Metadata.ASCII_STRING_MARSHALLER);
 
     //static final String      HOST_NAME = ;
+    // https://quarkus.io/guides/logging
+    // TODO json MDC
     // [%X{traceId}/%X{spanId}]
     @Override
     public void invoke(InputMessage im, StreamObserver<OutputMessage> responseObserver) {

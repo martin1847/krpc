@@ -7,12 +7,12 @@ variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 #  APP_NAME: course
 
-
-cache: &global_cache
-  key: build-$CI_COMMIT_REF_SLUG
-  paths:
-    - ./*/build/
-  policy: push
+#
+#cache: &global_cache
+#  key: build-$CI_COMMIT_REF_SLUG
+#  paths:
+#    - ./*/build/
+#  policy: push
 
 .docker-var:
   variables:
@@ -26,7 +26,12 @@ build:
     - key: gradle-deps
       paths:
         - .gradle/caches
-    - <<: *global_cache
+#    - <<: *global_cache
+#https://docs.gitlab.com/ee/ci/yaml/index.html#artifactsreportsjunit
+  artifacts:
+    expire_in: 7 days
+    paths:
+      - ./*/build/
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
   script:
@@ -38,9 +43,9 @@ build:
 docker:
   stage: deploy
   extends: .docker-var
-  cache:
-    <<: *global_cache
-    policy: pull
+#  cache:
+#    <<: *global_cache
+#    policy: pull
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]

@@ -113,7 +113,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
             , Metadata.ASCII_STRING_MARSHALLER);
     static final Key<String> SPAN_ID   = Metadata.Key.of(EnvUtils.env("SPAN_ID","x-b3-spanid")
                 , Metadata.ASCII_STRING_MARSHALLER);
-    static final String      HOST_NAME = EnvUtils.hostName();
+    //static final String      HOST_NAME = ;
     // [%X{traceId}/%X{spanId}]
     @Override
     public void invoke(InputMessage im, StreamObserver<OutputMessage> responseObserver) {
@@ -131,17 +131,12 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
             var res = filterChain.invoke(ctx);
             responseObserver.onNext(res.output);
             responseObserver.onCompleted();
-        //} catch (StatusException | StatusRuntimeException ex) {
-        //    //var traceId = Context.key()
-        //    //var msg = [] +"" +ServerContext.applicationName() + ":"
-        //    log.error("Got Customer StatusException : ", ex);
-        //    responseObserver.onError(ex);
         } catch (Throwable ex) {
-            var msg = HOST_NAME+":";
+            // will cached by GraalVM
+            var msg = EnvUtils.hostName()+":";
             var headers = ctx.getHeaders();
             if(null!=headers){
                 msg += " "+headers.get(TRACE_ID)+":"+headers.get(SPAN_ID)+":";
-                log.debug(headers.toString());
             }
             log.error(msg, ex);
             Throwable wrapError = ex;

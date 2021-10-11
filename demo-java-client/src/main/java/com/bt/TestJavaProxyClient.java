@@ -145,4 +145,8 @@ public class TestJavaProxyClient {
             client.shutdown();
         }
     }
+
+    public static void main(String[] args) throws Exception {
+        test("127.0.0.1");
+    }
 }

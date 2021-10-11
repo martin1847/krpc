@@ -15,7 +15,7 @@ import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.invoke.MethodHandles;
-
+import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
 public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMessage, OutputMessage> {
@@ -137,16 +137,22 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
         //    log.error("Got Customer StatusException : ", ex);
         //    responseObserver.onError(ex);
         } catch (Throwable ex) {
-            var msg = HOST_NAME;
+            var msg = HOST_NAME+":";
             var headers = ctx.getHeaders();
             if(null!=headers){
-                msg += ":"+headers.get(TRACE_ID)+":"+headers.get(SPAN_ID);
+                msg += " "+headers.get(TRACE_ID)+":"+headers.get(SPAN_ID)+":";
+                log.debug(headers.toString());
             }
-
             log.error(msg, ex);
-            responseObserver.onError( ex
-                    //Status.INTERNAL.withDescription(msg).withCause(ex).asRuntimeException()
-            );
+            Throwable wrapError = ex;
+            if(ex instanceof InvocationTargetException){
+                wrapError = ex.getCause();
+            }
+            if (! (wrapError instanceof StatusException) &&   ! (wrapError instanceof StatusRuntimeException)) {
+                wrapError =Status.INTERNAL.withDescription(msg +" " + wrapError.getMessage())
+                        .withCause(wrapError).asRuntimeException();
+            }
+            responseObserver.onError(wrapError);
         } finally {
             ServerContext.LOCAL.remove();
 

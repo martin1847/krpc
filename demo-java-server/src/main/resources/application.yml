@@ -1,6 +1,6 @@
 rpc:
   server:
-    name: Test Demo Server
+    name: demo-java-server
     port: 50051
 
 

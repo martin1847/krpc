@@ -5,8 +5,10 @@ import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.demo.service.impl.HelloServiceImpl;
 import com.bt.rpc.server.RpcServerBuilder;
 import io.grpc.Server;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.logging.Logger;
 
 
 /**
@@ -15,10 +17,11 @@ import java.util.logging.Logger;
  *
  * @author Martin.C
  */
+
 public class ProxyServer {
     private Server server;
 
-    private static final Logger logger = Logger.getLogger(ProxyServer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
 
     private int port = RpcConstants.DEFAULT_PORT;
     private void start() throws Exception {
@@ -65,10 +68,15 @@ public class ProxyServer {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        final ProxyServer server = new ProxyServer();
-        server.start();
-//        GrpcMain.invoke();
-        server.blockUntilShutdown();
+    @Test
+    public void testServer() throws Exception {
+        if("yyc".equals(System.getenv("LOGNAME"))) {
+            final ProxyServer server = new ProxyServer();
+            server.start();
+    //        GrpcMain.invoke();
+            server.blockUntilShutdown();
+        }else{
+            logger.info("Skip Test Server");
+        }
     }
 }

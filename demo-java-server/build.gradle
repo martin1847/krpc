@@ -63,6 +63,7 @@ dependencies {
 
 //    implementation 'io.quarkus:quarkus-resteasy'
     testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
 //    testImplementation 'io.rest-assured:rest-assured'
 }
 

@@ -19,27 +19,22 @@ import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
 public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMessage, OutputMessage> {
-    private final Class service;
+    private final Class                                    service;
     //private final Object serviceToInvoke;
-    private final MethodStub stub;
+    private final MethodStub                               stub;
     private final FilterChain<ServerResult, ServerContext> filterChain;
-
 
     private final String methodName;
 
-
-
     DynamicInvoke invoke;
 
-
-//    static {
-//        // -J-Djava.util.logging.manager=org.jboss.logmanager.LogManager
-//        // java.vendor = GraalVM Community
-//        System.out.println("Java.vendor... :" + System.getProperty("java.vendor"));
-//        System.out.println("java.vm.name... :" + System.getProperty("java.vm.name"));
-//        System.out.println("Java.logging.manager :" + System.getProperty("java.util.logging.manager"));
-//    }
-
+    //    static {
+    //        // -J-Djava.util.logging.manager=org.jboss.logmanager.LogManager
+    //        // java.vendor = GraalVM Community
+    //        System.out.println("Java.vendor... :" + System.getProperty("java.vendor"));
+    //        System.out.println("java.vm.name... :" + System.getProperty("java.vm.name"));
+    //        System.out.println("Java.logging.manager :" + System.getProperty("java.util.logging.manager"));
+    //    }
 
     public UnaryMethod(Class service, Object serviceToInvoke, MethodStub stub, FilterChain<ServerResult, ServerContext> filterChain) {
         //this.serviceToInvoke = serviceToInvoke;
@@ -51,24 +46,21 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
         //"java.vm.name :Substrate VM"
         boolean useRefDirect = System.getProperty("java.vm.name").contains("Substrate");
 
-
-        if(useRefDirect){
+        if (useRefDirect) {
             if (stub.readInput == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
             } else {
 
-                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,sc.readInput.apply(sc.getArg()));
+                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, sc.readInput.apply(sc.getArg()));
             }
             return;
         }
 
-
         var publicLookup = MethodHandles.publicLookup();
-//        var mt = MethodType.methodType(stub.method.getReturnType(),stub.method.getParameterTypes());
+        //        var mt = MethodType.methodType(stub.method.getReturnType(),stub.method.getParameterTypes());
 
         try {
             //var mh = publicLookup.findVirtual(service,stub.method.getName(),mt).bindTo(serviceToInvoke);
-            
 
             // vs JavassistProxyFactory https://bytebuddy.net/#/
             var mh = publicLookup.unreflect(stub.method).bindTo(serviceToInvoke);
@@ -79,19 +71,17 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
             } else {
 
                 // may has method override issue , int / string  both change to Object Param,
-//                var objInputMh=mh.asType(mh.type().changeParameterType(0, Object.class));
-//                invoke = sc ->  (RpcResult) objInputMh.invokeExact(sc.readInput.apply(sc.getArg()));
+                //                var objInputMh=mh.asType(mh.type().changeParameterType(0, Object.class));
+                //                invoke = sc ->  (RpcResult) objInputMh.invokeExact(sc.readInput.apply(sc.getArg()));
                 invoke = sc -> (RpcResult) mh.invoke(sc.readInput.apply(sc.getArg()));
             }
 
-
         } catch (Exception e) {
-            log.error("To RuntimeException : ",e);
+            log.error("To RuntimeException : ", e);
             throw new RuntimeException(e);
         }
 
     }
-
 
     @FunctionalInterface
     interface DynamicInvoke<DTO> {
@@ -100,26 +90,25 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
 
     }
 
-
     public ServerResult invoke(ServerContext req) throws Throwable {
         var res = invoke.invoke(req);
-        return new ServerResult( res, stub.writeOutput);
+        return new ServerResult(res, stub.writeOutput);
     }
 
     // https://github.com/openzipkin/brave
 
-
-    static final Key<String> TRACE_ID   = Metadata.Key.of(EnvUtils.env("TRACE_ID","x-b3-traceid")
+    static final Key<String> TRACE_ID = Metadata.Key.of(EnvUtils.env("TRACE_ID", "x-b3-traceid")
             , Metadata.ASCII_STRING_MARSHALLER);
-    static final Key<String> SPAN_ID   = Metadata.Key.of(EnvUtils.env("SPAN_ID","x-b3-spanid")
-                , Metadata.ASCII_STRING_MARSHALLER);
+    static final Key<String> SPAN_ID  = Metadata.Key.of(EnvUtils.env("SPAN_ID", "x-b3-spanid")
+            , Metadata.ASCII_STRING_MARSHALLER);
+
     //static final String      HOST_NAME = ;
     // [%X{traceId}/%X{spanId}]
     @Override
     public void invoke(InputMessage im, StreamObserver<OutputMessage> responseObserver) {
 
         var ctx = new ServerContext(service, methodName, stub.returnType,
-                im, this::invoke, stub.readInput, ((UnaryCallObserver)responseObserver).getHeaders());
+                im, this::invoke, stub.readInput, ((UnaryCallObserver) responseObserver).getHeaders());
         ServerContext.LOCAL.set(ctx);
 
         //1.  https://github.com/perfmark/perfmark
@@ -133,21 +122,22 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
             responseObserver.onCompleted();
         } catch (Throwable ex) {
             // will cached by GraalVM
-            var msg = EnvUtils.hostName()+":";
+            var msg = EnvUtils.hostName();
             var headers = ctx.getHeaders();
-            if(null!=headers){
-                msg += " "+headers.get(TRACE_ID)+":"+headers.get(SPAN_ID)+":";
+            if (null != headers) {
+                msg += ":" + headers.get(TRACE_ID) + ":" + headers.get(SPAN_ID);
             }
             log.error(msg, ex);
-            Throwable wrapError = ex;
-            if(ex instanceof InvocationTargetException){
-                wrapError = ex.getCause();
+
+            Throwable wrapToClient = ex;
+            if (ex instanceof InvocationTargetException) {
+                wrapToClient = ex.getCause();
             }
-            if (! (wrapError instanceof StatusException) &&   ! (wrapError instanceof StatusRuntimeException)) {
-                wrapError =Status.INTERNAL.withDescription(msg +" " + wrapError.getMessage())
-                        .withCause(wrapError).asRuntimeException();
+            if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
+                wrapToClient = Status.INTERNAL.withDescription(msg + " " + wrapToClient.getMessage())
+                        .withCause(wrapToClient).asRuntimeException();
             }
-            responseObserver.onError(wrapError);
+            responseObserver.onError(wrapToClient);
         } finally {
             ServerContext.LOCAL.remove();
 

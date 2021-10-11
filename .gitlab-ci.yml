@@ -72,6 +72,7 @@ chart:
   stage: deploy
   extends: .docker-var
   cache: []
+  dependencies: []
   image:
     name: jcr.botaoyx.com/img/helm-kubectl:3.5.3
   script:

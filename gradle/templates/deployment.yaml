@@ -16,7 +16,7 @@ spec:
         sidecar.istio.io/inject: "{{ .Values.deployment.istioInject | default true }}"
       labels:
         app: {{ .Values.appName }}
-        lang: java
+        component: java
     spec:
 #     serviceAccountName: {{ .Values.deployment.serviceAccount | default "fabric8-service-account" }}
 #      securityContext:

@@ -17,4 +17,8 @@ https://github.com/improbable-eng/grpc-web/tree/master/client/grpc-web
 
 
 # docker run --rm -it --mount type=bind,source="$(pwd)"/ts-example,dst=/tmp/ts-example grpcweb/prereqs bash
-protoc internal.proto  --js_out=import_style=commonjs,binary:js --grpc-web_out=import_style=commonjs+dts,mode=grpcweb:js
+# https://www.npmjs.com/package/grpc-web
+protoc internal.proto  --js_out=import_style=commonjs,binary:js --grpc-web_out=import_style=typescript,mode=grpcweb:gweb
+
+protoc internal.proto  --js_out=import_style=commonjs,binary:js --grpc-web_out=import_style=commonjs+dts,mode=grpcweb:gcts
+

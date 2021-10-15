@@ -79,12 +79,8 @@ export class GrpcClient {
         input.setB(JSON.stringify(request));
     }
     if (callback !== undefined) {
-    //  static getHostname(method, methodDescriptor) {
-//           // method = hostname + methodDescriptor.name(relative path of this method)
-//           return method.substr(0, method.length - methodDescriptor.name.length);
-    //
-    console.log("client 86 : " + this.client)
-      return this.client_.rpcCall(
+
+     return this.client_.rpcCall(
         this.hostname_ + method,
         input,
         metadata || {},
@@ -112,9 +108,9 @@ export class GrpcClient {
        const result = new RpcResult();
        result.code = response.getC();
        result.message = response.getM();
-       console.log("response : " + response);
        if(internal_pb.SerEnum.JSON == response.getSe()){
-            result.data = JSON.parse(response.getB());
+            var json = new TextDecoder("utf-8").decode(response.getB());
+            result.data = JSON.parse(json);
        }else if(null !== response.getS()){
             result.data =  response.getS();
        }else{

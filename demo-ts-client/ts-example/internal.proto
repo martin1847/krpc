@@ -22,7 +22,7 @@ package com.bt.rpc.internal;
 //   rpc Mailbox (stream InputMessage) returns (stream OutputMessage) {}
 // }
 
-service Skeleton {
+service Grpc {
   rpc call (InputMessage) returns (OutputMessage);
 }
 
@@ -38,7 +38,7 @@ enum SerEnum {
 
 message InputMessage {
   SerEnum se = 1; 
-  bytes b  = 2;
+  string b  = 2;
 }
 
 message OutputMessage {

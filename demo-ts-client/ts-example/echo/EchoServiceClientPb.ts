@@ -27,7 +27,7 @@ export class EchoServiceClient {
                options?: null | { [index: string]: any; }) {
     if (!options) options = {};
     if (!credentials) credentials = {};
-    options['format'] = 'binary';
+    options['format'] = 'text';
 
     this.client_ = new grpcWeb.GrpcWebClientBase(options);
     this.hostname_ = hostname;
@@ -35,7 +35,10 @@ export class EchoServiceClient {
     this.options_ = options;
   }
 
-  methodInfoEcho = new grpcWeb.AbstractClientBase.MethodInfo(
+  methodInfoEcho = new grpcWeb.MethodDescriptor(
+    '/grpc.gateway.testing.EchoService/Echo',
+    grpcWeb.MethodType.UNARY,
+    echo_pb.EchoRequest,
     echo_pb.EchoResponse,
     (request: echo_pb.EchoRequest) => {
       return request.serializeBinary();
@@ -50,13 +53,13 @@ export class EchoServiceClient {
   echo(
     request: echo_pb.EchoRequest,
     metadata: grpcWeb.Metadata | null,
-    callback: (err: grpcWeb.Error,
+    callback: (err: grpcWeb.RpcError,
                response: echo_pb.EchoResponse) => void): grpcWeb.ClientReadableStream<echo_pb.EchoResponse>;
 
   echo(
     request: echo_pb.EchoRequest,
     metadata: grpcWeb.Metadata | null,
-    callback?: (err: grpcWeb.Error,
+    callback?: (err: grpcWeb.RpcError,
                response: echo_pb.EchoResponse) => void) {
     if (callback !== undefined) {
       return this.client_.rpcCall(
@@ -75,7 +78,10 @@ export class EchoServiceClient {
     this.methodInfoEcho);
   }
 
-  methodInfoEchoAbort = new grpcWeb.AbstractClientBase.MethodInfo(
+  methodInfoEchoAbort = new grpcWeb.MethodDescriptor(
+    '/grpc.gateway.testing.EchoService/EchoAbort',
+    grpcWeb.MethodType.UNARY,
+    echo_pb.EchoRequest,
     echo_pb.EchoResponse,
     (request: echo_pb.EchoRequest) => {
       return request.serializeBinary();
@@ -90,13 +96,13 @@ export class EchoServiceClient {
   echoAbort(
     request: echo_pb.EchoRequest,
     metadata: grpcWeb.Metadata | null,
-    callback: (err: grpcWeb.Error,
+    callback: (err: grpcWeb.RpcError,
                response: echo_pb.EchoResponse) => void): grpcWeb.ClientReadableStream<echo_pb.EchoResponse>;
 
   echoAbort(
     request: echo_pb.EchoRequest,
     metadata: grpcWeb.Metadata | null,
-    callback?: (err: grpcWeb.Error,
+    callback?: (err: grpcWeb.RpcError,
                response: echo_pb.EchoResponse) => void) {
     if (callback !== undefined) {
       return this.client_.rpcCall(
@@ -115,7 +121,10 @@ export class EchoServiceClient {
     this.methodInfoEchoAbort);
   }
 
-  methodInfoNoOp = new grpcWeb.AbstractClientBase.MethodInfo(
+  methodInfoNoOp = new grpcWeb.MethodDescriptor(
+    '/grpc.gateway.testing.EchoService/NoOp',
+    grpcWeb.MethodType.UNARY,
+    echo_pb.Empty,
     echo_pb.Empty,
     (request: echo_pb.Empty) => {
       return request.serializeBinary();
@@ -130,13 +139,13 @@ export class EchoServiceClient {
   noOp(
     request: echo_pb.Empty,
     metadata: grpcWeb.Metadata | null,
-    callback: (err: grpcWeb.Error,
+    callback: (err: grpcWeb.RpcError,
                response: echo_pb.Empty) => void): grpcWeb.ClientReadableStream<echo_pb.Empty>;
 
   noOp(
     request: echo_pb.Empty,
     metadata: grpcWeb.Metadata | null,
-    callback?: (err: grpcWeb.Error,
+    callback?: (err: grpcWeb.RpcError,
                response: echo_pb.Empty) => void) {
     if (callback !== undefined) {
       return this.client_.rpcCall(
@@ -155,7 +164,10 @@ export class EchoServiceClient {
     this.methodInfoNoOp);
   }
 
-  methodInfoServerStreamingEcho = new grpcWeb.AbstractClientBase.MethodInfo(
+  methodInfoServerStreamingEcho = new grpcWeb.MethodDescriptor(
+    '/grpc.gateway.testing.EchoService/ServerStreamingEcho',
+    grpcWeb.MethodType.SERVER_STREAMING,
+    echo_pb.ServerStreamingEchoRequest,
     echo_pb.ServerStreamingEchoResponse,
     (request: echo_pb.ServerStreamingEchoRequest) => {
       return request.serializeBinary();
@@ -174,7 +186,10 @@ export class EchoServiceClient {
       this.methodInfoServerStreamingEcho);
   }
 
-  methodInfoServerStreamingEchoAbort = new grpcWeb.AbstractClientBase.MethodInfo(
+  methodInfoServerStreamingEchoAbort = new grpcWeb.MethodDescriptor(
+    '/grpc.gateway.testing.EchoService/ServerStreamingEchoAbort',
+    grpcWeb.MethodType.SERVER_STREAMING,
+    echo_pb.ServerStreamingEchoRequest,
     echo_pb.ServerStreamingEchoResponse,
     (request: echo_pb.ServerStreamingEchoRequest) => {
       return request.serializeBinary();

@@ -1,49 +1,21 @@
-/**
- *
- * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
-
 import * as grpcWeb from 'grpc-web';
 import * as $ from 'jquery';
 
 // Uncomment either one of the following:
 // Option 1: import_style=commonjs+dts
-// import {EchoServiceClient} from './echo_grpc_web_pb';
+//import {EchoServiceClient} from './echo_grpc_web_pb';
 
 // Option 2: import_style=typescript
-import {RpcResult,GrpcClient} from './grpc/GrpcClientPb';
+import {EchoServiceClient} from './EchoServiceClientPb';
 
-// import {EchoRequest, EchoResponse, ServerStreamingEchoRequest, ServerStreamingEchoResponse} from './echo_pb';
-
-class TimeReq {
-    name: string;
-    age:  number;
-    constructor(name: string, age: number) {
-        this.name = name;
-        this.age = age;
-    }
-}
+import {EchoRequest, EchoResponse, ServerStreamingEchoRequest, ServerStreamingEchoResponse} from './echo_pb';
 
 class EchoApp {
   static readonly INTERVAL = 500;  // ms
   static readonly MAX_STREAM_MESSAGES = 50;
 
-//   stream?: grpcWeb.ClientReadableStream<internal_pb.OutputMessage>;
 
-  constructor(public echoService: GrpcClient) {}
+  constructor(public echoService: EchoServiceClient) {}
 
   static addMessage(message: string, cssClass: string) {
     $('#first').after($('<div/>').addClass('row').append($('<h2/>').append(
@@ -60,18 +32,20 @@ class EchoApp {
 
   echo(msg: string) {
     EchoApp.addLeftMessage(msg);
-    const request = new TimeReq(msg,18);
-    const call = this.echoService.call("hello",
+    const request = new EchoRequest();
+    request.setMessage(msg);
+    const call = this.echoService.echo(
         request, {'custom-header-1': 'value1'},
-        (err: grpcWeb.RpcError, response: RpcResult) => {
+        (err: grpcWeb.RpcError, response: EchoResponse) => {
           if (err) {
             if (err.code !== grpcWeb.StatusCode.OK) {
               EchoApp.addRightMessage(
                   'Error code: ' + err.code + ' "' + err.message + '"');
             }
           } else {
-                console.log(" client.ts line 73 get result :" + JSON.stringify(response));
-              EchoApp.addRightMessage("response : "+ response);
+            setTimeout(() => {
+              EchoApp.addRightMessage(response.getMessage());
+            }, EchoApp.INTERVAL);
           }
         });
     call.on('status', (status: grpcWeb.Status) => {
@@ -82,12 +56,15 @@ class EchoApp {
     });
   }
 
+
+
   send(e: {}) {
     const _msg: string = $('#msg').val() as string;
     const msg = _msg.trim();
     $('#msg').val('');  // clear the text box
     if (!msg) return false;
-	this.echo(msg);
+
+      this.echo(msg);
   }
 
   load() {
@@ -105,7 +82,7 @@ class EchoApp {
   }
 }
 
-const echoService = new GrpcClient('http://localhost:8080', 'com.bt.demo.TimeService');
+const echoService = new EchoServiceClient('http://localhost:8080', null, null);
 
 const echoApp = new EchoApp(echoService);
 echoApp.load();

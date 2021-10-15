@@ -16,19 +16,25 @@
 # docker run --rm -it --mount type=bind,source="$(pwd)"/ts-example,dst=/tmp/ts-example grpcweb/prereqs bash
 
 
-FROM grpcweb/prereqs
+FROM grpcweb/prereqs:1.3.0
 
 RUN npm install -g typescript
 
 # WORKDIR /github/grpc-web/net/grpc/gateway/examples/echo
 #
-# RUN protoc -I=. echo.proto \
-# --js_out=import_style=commonjs:./ts-example \
-# --grpc-web_out=import_style=commonjs+dts,mode=grpcwebtext:./ts-example
 
 
 copy ./ts-example /tmp/ts-example
 WORKDIR /tmp/ts-example
+
+RUN protoc -I=. internal.proto \
+	--js_out=import_style=commonjs,binary:./grpc \
+	--grpc-web_out=import_style=typescript,mode=grpcweb:./grpc
+
+RUN protoc -I=. echo.proto \
+	--js_out=import_style=commonjs:./ \
+	--grpc-web_out=import_style=typescript,mode=grpcwebtext:./ && ls -la
+
 
 
 # RUN npm install && \
@@ -48,4 +54,4 @@ WORKDIR /var/www/html
 EXPOSE 8081
 CMD ["python", "-m", "SimpleHTTPServer", "8081"]
 
-# docker build -t grpcweb/ts-client
+# docker build -t grpcweb/ts-client:ts -f my.Dockerfile

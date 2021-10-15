@@ -24,9 +24,8 @@ import * as grpcWeb from 'grpc-web';
 // import {EchoServiceClient} from './echo_grpc_web_pb';
 
 // Option 2: import_style=typescript
-import {RpcResult,GrpcClient} from './grpc/GrpcClientPb';
-
-// import {EchoRequest, EchoResponse, ServerStreamingEchoRequest, ServerStreamingEchoResponse} from './echo_pb';
+import {RpcResult,GrpcClient} from '../grpc/GrpcClientPb';
+import {OutputMessage} from '../grpc/internal_pb';
 
 class TimeReq {
     name: string;
@@ -36,20 +35,19 @@ class TimeReq {
         this.age = age;
     }
 }
-const timeService = new GrpcClient('http://localhost:8080', 'com.bt.demo.TimeService');
+const timeService = new GrpcClient('http://host.docker.internal:8080', 'com.bt.demo.TimeService');
 
-const request = new TimeReq(msg,18);
+const request = new TimeReq("hello-node-jest",18);
 const call = timeService.call("hello",
     request, {'custom-header-1': 'value1'},
     (err: grpcWeb.RpcError, response: RpcResult) => {
       if (err) {
         if (err.code !== grpcWeb.StatusCode.OK) {
-          EchoApp.addRightMessage(
+          console.log(
               'Error code: ' + err.code + ' "' + err.message + '"');
         }
       } else {
             console.log(" client.ts line 73 get result :" + JSON.stringify(response));
-          EchoApp.addRightMessage("response : "+ response);
       }
     });
 call.on('status', (status: grpcWeb.Status) => {

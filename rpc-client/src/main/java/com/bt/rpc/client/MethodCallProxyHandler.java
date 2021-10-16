@@ -2,8 +2,8 @@ package com.bt.rpc.client;
 
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.common.FilterInvokeHelper;
-import com.bt.rpc.internal.InputMessage;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.Code;
 import com.bt.rpc.util.MethodStub;
 import com.bt.rpc.util.RefUtils;
@@ -68,10 +68,10 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         @Override
         public ClientResult invoke(ClientContext req) {
-            var input = InputMessage.newBuilder();
+            var input = InputProto.newBuilder();
             stub.writeInput.accept(req.getArg(),input);
 
-            OutputMessage response = rpc(req, input.build());
+            OutputProto response = rpc(req, input.build());
 
 //            var asyncRes =  remoteInvoker.AsyncUnaryCall(stub.GrpcMethod, null, option, input);
             // Console.WriteLine("rpcContext output {0}",output);
@@ -80,7 +80,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
             return new ClientResult(response,stub.readOutput);
         }
 
-        protected OutputMessage rpc(ClientContext req,InputMessage input){
+        protected OutputProto rpc(ClientContext req, InputProto input){
             var option = req.getCallOptions();
             var call = channel.newCall(stub.methodDescriptor, option);
             return ClientCalls.blockingUnaryCall(call, input);
@@ -95,7 +95,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         }
 
         @Override
-        protected OutputMessage rpc(ClientContext req, InputMessage input){
+        protected OutputProto rpc(ClientContext req, InputProto input){
             var cacheKey = cacheManager.cacheKey(stub,input);
             var out = cacheManager.get(stub,cacheKey);
             if(null != out){

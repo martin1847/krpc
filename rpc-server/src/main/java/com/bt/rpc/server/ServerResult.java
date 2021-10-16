@@ -1,7 +1,7 @@
 package com.bt.rpc.server;
 
 import com.bt.rpc.common.ResultWrapper;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
 
 import java.util.function.BiConsumer;
@@ -13,11 +13,11 @@ import java.util.function.BiConsumer;
  */
 public class ServerResult extends ResultWrapper {
 
-    public <DTO> ServerResult(RpcResult<DTO> result, BiConsumer<Object, OutputMessage.Builder> writeOutput)
+    public <DTO> ServerResult(RpcResult<DTO> result, BiConsumer<Object, OutputProto.Builder> writeOutput)
     {
         if (null != result)
         {
-            var output = OutputMessage.newBuilder();
+            var output = OutputProto.newBuilder();
             output.setC(result.getCode().value);
             var msg = result.getMessage();
             if (null != msg)

@@ -10,6 +10,7 @@ import com.bt.rpc.client.SimpleLRUCache;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.demo.filter.TestFilter;
+import com.bt.rpc.util.JSON;
 import com.bt.rpc.util.SerializationUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -121,7 +122,7 @@ public class TestJavaProxyClient {
 
             var rpcObj = timeService.hello(new TimeReq("Java",2020));
             System.out.println(
-                    SerializationUtils.toJson(
+                    JSON.stringify(
                             rpcObj.getData()
                     )
             );
@@ -132,7 +133,7 @@ public class TestJavaProxyClient {
 
             var metaService = client.builder.get(RpcMetaService.class);
             System.out.println(
-                    SerializationUtils.toJson(
+                    JSON.stringify(
                     metaService.listApis().getData()
                     )
             );

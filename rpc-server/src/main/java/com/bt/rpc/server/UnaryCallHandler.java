@@ -4,8 +4,8 @@
  */
 package com.bt.rpc.server;
 
-import com.bt.rpc.internal.InputMessage;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.internal.OutputProto;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
@@ -16,7 +16,7 @@ import io.grpc.Status;
  * @author Martin.C
  * @version 2021/10/11 1:18 PM
  */
-public class UnaryCallHandler implements ServerCallHandler<InputMessage, OutputMessage> {
+public class UnaryCallHandler implements ServerCallHandler<InputProto, OutputProto> {
 
     private final UnaryMethod method;
 
@@ -26,7 +26,7 @@ public class UnaryCallHandler implements ServerCallHandler<InputMessage, OutputM
     }
 
     @Override
-    public ServerCall.Listener<InputMessage> startCall(ServerCall<InputMessage, OutputMessage> call
+    public ServerCall.Listener<InputProto> startCall(ServerCall<InputProto, OutputProto> call
             , Metadata headers) {
         // We expect only 1 request, but we ask for 2 requests here so that if a misbehaving client
         // sends more than 1 requests, ServerCall will catch it. Note that disabling auto
@@ -34,21 +34,21 @@ public class UnaryCallHandler implements ServerCallHandler<InputMessage, OutputM
         call.request(2);
         return new UnaryServerCallListener( call , headers);
     }
-    final class UnaryServerCallListener extends ServerCall.Listener<InputMessage> {
-        private final ServerCall<InputMessage, OutputMessage> call;
-        private final UnaryCallObserver responseObserver;
-        private       boolean                                   canInvoke = true;
-        private boolean wasReady;
-        private InputMessage request;
+    final class UnaryServerCallListener extends ServerCall.Listener<InputProto> {
+        private final ServerCall<InputProto, OutputProto> call;
+        private final UnaryCallObserver                   responseObserver;
+        private       boolean                               canInvoke = true;
+        private       boolean                               wasReady;
+        private       InputProto                            request;
 
         // Non private to avoid synthetic class
-        UnaryServerCallListener(ServerCall<InputMessage, OutputMessage> call, Metadata headers) {
+        UnaryServerCallListener(ServerCall<InputProto, OutputProto> call, Metadata headers) {
             this.call = call;
             this.responseObserver = new UnaryCallObserver(call,headers);
         }
 
         @Override
-        public void onMessage(InputMessage request) {
+        public void onMessage(InputProto request) {
             if (this.request != null) {
                 // Safe to close the call, because the application has not yet been invoked
                 // ServerCalls.TOO_MANY_REQUESTS

@@ -2,7 +2,7 @@ package com.bt.rpc.server;
 
 import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.internal.InputMessage;
+import com.bt.rpc.internal.InputProto;
 import io.grpc.Context;
 import io.grpc.Metadata;
 
@@ -16,7 +16,7 @@ import java.util.function.Function;
  *
  * @author Martin.C
  */
-public class ServerContext extends AbstractContext<ServerResult, InputMessage,ServerContext> {
+public class ServerContext extends AbstractContext<ServerResult, InputProto,ServerContext> {
 
     static final ThreadLocal<ServerContext> LOCAL = new ThreadLocal<>();
 
@@ -32,15 +32,15 @@ public class ServerContext extends AbstractContext<ServerResult, InputMessage,Se
 
 
 
-    public ServerContext(Class service, String method, Type resDto, InputMessage arg,
+    public ServerContext(Class service, String method, Type resDto, InputProto arg,
                          FilterChain<ServerResult,ServerContext> lastChain,
-                         Function<InputMessage,Object> readInput,Metadata headers) {
+                         Function<InputProto,Object> readInput, Metadata headers) {
         super(service, method, resDto, arg, lastChain);
         this.readInput = readInput;
         this.headers = headers;
     }
 
-    public Function<InputMessage,Object> readInput;
+    public Function<InputProto,Object> readInput;
 
     public Metadata getHeaders(){
         return headers;

@@ -15,15 +15,15 @@ public final class Internal {
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_com_bt_rpc_internal_InputMessage_descriptor;
+    internal_static_com_bt_rpc_internal_InputProto_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_com_bt_rpc_internal_InputMessage_fieldAccessorTable;
+      internal_static_com_bt_rpc_internal_InputProto_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_com_bt_rpc_internal_OutputMessage_descriptor;
+    internal_static_com_bt_rpc_internal_OutputProto_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_com_bt_rpc_internal_OutputMessage_fieldAccessorTable;
+      internal_static_com_bt_rpc_internal_OutputProto_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -32,33 +32,29 @@ public final class Internal {
   private static  com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
   static {
-    java.lang.String[] descriptorData = {
-      "\n\016internal.proto\022\023com.bt.rpc.internal\"C\n" +
-      "\014InputMessage\022(\n\002se\030\001 \001(\0162\034.com.bt.rpc.i" +
-      "nternal.SerEnum\022\t\n\001b\030\002 \001(\014\"n\n\rOutputMess" +
-      "age\022\t\n\001c\030\001 \001(\005\022\t\n\001m\030\002 \001(\t\022(\n\002se\030\003 \001(\0162\034." +
-      "com.bt.rpc.internal.SerEnum\022\013\n\001s\030\004 \001(\tH\000" +
-      "\022\013\n\001b\030\005 \001(\014H\000B\003\n\001p*K\n\007SerEnum\022\010\n\004NONE\020\000\022" +
-      "\010\n\004JSON\020\001\022\014\n\010MSG_PACK\020\002\022\013\n\007HESSIAN\020\003\022\010\n\004" +
-      "KRYO\020\004\022\007\n\003PSR\020\005B)\n\023com.bt.rpc.internalP\001" +
-      "\252\002\017Bt.Rpc.Internalb\006proto3"
+    String[] descriptorData = {
+      "\n\016internal.proto\022\023com.bt.rpc.internal\"\032\n" +
+      "\nInputProto\022\014\n\004json\030\001 \001(\t\"I\n\013OutputProto" +
+      "\022\t\n\001c\030\001 \001(\005\022\t\n\001m\030\002 \001(\t\022\016\n\004json\030\003 \001(\tH\000\022\014" +
+      "\n\002bs\030\004 \001(\014H\000B\006\n\004dataB-\n\023com.bt.rpc.inter" +
+      "nalP\001\252\002\023Com.Bt.Rpc.Internalb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         });
-    internal_static_com_bt_rpc_internal_InputMessage_descriptor =
+    internal_static_com_bt_rpc_internal_InputProto_descriptor =
       getDescriptor().getMessageTypes().get(0);
-    internal_static_com_bt_rpc_internal_InputMessage_fieldAccessorTable = new
+    internal_static_com_bt_rpc_internal_InputProto_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_com_bt_rpc_internal_InputMessage_descriptor,
-        new java.lang.String[] { "Se", "B", });
-    internal_static_com_bt_rpc_internal_OutputMessage_descriptor =
+        internal_static_com_bt_rpc_internal_InputProto_descriptor,
+        new String[] { "Json", });
+    internal_static_com_bt_rpc_internal_OutputProto_descriptor =
       getDescriptor().getMessageTypes().get(1);
-    internal_static_com_bt_rpc_internal_OutputMessage_fieldAccessorTable = new
+    internal_static_com_bt_rpc_internal_OutputProto_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_com_bt_rpc_internal_OutputMessage_descriptor,
-        new java.lang.String[] { "C", "M", "Se", "S", "B", "P", });
+        internal_static_com_bt_rpc_internal_OutputProto_descriptor,
+        new String[] { "C", "M", "Json", "Bs", "Data", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -1,8 +1,8 @@
 package com.bt.rpc.server;
 
 import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.internal.InputMessage;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.util.EnvUtils;
 import com.bt.rpc.util.MethodStub;
@@ -18,7 +18,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
-public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMessage, OutputMessage> {
+public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto> {
     private final Class                                    service;
     //private final Object serviceToInvoke;
     private final MethodStub                               stub;
@@ -107,7 +107,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputMe
     // TODO json MDC
     // [%X{traceId}/%X{spanId}]
     @Override
-    public void invoke(InputMessage im, StreamObserver<OutputMessage> responseObserver) {
+    public void invoke(InputProto im, StreamObserver<OutputProto> responseObserver) {
 
         var ctx = new ServerContext(service, methodName, stub.returnType,
                 im, this::invoke, stub.readInput, ((UnaryCallObserver) responseObserver).getHeaders());

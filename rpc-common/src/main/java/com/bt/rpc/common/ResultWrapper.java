@@ -1,23 +1,23 @@
 package com.bt.rpc.common;
 
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.Code;
 
 public class ResultWrapper
     {
 
-        public OutputMessage output;
+        public OutputProto output;
 
         public ResultWrapper(){}
 
-        public ResultWrapper(OutputMessage Output)
+        public ResultWrapper(OutputProto Output)
         {
             this.output = Output;
         }
 
         public ResultWrapper(Code code, String message)
         {
-            var out = OutputMessage.newBuilder();
+            var out = OutputProto.newBuilder();
             out.setC(code.value);
             out.setM(message);
             this.output = out.build();

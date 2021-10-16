@@ -1,7 +1,7 @@
 package com.bt.rpc.client;
 
 import com.bt.rpc.common.ResultWrapper;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.Code;
 import com.bt.rpc.model.RpcResult;
 
@@ -14,14 +14,14 @@ import java.util.function.Function;
  */
 public class ClientResult extends ResultWrapper {
 
-    Function<OutputMessage, Object> ReadOutput;
+    Function<OutputProto, Object> ReadOutput;
 
-    public ClientResult(OutputMessage output, Function<OutputMessage, Object> reader) {
+    public ClientResult(OutputProto output, Function<OutputProto, Object> reader) {
         super(output);
         this.ReadOutput = reader;
     }
 
-    public ClientResult(Code code, String message, Function<OutputMessage, Object> reader) {
+    public ClientResult(Code code, String message, Function<OutputProto, Object> reader) {
         super(code, message);
         this.ReadOutput = reader;
     }

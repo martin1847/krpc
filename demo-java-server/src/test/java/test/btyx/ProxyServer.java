@@ -70,7 +70,9 @@ public class ProxyServer {
 
     @Test
     public void testServer() throws Exception {
-        if("yyc".equals(System.getenv("LOGNAME"))) {
+        if("yyc".equals(System.getenv("LOGNAME"))
+        || "young".equals(System.getenv("LOGNAME"))
+        ) {
             final ProxyServer server = new ProxyServer();
             server.start();
     //        GrpcMain.invoke();

@@ -4,41 +4,40 @@
 package com.bt.rpc.internal;
 
 /**
- * Protobuf type {@code com.bt.rpc.internal.OutputMessage}
+ * Protobuf type {@code com.bt.rpc.internal.OutputProto}
  */
-public final class OutputMessage extends
+public final class OutputProto extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:com.bt.rpc.internal.OutputMessage)
-    OutputMessageOrBuilder {
+    // @@protoc_insertion_point(message_implements:com.bt.rpc.internal.OutputProto)
+    OutputProtoOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use OutputMessage.newBuilder() to construct.
-  private OutputMessage(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use OutputProto.newBuilder() to construct.
+  private OutputProto(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private OutputMessage() {
+  private OutputProto() {
     m_ = "";
-    se_ = 0;
   }
 
-  @java.lang.Override
+  @Override
   @SuppressWarnings({"unused"})
-  protected java.lang.Object newInstance(
+  protected Object newInstance(
       UnusedPrivateParameter unused) {
-    return new OutputMessage();
+    return new OutputProto();
   }
 
-  @java.lang.Override
+  @Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
     return this.unknownFields;
   }
-  private OutputMessage(
+  private OutputProto(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
     if (extensionRegistry == null) {
-      throw new java.lang.NullPointerException();
+      throw new NullPointerException();
     }
     com.google.protobuf.UnknownFieldSet.Builder unknownFields =
         com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -56,26 +55,20 @@ private static final long serialVersionUID = 0L;
             break;
           }
           case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
+            String s = input.readStringRequireUtf8();
 
             m_ = s;
             break;
           }
-          case 24: {
-            int rawValue = input.readEnum();
-
-            se_ = rawValue;
+          case 26: {
+            String s = input.readStringRequireUtf8();
+            dataCase_ = 3;
+            data_ = s;
             break;
           }
           case 34: {
-            java.lang.String s = input.readStringRequireUtf8();
-            pCase_ = 4;
-            p_ = s;
-            break;
-          }
-          case 42: {
-            pCase_ = 5;
-            p_ = input.readBytes();
+            dataCase_ = 4;
+            data_ = input.readBytes();
             break;
           }
           default: {
@@ -99,27 +92,27 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.bt.rpc.internal.Internal.internal_static_com_bt_rpc_internal_OutputMessage_descriptor;
+    return Internal.internal_static_com_bt_rpc_internal_OutputProto_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.bt.rpc.internal.Internal.internal_static_com_bt_rpc_internal_OutputMessage_fieldAccessorTable
+    return Internal.internal_static_com_bt_rpc_internal_OutputProto_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            com.bt.rpc.internal.OutputMessage.class, com.bt.rpc.internal.OutputMessage.Builder.class);
+            OutputProto.class, Builder.class);
   }
 
-  private int pCase_ = 0;
-  private java.lang.Object p_;
-  public enum PCase
+  private int dataCase_ = 0;
+  private Object data_;
+  public enum DataCase
       implements com.google.protobuf.Internal.EnumLite,
-          com.google.protobuf.AbstractMessage.InternalOneOfEnum {
-    S(4),
-    B(5),
-    P_NOT_SET(0);
+          InternalOneOfEnum {
+    JSON(3),
+    BS(4),
+    DATA_NOT_SET(0);
     private final int value;
-    private PCase(int value) {
+    private DataCase(int value) {
       this.value = value;
     }
     /**
@@ -127,16 +120,16 @@ private static final long serialVersionUID = 0L;
      * @return The enum associated with the given number.
      * @deprecated Use {@link #forNumber(int)} instead.
      */
-    @java.lang.Deprecated
-    public static PCase valueOf(int value) {
+    @Deprecated
+    public static DataCase valueOf(int value) {
       return forNumber(value);
     }
 
-    public static PCase forNumber(int value) {
+    public static DataCase forNumber(int value) {
       switch (value) {
-        case 4: return S;
-        case 5: return B;
-        case 0: return P_NOT_SET;
+        case 3: return JSON;
+        case 4: return BS;
+        case 0: return DATA_NOT_SET;
         default: return null;
       }
     }
@@ -145,10 +138,10 @@ private static final long serialVersionUID = 0L;
     }
   };
 
-  public PCase
-  getPCase() {
-    return PCase.forNumber(
-        pCase_);
+  public DataCase
+  getDataCase() {
+    return DataCase.forNumber(
+        dataCase_);
   }
 
   public static final int C_FIELD_NUMBER = 1;
@@ -161,13 +154,13 @@ private static final long serialVersionUID = 0L;
    * <code>int32 c = 1;</code>
    * @return The c.
    */
-  @java.lang.Override
+  @Override
   public int getC() {
     return c_;
   }
 
   public static final int M_FIELD_NUMBER = 2;
-  private volatile java.lang.Object m_;
+  private volatile Object m_;
   /**
    * <pre>
    *detail  message if there is a error ,otherwise  null 
@@ -176,15 +169,15 @@ private static final long serialVersionUID = 0L;
    * <code>string m = 2;</code>
    * @return The m.
    */
-  @java.lang.Override
-  public java.lang.String getM() {
-    java.lang.Object ref = m_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getM() {
+    Object ref = m_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       m_ = s;
       return s;
     }
@@ -197,14 +190,14 @@ private static final long serialVersionUID = 0L;
    * <code>string m = 2;</code>
    * @return The bytes for m.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getMBytes() {
-    java.lang.Object ref = m_;
-    if (ref instanceof java.lang.String) {
+    Object ref = m_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       m_ = b;
       return b;
     } else {
@@ -212,78 +205,63 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int SE_FIELD_NUMBER = 3;
-  private int se_;
+  public static final int JSON_FIELD_NUMBER = 3;
   /**
    * <pre>
-   * Serialization that support both java and c# , and code first , without IDL/proto file
+   *for json
    * </pre>
    *
-   * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-   * @return The enum numeric value on the wire for se.
+   * <code>string json = 3;</code>
+   * @return Whether the json field is set.
    */
-  @java.lang.Override public int getSeValue() {
-    return se_;
+  public boolean hasJson() {
+    return dataCase_ == 3;
   }
   /**
    * <pre>
-   * Serialization that support both java and c# , and code first , without IDL/proto file
+   *for json
    * </pre>
    *
-   * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-   * @return The se.
+   * <code>string json = 3;</code>
+   * @return The json.
    */
-  @java.lang.Override public com.bt.rpc.internal.SerEnum getSe() {
-    @SuppressWarnings("deprecation")
-    com.bt.rpc.internal.SerEnum result = com.bt.rpc.internal.SerEnum.valueOf(se_);
-    return result == null ? com.bt.rpc.internal.SerEnum.UNRECOGNIZED : result;
-  }
-
-  public static final int S_FIELD_NUMBER = 4;
-  /**
-   * <code>string s = 4;</code>
-   * @return Whether the s field is set.
-   */
-  public boolean hasS() {
-    return pCase_ == 4;
-  }
-  /**
-   * <code>string s = 4;</code>
-   * @return The s.
-   */
-  public java.lang.String getS() {
-    java.lang.Object ref = "";
-    if (pCase_ == 4) {
-      ref = p_;
+  public String getJson() {
+    Object ref = "";
+    if (dataCase_ == 3) {
+      ref = data_;
     }
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      if (pCase_ == 4) {
-        p_ = s;
+      String s = bs.toStringUtf8();
+      if (dataCase_ == 3) {
+        data_ = s;
       }
       return s;
     }
   }
   /**
-   * <code>string s = 4;</code>
-   * @return The bytes for s.
+   * <pre>
+   *for json
+   * </pre>
+   *
+   * <code>string json = 3;</code>
+   * @return The bytes for json.
    */
   public com.google.protobuf.ByteString
-      getSBytes() {
-    java.lang.Object ref = "";
-    if (pCase_ == 4) {
-      ref = p_;
+      getJsonBytes() {
+    Object ref = "";
+    if (dataCase_ == 3) {
+      ref = data_;
     }
-    if (ref instanceof java.lang.String) {
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      if (pCase_ == 4) {
-        p_ = b;
+              (String) ref);
+      if (dataCase_ == 3) {
+        data_ = b;
       }
       return b;
     } else {
@@ -291,29 +269,37 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int B_FIELD_NUMBER = 5;
+  public static final int BS_FIELD_NUMBER = 4;
   /**
-   * <code>bytes b = 5;</code>
-   * @return Whether the b field is set.
+   * <pre>
+   * ByteString, others Serialization transfer by protobuf
+   * </pre>
+   *
+   * <code>bytes bs = 4;</code>
+   * @return Whether the bs field is set.
    */
-  @java.lang.Override
-  public boolean hasB() {
-    return pCase_ == 5;
+  @Override
+  public boolean hasBs() {
+    return dataCase_ == 4;
   }
   /**
-   * <code>bytes b = 5;</code>
-   * @return The b.
+   * <pre>
+   * ByteString, others Serialization transfer by protobuf
+   * </pre>
+   *
+   * <code>bytes bs = 4;</code>
+   * @return The bs.
    */
-  @java.lang.Override
-  public com.google.protobuf.ByteString getB() {
-    if (pCase_ == 5) {
-      return (com.google.protobuf.ByteString) p_;
+  @Override
+  public com.google.protobuf.ByteString getBs() {
+    if (dataCase_ == 4) {
+      return (com.google.protobuf.ByteString) data_;
     }
     return com.google.protobuf.ByteString.EMPTY;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -323,7 +309,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (c_ != 0) {
@@ -332,20 +318,17 @@ private static final long serialVersionUID = 0L;
     if (!getMBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, m_);
     }
-    if (se_ != com.bt.rpc.internal.SerEnum.NONE.getNumber()) {
-      output.writeEnum(3, se_);
+    if (dataCase_ == 3) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 3, data_);
     }
-    if (pCase_ == 4) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 4, p_);
-    }
-    if (pCase_ == 5) {
+    if (dataCase_ == 4) {
       output.writeBytes(
-          5, (com.google.protobuf.ByteString) p_);
+          4, (com.google.protobuf.ByteString) data_);
     }
     unknownFields.writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -358,47 +341,42 @@ private static final long serialVersionUID = 0L;
     if (!getMBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, m_);
     }
-    if (se_ != com.bt.rpc.internal.SerEnum.NONE.getNumber()) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeEnumSize(3, se_);
+    if (dataCase_ == 3) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, data_);
     }
-    if (pCase_ == 4) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, p_);
-    }
-    if (pCase_ == 5) {
+    if (dataCase_ == 4) {
       size += com.google.protobuf.CodedOutputStream
         .computeBytesSize(
-            5, (com.google.protobuf.ByteString) p_);
+            4, (com.google.protobuf.ByteString) data_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof com.bt.rpc.internal.OutputMessage)) {
+    if (!(obj instanceof OutputProto)) {
       return super.equals(obj);
     }
-    com.bt.rpc.internal.OutputMessage other = (com.bt.rpc.internal.OutputMessage) obj;
+    OutputProto other = (OutputProto) obj;
 
     if (getC()
         != other.getC()) return false;
     if (!getM()
         .equals(other.getM())) return false;
-    if (se_ != other.se_) return false;
-    if (!getPCase().equals(other.getPCase())) return false;
-    switch (pCase_) {
-      case 4:
-        if (!getS()
-            .equals(other.getS())) return false;
+    if (!getDataCase().equals(other.getDataCase())) return false;
+    switch (dataCase_) {
+      case 3:
+        if (!getJson()
+            .equals(other.getJson())) return false;
         break;
-      case 5:
-        if (!getB()
-            .equals(other.getB())) return false;
+      case 4:
+        if (!getBs()
+            .equals(other.getBs())) return false;
         break;
       case 0:
       default:
@@ -407,7 +385,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -418,16 +396,14 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getC();
     hash = (37 * hash) + M_FIELD_NUMBER;
     hash = (53 * hash) + getM().hashCode();
-    hash = (37 * hash) + SE_FIELD_NUMBER;
-    hash = (53 * hash) + se_;
-    switch (pCase_) {
-      case 4:
-        hash = (37 * hash) + S_FIELD_NUMBER;
-        hash = (53 * hash) + getS().hashCode();
+    switch (dataCase_) {
+      case 3:
+        hash = (37 * hash) + JSON_FIELD_NUMBER;
+        hash = (53 * hash) + getJson().hashCode();
         break;
-      case 5:
-        hash = (37 * hash) + B_FIELD_NUMBER;
-        hash = (53 * hash) + getB().hashCode();
+      case 4:
+        hash = (37 * hash) + BS_FIELD_NUMBER;
+        hash = (53 * hash) + getBs().hashCode();
         break;
       case 0:
       default:
@@ -437,69 +413,69 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(byte[] data)
+  public static OutputProto parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(java.io.InputStream input)
+  public static OutputProto parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.bt.rpc.internal.OutputMessage parseDelimitedFrom(java.io.InputStream input)
+  public static OutputProto parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static com.bt.rpc.internal.OutputMessage parseDelimitedFrom(
+  public static OutputProto parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.bt.rpc.internal.OutputMessage parseFrom(
+  public static OutputProto parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -507,53 +483,53 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(com.bt.rpc.internal.OutputMessage prototype) {
+  public static Builder newBuilder(OutputProto prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
   /**
-   * Protobuf type {@code com.bt.rpc.internal.OutputMessage}
+   * Protobuf type {@code com.bt.rpc.internal.OutputProto}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:com.bt.rpc.internal.OutputMessage)
-      com.bt.rpc.internal.OutputMessageOrBuilder {
+      // @@protoc_insertion_point(builder_implements:com.bt.rpc.internal.OutputProto)
+      OutputProtoOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.bt.rpc.internal.Internal.internal_static_com_bt_rpc_internal_OutputMessage_descriptor;
+      return Internal.internal_static_com_bt_rpc_internal_OutputProto_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.bt.rpc.internal.Internal.internal_static_com_bt_rpc_internal_OutputMessage_fieldAccessorTable
+      return Internal.internal_static_com_bt_rpc_internal_OutputProto_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.bt.rpc.internal.OutputMessage.class, com.bt.rpc.internal.OutputMessage.Builder.class);
+              OutputProto.class, Builder.class);
     }
 
-    // Construct using com.bt.rpc.internal.OutputMessage.newBuilder()
+    // Construct using com.bt.rpc.internal.OutputProto.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
       maybeForceBuilderInitialization();
     }
@@ -562,101 +538,98 @@ private static final long serialVersionUID = 0L;
               .alwaysUseFieldBuilders) {
       }
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       c_ = 0;
 
       m_ = "";
 
-      se_ = 0;
-
-      pCase_ = 0;
-      p_ = null;
+      dataCase_ = 0;
+      data_ = null;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.bt.rpc.internal.Internal.internal_static_com_bt_rpc_internal_OutputMessage_descriptor;
+      return Internal.internal_static_com_bt_rpc_internal_OutputProto_descriptor;
     }
 
-    @java.lang.Override
-    public com.bt.rpc.internal.OutputMessage getDefaultInstanceForType() {
-      return com.bt.rpc.internal.OutputMessage.getDefaultInstance();
+    @Override
+    public OutputProto getDefaultInstanceForType() {
+      return OutputProto.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public com.bt.rpc.internal.OutputMessage build() {
-      com.bt.rpc.internal.OutputMessage result = buildPartial();
+    @Override
+    public OutputProto build() {
+      OutputProto result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public com.bt.rpc.internal.OutputMessage buildPartial() {
-      com.bt.rpc.internal.OutputMessage result = new com.bt.rpc.internal.OutputMessage(this);
+    @Override
+    public OutputProto buildPartial() {
+      OutputProto result = new OutputProto(this);
       result.c_ = c_;
       result.m_ = m_;
-      result.se_ = se_;
-      if (pCase_ == 4) {
-        result.p_ = p_;
+      if (dataCase_ == 3) {
+        result.data_ = data_;
       }
-      if (pCase_ == 5) {
-        result.p_ = p_;
+      if (dataCase_ == 4) {
+        result.data_ = data_;
       }
-      result.pCase_ = pCase_;
+      result.dataCase_ = dataCase_;
       onBuilt();
       return result;
     }
 
-    @java.lang.Override
+    @Override
     public Builder clone() {
       return super.clone();
     }
-    @java.lang.Override
+    @Override
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        java.lang.Object value) {
+        Object value) {
       return super.setField(field, value);
     }
-    @java.lang.Override
+    @Override
     public Builder clearField(
         com.google.protobuf.Descriptors.FieldDescriptor field) {
       return super.clearField(field);
     }
-    @java.lang.Override
+    @Override
     public Builder clearOneof(
         com.google.protobuf.Descriptors.OneofDescriptor oneof) {
       return super.clearOneof(oneof);
     }
-    @java.lang.Override
+    @Override
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, java.lang.Object value) {
+        int index, Object value) {
       return super.setRepeatedField(field, index, value);
     }
-    @java.lang.Override
+    @Override
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        java.lang.Object value) {
+        Object value) {
       return super.addRepeatedField(field, value);
     }
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof com.bt.rpc.internal.OutputMessage) {
-        return mergeFrom((com.bt.rpc.internal.OutputMessage)other);
+      if (other instanceof OutputProto) {
+        return mergeFrom((OutputProto)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(com.bt.rpc.internal.OutputMessage other) {
-      if (other == com.bt.rpc.internal.OutputMessage.getDefaultInstance()) return this;
+    public Builder mergeFrom(OutputProto other) {
+      if (other == OutputProto.getDefaultInstance()) return this;
       if (other.getC() != 0) {
         setC(other.getC());
       }
@@ -664,21 +637,18 @@ private static final long serialVersionUID = 0L;
         m_ = other.m_;
         onChanged();
       }
-      if (other.se_ != 0) {
-        setSeValue(other.getSeValue());
-      }
-      switch (other.getPCase()) {
-        case S: {
-          pCase_ = 4;
-          p_ = other.p_;
+      switch (other.getDataCase()) {
+        case JSON: {
+          dataCase_ = 3;
+          data_ = other.data_;
           onChanged();
           break;
         }
-        case B: {
-          setB(other.getB());
+        case BS: {
+          setBs(other.getBs());
           break;
         }
-        case P_NOT_SET: {
+        case DATA_NOT_SET: {
           break;
         }
       }
@@ -687,21 +657,21 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.bt.rpc.internal.OutputMessage parsedMessage = null;
+      OutputProto parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.bt.rpc.internal.OutputMessage) e.getUnfinishedMessage();
+        parsedMessage = (OutputProto) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -710,17 +680,17 @@ private static final long serialVersionUID = 0L;
       }
       return this;
     }
-    private int pCase_ = 0;
-    private java.lang.Object p_;
-    public PCase
-        getPCase() {
-      return PCase.forNumber(
-          pCase_);
+    private int dataCase_ = 0;
+    private Object data_;
+    public DataCase
+        getDataCase() {
+      return DataCase.forNumber(
+          dataCase_);
     }
 
-    public Builder clearP() {
-      pCase_ = 0;
-      p_ = null;
+    public Builder clearData() {
+      dataCase_ = 0;
+      data_ = null;
       onChanged();
       return this;
     }
@@ -735,7 +705,7 @@ private static final long serialVersionUID = 0L;
      * <code>int32 c = 1;</code>
      * @return The c.
      */
-    @java.lang.Override
+    @Override
     public int getC() {
       return c_;
     }
@@ -769,7 +739,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object m_ = "";
+    private Object m_ = "";
     /**
      * <pre>
      *detail  message if there is a error ,otherwise  null 
@@ -778,16 +748,16 @@ private static final long serialVersionUID = 0L;
      * <code>string m = 2;</code>
      * @return The m.
      */
-    public java.lang.String getM() {
-      java.lang.Object ref = m_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getM() {
+      Object ref = m_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         m_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -800,11 +770,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getMBytes() {
-      java.lang.Object ref = m_;
+      Object ref = m_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         m_ = b;
         return b;
       } else {
@@ -821,7 +791,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setM(
-        java.lang.String value) {
+        String value) {
       if (value == null) {
     throw new NullPointerException();
   }
@@ -865,127 +835,65 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private int se_ = 0;
     /**
      * <pre>
-     * Serialization that support both java and c# , and code first , without IDL/proto file
+     *for json
      * </pre>
      *
-     * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-     * @return The enum numeric value on the wire for se.
+     * <code>string json = 3;</code>
+     * @return Whether the json field is set.
      */
-    @java.lang.Override public int getSeValue() {
-      return se_;
+    @Override
+    public boolean hasJson() {
+      return dataCase_ == 3;
     }
     /**
      * <pre>
-     * Serialization that support both java and c# , and code first , without IDL/proto file
+     *for json
      * </pre>
      *
-     * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-     * @param value The enum numeric value on the wire for se to set.
-     * @return This builder for chaining.
+     * <code>string json = 3;</code>
+     * @return The json.
      */
-    public Builder setSeValue(int value) {
-      
-      se_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Serialization that support both java and c# , and code first , without IDL/proto file
-     * </pre>
-     *
-     * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-     * @return The se.
-     */
-    @java.lang.Override
-    public com.bt.rpc.internal.SerEnum getSe() {
-      @SuppressWarnings("deprecation")
-      com.bt.rpc.internal.SerEnum result = com.bt.rpc.internal.SerEnum.valueOf(se_);
-      return result == null ? com.bt.rpc.internal.SerEnum.UNRECOGNIZED : result;
-    }
-    /**
-     * <pre>
-     * Serialization that support both java and c# , and code first , without IDL/proto file
-     * </pre>
-     *
-     * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-     * @param value The se to set.
-     * @return This builder for chaining.
-     */
-    public Builder setSe(com.bt.rpc.internal.SerEnum value) {
-      if (value == null) {
-        throw new NullPointerException();
+    @Override
+    public String getJson() {
+      Object ref = "";
+      if (dataCase_ == 3) {
+        ref = data_;
       }
-      
-      se_ = value.getNumber();
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Serialization that support both java and c# , and code first , without IDL/proto file
-     * </pre>
-     *
-     * <code>.com.bt.rpc.internal.SerEnum se = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearSe() {
-      
-      se_ = 0;
-      onChanged();
-      return this;
-    }
-
-    /**
-     * <code>string s = 4;</code>
-     * @return Whether the s field is set.
-     */
-    @java.lang.Override
-    public boolean hasS() {
-      return pCase_ == 4;
-    }
-    /**
-     * <code>string s = 4;</code>
-     * @return The s.
-     */
-    @java.lang.Override
-    public java.lang.String getS() {
-      java.lang.Object ref = "";
-      if (pCase_ == 4) {
-        ref = p_;
-      }
-      if (!(ref instanceof java.lang.String)) {
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (pCase_ == 4) {
-          p_ = s;
+        String s = bs.toStringUtf8();
+        if (dataCase_ == 3) {
+          data_ = s;
         }
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
-     * <code>string s = 4;</code>
-     * @return The bytes for s.
+     * <pre>
+     *for json
+     * </pre>
+     *
+     * <code>string json = 3;</code>
+     * @return The bytes for json.
      */
-    @java.lang.Override
+    @Override
     public com.google.protobuf.ByteString
-        getSBytes() {
-      java.lang.Object ref = "";
-      if (pCase_ == 4) {
-        ref = p_;
+        getJsonBytes() {
+      Object ref = "";
+      if (dataCase_ == 3) {
+        ref = data_;
       }
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        if (pCase_ == 4) {
-          p_ = b;
+                (String) ref);
+        if (dataCase_ == 3) {
+          data_ = b;
         }
         return b;
       } else {
@@ -993,140 +901,168 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string s = 4;</code>
-     * @param value The s to set.
+     * <pre>
+     *for json
+     * </pre>
+     *
+     * <code>string json = 3;</code>
+     * @param value The json to set.
      * @return This builder for chaining.
      */
-    public Builder setS(
-        java.lang.String value) {
+    public Builder setJson(
+        String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  pCase_ = 4;
-      p_ = value;
+  dataCase_ = 3;
+      data_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>string s = 4;</code>
+     * <pre>
+     *for json
+     * </pre>
+     *
+     * <code>string json = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearS() {
-      if (pCase_ == 4) {
-        pCase_ = 0;
-        p_ = null;
+    public Builder clearJson() {
+      if (dataCase_ == 3) {
+        dataCase_ = 0;
+        data_ = null;
         onChanged();
       }
       return this;
     }
     /**
-     * <code>string s = 4;</code>
-     * @param value The bytes for s to set.
+     * <pre>
+     *for json
+     * </pre>
+     *
+     * <code>string json = 3;</code>
+     * @param value The bytes for json to set.
      * @return This builder for chaining.
      */
-    public Builder setSBytes(
+    public Builder setJsonBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      pCase_ = 4;
-      p_ = value;
+      dataCase_ = 3;
+      data_ = value;
       onChanged();
       return this;
     }
 
     /**
-     * <code>bytes b = 5;</code>
-     * @return Whether the b field is set.
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 4;</code>
+     * @return Whether the bs field is set.
      */
-    public boolean hasB() {
-      return pCase_ == 5;
+    public boolean hasBs() {
+      return dataCase_ == 4;
     }
     /**
-     * <code>bytes b = 5;</code>
-     * @return The b.
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 4;</code>
+     * @return The bs.
      */
-    public com.google.protobuf.ByteString getB() {
-      if (pCase_ == 5) {
-        return (com.google.protobuf.ByteString) p_;
+    public com.google.protobuf.ByteString getBs() {
+      if (dataCase_ == 4) {
+        return (com.google.protobuf.ByteString) data_;
       }
       return com.google.protobuf.ByteString.EMPTY;
     }
     /**
-     * <code>bytes b = 5;</code>
-     * @param value The b to set.
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 4;</code>
+     * @param value The bs to set.
      * @return This builder for chaining.
      */
-    public Builder setB(com.google.protobuf.ByteString value) {
+    public Builder setBs(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  pCase_ = 5;
-      p_ = value;
+  dataCase_ = 4;
+      data_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bytes b = 5;</code>
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 4;</code>
      * @return This builder for chaining.
      */
-    public Builder clearB() {
-      if (pCase_ == 5) {
-        pCase_ = 0;
-        p_ = null;
+    public Builder clearBs() {
+      if (dataCase_ == 4) {
+        dataCase_ = 0;
+        data_ = null;
         onChanged();
       }
       return this;
     }
-    @java.lang.Override
+    @Override
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
       return super.setUnknownFields(unknownFields);
     }
 
-    @java.lang.Override
+    @Override
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
       return super.mergeUnknownFields(unknownFields);
     }
 
 
-    // @@protoc_insertion_point(builder_scope:com.bt.rpc.internal.OutputMessage)
+    // @@protoc_insertion_point(builder_scope:com.bt.rpc.internal.OutputProto)
   }
 
-  // @@protoc_insertion_point(class_scope:com.bt.rpc.internal.OutputMessage)
-  private static final com.bt.rpc.internal.OutputMessage DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:com.bt.rpc.internal.OutputProto)
+  private static final OutputProto DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new com.bt.rpc.internal.OutputMessage();
+    DEFAULT_INSTANCE = new OutputProto();
   }
 
-  public static com.bt.rpc.internal.OutputMessage getDefaultInstance() {
+  public static OutputProto getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<OutputMessage>
-      PARSER = new com.google.protobuf.AbstractParser<OutputMessage>() {
-    @java.lang.Override
-    public OutputMessage parsePartialFrom(
+  private static final com.google.protobuf.Parser<OutputProto>
+      PARSER = new com.google.protobuf.AbstractParser<OutputProto>() {
+    @Override
+    public OutputProto parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new OutputMessage(input, extensionRegistry);
+      return new OutputProto(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<OutputMessage> parser() {
+  public static com.google.protobuf.Parser<OutputProto> parser() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public com.google.protobuf.Parser<OutputMessage> getParserForType() {
+  @Override
+  public com.google.protobuf.Parser<OutputProto> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public com.bt.rpc.internal.OutputMessage getDefaultInstanceForType() {
+  @Override
+  public OutputProto getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

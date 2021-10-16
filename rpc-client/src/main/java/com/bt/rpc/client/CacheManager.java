@@ -1,8 +1,10 @@
 package com.bt.rpc.client;
 
-import com.bt.rpc.internal.InputMessage;
-import com.bt.rpc.internal.OutputMessage;
-import com.bt.rpc.internal.SerEnum;
+import java.nio.charset.StandardCharsets;
+
+import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.internal.OutputProto;
+//import com.bt.rpc.internal.SerEnum;
 import com.google.protobuf.ByteString;
 import com.bt.rpc.util.MethodStub;
 
@@ -16,7 +18,7 @@ public interface CacheManager {
 
     int DEFAULT_EXPIRE_SECONDS = 60;
 
-    int KEY_MAX_SIZE_UNDIGEST = 32;
+    int KEY_MAX_SIZE_UNDIGEST = 64;
 
 
     String get(String cacheKey);
@@ -25,42 +27,39 @@ public interface CacheManager {
 
 
 
-    default void set(MethodStub stub, String cacheKey, OutputMessage message){
+    default void set(MethodStub stub, String cacheKey, OutputProto message){
         String value;
-        if(stub.returnType == String.class){
-            value = message.getS();
+        if(stub.returnType != byte[].class){
+            value = message.getJson();
         }else {
-            value = message.getB().toStringUtf8();
+            value = message.getBs().toStringUtf8();
         }
         set(cacheKey,value,stub.getExpireSeconds());
     }
 
 
-    default OutputMessage get(MethodStub stub,String cacheKey){
+    default OutputProto get(MethodStub stub, String cacheKey){
         var bs = get(cacheKey);
         if(null == bs){
             return  null;
         }
-        OutputMessage.Builder bd = OutputMessage.newBuilder();
-        bd.setSe(SerEnum.JSON);
-        if(stub.returnType == String.class){
-            bd.setS(bs);
+        OutputProto.Builder bd = OutputProto.newBuilder();
+        if(stub.returnType != byte[].class){
+            bd.setJson(bs);
         }else{
-            bd.setB(ByteString.copyFromUtf8(bs));
+            bd.setBs(ByteString.copyFromUtf8(bs));
         }
         return bd.build();
     }
 
 
     default String cacheKey(MethodStub stub,
-                    InputMessage input){
+                    InputProto input){
 
-        var bytes = input.getB();
-        String paramKey ;
-        if(bytes.size()>KEY_MAX_SIZE_UNDIGEST){
-            paramKey = SimpleMD5.md5(bytes.toByteArray());
-        }else{
-            paramKey = bytes.toStringUtf8();
+        var json = input.getJson();
+        String paramKey  = json;
+        if(json.length()>KEY_MAX_SIZE_UNDIGEST){
+            paramKey = json.substring(0,32)+"---"+ SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8));
         }
         return stub.methodDescriptor.getFullMethodName()+":"+paramKey;
     }

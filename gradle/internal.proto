@@ -7,7 +7,8 @@ syntax = "proto3";
 //repeated google.protobuf.Any args = 2;
 
 //https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/struct.proto
-// protoc  --csharp_out=outc --java_out=outj internal.proto
+// protoc  --java_out=outj internal.proto
+// --csharp_out=outc
 // protoc internal.proto  --js_out=import_style=commonjs,binary:js --grpc-web_out=import_style=typescript,mode=grpcweb:js
 // https://github.com/grpc/grpc-web#wire-format-mode
 
@@ -21,39 +22,39 @@ package com.bt.rpc.internal;
 // service Mailer {
 //   rpc Mailbox (stream InputMessage) returns (stream OutputMessage) {}
 // }
-
 // https://developers.google.com/protocol-buffers/docs/proto3#options
 //option optimize_for = LITE_RUNTIME;
 
+
 //service Grpc {
-//  rpc call (InputMessage) returns (OutputMessage);
+//  rpc call (InputProto) returns (OutputProto);
 //}
 
-enum SerEnum {
-    NONE = 0;
-    JSON = 1;
-    MSG_PACK = 2;
-    HESSIAN = 3;
-    KRYO = 4;
-    PSR = 5;
+//enum SerEnum {
+//    NONE = 0;
+//    JSON = 1;
+//    MSG_PACK = 2;
+//    HESSIAN = 3;
+//    KRYO = 4;
+//    PSR = 5;
+//}
+
+
+message InputProto {
+  //SerEnum se = 1;
+  string json  = 1;
 }
 
-
-message InputMessage {
-  SerEnum se = 1; 
-  bytes b  = 2;
-}
-
-message OutputMessage {
+message OutputProto {
   //google.rpc.Code  see https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
   int32 c = 1;
   //detail  message if there is a error ,otherwise  null 
   string m = 2;
   // Serialization that support both java and c# , and code first , without IDL/proto file
-  SerEnum se = 3;
+  // SerEnum se = 3;
   // payload data , oneof  string or bytes
-  oneof p {
-	string s = 4;
- 	bytes b = 5;
+  oneof data {
+	string json = 3;//for json
+ 	bytes bs = 4; // ByteString, others Serialization transfer by protobuf
   }
 }

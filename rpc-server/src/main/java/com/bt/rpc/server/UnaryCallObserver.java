@@ -1,7 +1,7 @@
 package com.bt.rpc.server;
 
-import com.bt.rpc.internal.InputMessage;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.internal.OutputProto;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.Status;
@@ -10,12 +10,12 @@ import io.grpc.stub.ServerCallStreamObserver;
 import static com.google.common.base.Preconditions.checkState;
 
 public class UnaryCallObserver
-      extends ServerCallStreamObserver<OutputMessage> {
-    final         ServerCall<InputMessage, OutputMessage> call;
-    volatile boolean cancelled;
-    private boolean frozen;
-    private boolean autoRequestEnabled = true;
-    private boolean sentHeaders;
+      extends ServerCallStreamObserver<OutputProto> {
+    final         ServerCall<InputProto, OutputProto> call;
+    volatile boolean                                  cancelled;
+    private boolean                                   frozen;
+    private boolean                                   autoRequestEnabled = true;
+    private boolean                                   sentHeaders;
     Runnable onReadyHandler;
     Runnable onCancelHandler;
     private boolean aborted = false;
@@ -24,7 +24,7 @@ public class UnaryCallObserver
     private   Metadata headers;
 
     // Non private to avoid synthetic class
-    UnaryCallObserver(ServerCall<InputMessage, OutputMessage> call, Metadata headers) {
+    UnaryCallObserver(ServerCall<InputProto, OutputProto> call, Metadata headers) {
       this.call = call;
       this.headers = headers;
     }
@@ -48,7 +48,7 @@ public class UnaryCallObserver
     }
 
     @Override
-    public void onNext(OutputMessage response) {
+    public void onNext(OutputProto response) {
 
       checkState(!aborted, "Stream was terminated by error, no further calls are allowed");
       checkState(!completed, "Stream is already completed, no further calls are allowed");

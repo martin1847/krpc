@@ -22,9 +22,12 @@ package com.bt.rpc.internal;
 //   rpc Mailbox (stream InputMessage) returns (stream OutputMessage) {}
 // }
 
-service Grpc {
-  rpc call (InputMessage) returns (OutputMessage);
-}
+// https://developers.google.com/protocol-buffers/docs/proto3#options
+//option optimize_for = LITE_RUNTIME;
+
+//service Grpc {
+//  rpc call (InputMessage) returns (OutputMessage);
+//}
 
 enum SerEnum {
     NONE = 0;
@@ -38,7 +41,7 @@ enum SerEnum {
 
 message InputMessage {
   SerEnum se = 1; 
-  string b  = 2;
+  bytes b  = 2;
 }
 
 message OutputMessage {

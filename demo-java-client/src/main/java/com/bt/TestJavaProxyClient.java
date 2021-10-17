@@ -146,7 +146,7 @@ public class TestJavaProxyClient {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        test("127.0.0.1");
-    }
+    //public static void main(String[] args) throws Exception {
+    //    test("127.0.0.1");
+    //}
 }

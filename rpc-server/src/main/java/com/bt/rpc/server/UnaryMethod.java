@@ -4,6 +4,7 @@ import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.serial.Serial;
 import com.bt.rpc.serial.ServerSerial;
 import com.bt.rpc.util.EnvUtils;
 import com.bt.rpc.common.MethodStub;
@@ -46,7 +47,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         this.service = service;
         methodName = stub.method.getName();
 
-        serverSerial =  (byte[].class == stub.returnType)? ServerSerial.BARE : ServerSerial.JSON;
+        serverSerial =  (byte[].class == stub.returnType)? ServerSerial.BARE : Serial.Instance.get();
 
         var inputArgTypes = stub.method.getParameterTypes();
         Class firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];

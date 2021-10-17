@@ -2,16 +2,12 @@ package com.bt.rpc.common;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 import com.bt.rpc.annotation.Cached;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.util.JsonUtils;
 import com.bt.rpc.util.RefUtils;
-import com.google.protobuf.ByteString;
 import io.grpc.MethodDescriptor;
 import io.grpc.protobuf.lite.ProtoLiteUtils;
 import lombok.Getter;
@@ -30,12 +26,7 @@ public class MethodStub {
     private final static MethodDescriptor.Marshaller<OutputProto> RESPONSE_MARSHALLER =
             ProtoLiteUtils.marshaller(OutputProto.getDefaultInstance());
 
-    public final Type                                     returnType;
-    public final BiConsumer<Object[], InputProto.Builder> writeInput;
-    public final Function<OutputProto, Object>            readOutput;
-    //public final Function<InputProto, Object>             readInput;
-
-    //public final BiConsumer<Object, OutputProto.Builder>   writeOutput;
+    public final Type                                      returnType;
     public final MethodDescriptor<InputProto, OutputProto> methodDescriptor;
 
     public final Method method;
@@ -48,7 +39,6 @@ public class MethodStub {
     @Setter
     int expireSeconds;
 
-
     public MethodStub(RpcService rpcService, String clzName, Method method) {
         this.method = method;
         this.rpcService = rpcService;
@@ -59,36 +49,7 @@ public class MethodStub {
             cached = null;
         }
 
-        var types = method.getParameterTypes();
-
-        if (types.length == 0) {
-            //readInput = null;
-            writeInput = (objects, builder) -> {
-            };
-        } else {
-
-            //readInput = in -> JsonUtils.parse(in.getJson(), types[0]);
-            //SerializationUtils.deserialize(in.getB(),types[0]);
-            writeInput = (objects, builder) -> builder.setJson(JsonUtils.stringify(objects[0]));
-            //{
-            //    builder.setSe(SerEnum.JSON);
-            //    builder.setB(SerializationUtils.serialize(objects[0]));
-            //};
-        }
-
         this.returnType = RefUtils.findRpcResultGenericType(method);
-        if (byte[].class != returnType) {
-            //writeOutput = (obj, output) -> output.setJson(JsonUtils.stringify(obj));
-            //{
-            //    output.setSe(SerEnum.JSON);
-            //    output.setB(SerializationUtils.serialize(obj));
-            //};
-            readOutput = output -> JsonUtils.parse(output.getJson(), returnType);
-            //SerializationUtils.deserialize(output.getB(), returnType);
-        } else {
-            //writeOutput = (obj, output) -> output.setBs(ByteString.copyFrom((byte[]) obj));
-            readOutput = o -> o.getBs().toByteArray();
-        }
         methodDescriptor = buildMd(clzName, method.getName());
 
     }

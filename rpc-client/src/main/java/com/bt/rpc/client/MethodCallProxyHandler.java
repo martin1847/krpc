@@ -6,14 +6,17 @@ import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.Code;
 import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.serial.ClientSerial;
+import com.bt.rpc.serial.ClientSerial.Generic;
+import com.bt.rpc.serial.ClientSerial.Normal;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.ClientCalls;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,24 +63,34 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
 
 
-    @AllArgsConstructor
     private class ChannelMethodInvoker implements  FilterChain<ClientResult,ClientContext>{
 //        ClientCall<InputMessage, OutputMessage> clientCall;
-        MethodStub stub;
-//        ManagedChannel channel;
+        final MethodStub   stub;
+        final boolean hasInputs;
+        ClientSerial clientSerial;
+        //        ManagedChannel channel;
+
+        public ChannelMethodInvoker(MethodStub stub) {
+            this.stub = stub;
+            hasInputs = stub.method.getParameterCount() > 0;
+            var returnType = stub.returnType;
+            if(byte[].class == returnType){
+                clientSerial = ClientSerial.BARE;
+            }else if(returnType instanceof Class){
+                clientSerial = new Normal((Class) returnType);
+            }else {
+                clientSerial = new Generic((ParameterizedType) returnType);
+            }
+        }
 
         @Override
         public ClientResult invoke(ClientContext req) {
             var input = InputProto.newBuilder();
-            stub.writeInput.accept(req.getArg(),input);
-
+            if(hasInputs){
+                clientSerial.writeInput(req.getArg(),input);
+            }
             OutputProto response = rpc(req, input.build());
-
-//            var asyncRes =  remoteInvoker.AsyncUnaryCall(stub.GrpcMethod, null, option, input);
-            // Console.WriteLine("rpcContext output {0}",output);
-            //var output = asyncRes.GetAwaiter().GetResult();
-            //var header =  asyncRes.ResponseHeadersAsync.GetAwaiter().GetResult();
-            return new ClientResult(response,stub.readOutput);
+            return new ClientResult(response,clientSerial);
         }
 
         protected OutputProto rpc(ClientContext req, InputProto input){

@@ -2,77 +2,61 @@ import * as jspb from 'google-protobuf'
 
 
 
-export class InputMessage extends jspb.Message {
-  getSe(): SerEnum;
-  setSe(value: SerEnum): InputMessage;
-
-  getB(): string;
-  setB(value: string): InputMessage;
+export class InputProto extends jspb.Message {
+  getUtf8(): string;
+  setUtf8(value: string): InputProto;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): InputMessage.AsObject;
-  static toObject(includeInstance: boolean, msg: InputMessage): InputMessage.AsObject;
-  static serializeBinaryToWriter(message: InputMessage, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): InputMessage;
-  static deserializeBinaryFromReader(message: InputMessage, reader: jspb.BinaryReader): InputMessage;
+  toObject(includeInstance?: boolean): InputProto.AsObject;
+  static toObject(includeInstance: boolean, msg: InputProto): InputProto.AsObject;
+  static serializeBinaryToWriter(message: InputProto, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): InputProto;
+  static deserializeBinaryFromReader(message: InputProto, reader: jspb.BinaryReader): InputProto;
 }
 
-export namespace InputMessage {
+export namespace InputProto {
   export type AsObject = {
-    se: SerEnum,
-    b: string,
+    utf8: string,
   }
 }
 
-export class OutputMessage extends jspb.Message {
+export class OutputProto extends jspb.Message {
   getC(): number;
-  setC(value: number): OutputMessage;
+  setC(value: number): OutputProto;
 
   getM(): string;
-  setM(value: string): OutputMessage;
+  setM(value: string): OutputProto;
 
-  getSe(): SerEnum;
-  setSe(value: SerEnum): OutputMessage;
+  getUtf8(): string;
+  setUtf8(value: string): OutputProto;
 
-  getS(): string;
-  setS(value: string): OutputMessage;
+  getBs(): Uint8Array | string;
+  getBs_asU8(): Uint8Array;
+  getBs_asB64(): string;
+  setBs(value: Uint8Array | string): OutputProto;
 
-  getB(): Uint8Array | string;
-  getB_asU8(): Uint8Array;
-  getB_asB64(): string;
-  setB(value: Uint8Array | string): OutputMessage;
-
-  getPCase(): OutputMessage.PCase;
+  getDataCase(): OutputProto.DataCase;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): OutputMessage.AsObject;
-  static toObject(includeInstance: boolean, msg: OutputMessage): OutputMessage.AsObject;
-  static serializeBinaryToWriter(message: OutputMessage, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): OutputMessage;
-  static deserializeBinaryFromReader(message: OutputMessage, reader: jspb.BinaryReader): OutputMessage;
+  toObject(includeInstance?: boolean): OutputProto.AsObject;
+  static toObject(includeInstance: boolean, msg: OutputProto): OutputProto.AsObject;
+  static serializeBinaryToWriter(message: OutputProto, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): OutputProto;
+  static deserializeBinaryFromReader(message: OutputProto, reader: jspb.BinaryReader): OutputProto;
 }
 
-export namespace OutputMessage {
+export namespace OutputProto {
   export type AsObject = {
     c: number,
     m: string,
-    se: SerEnum,
-    s: string,
-    b: Uint8Array | string,
+    utf8: string,
+    bs: Uint8Array | string,
   }
 
-  export enum PCase { 
-    P_NOT_SET = 0,
-    S = 4,
-    B = 5,
+  export enum DataCase { 
+    DATA_NOT_SET = 0,
+    UTF8 = 3,
+    BS = 4,
   }
 }
 
-export enum SerEnum { 
-  NONE = 0,
-  JSON = 1,
-  MSG_PACK = 2,
-  HESSIAN = 3,
-  KRYO = 4,
-  PSR = 5,
-}

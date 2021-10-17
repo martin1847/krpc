@@ -7,7 +7,7 @@ import * as $ from 'jquery';
 
 // Option 2: import_style=typescript
 import {RpcResult,GrpcClient} from './grpc/GrpcClientPb';
-import {OutputMessage} from './grpc/internal_pb';
+//import {OutputProto} from './grpc/internal_pb';
 
 class TimeReq {
     name: string;
@@ -42,7 +42,7 @@ class EchoApp {
     EchoApp.addLeftMessage(msg);
     const request = new TimeReq(msg,18);
     const call = this.echoService.call("hello",
-        request, {'custom-header-1': 'value1'},
+        request, {'custom-header-1': 'my-value1'},
         (err: grpcWeb.RpcError, response: RpcResult) => {
           if (err) {
             if (err.code !== grpcWeb.StatusCode.OK) {

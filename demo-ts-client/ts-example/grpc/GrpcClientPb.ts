@@ -49,13 +49,12 @@ export class GrpcClient {
   methodInfocall = new grpcWeb.MethodDescriptor(
     '',// '/this-is-a-just-placeholder/method-name-here',
     grpcWeb.MethodType.UNARY,
-    internal_pb.InputMessage,
-    internal_pb.OutputMessage,
-    (request: internal_pb.InputMessage) => {
+    internal_pb.InputProto,
+    internal_pb.OutputProto,
+    (request: internal_pb.InputProto) => {
       return request.serializeBinary();
     },
-//     internal_pb.InputMessage.serializeBinary ,
-    internal_pb.OutputMessage.deserializeBinary
+    internal_pb.OutputProto.deserializeBinary
   );
 
   call(method: string,
@@ -66,17 +65,17 @@ export class GrpcClient {
     request: any,
     metadata: grpcWeb.Metadata | null,
     callback: (err: grpcWeb.Error,
-               response: RpcResult) => void): grpcWeb.ClientReadableStream<internal_pb.OutputMessage>;
+               response: RpcResult) => void): grpcWeb.ClientReadableStream<internal_pb.OutputProto>;
 
   call(method: string,
     request: any,
     metadata: grpcWeb.Metadata | null,
     callback?: (err: grpcWeb.Error,
                response: RpcResult) => void) {
-    const input = new internal_pb.InputMessage();
+    const input = new internal_pb.InputProto();
     if (request !== undefined && request !== null  ) {
-        input.setSe(internal_pb.SerEnum.JSON);
-        input.setB(JSON.stringify(request));
+        // input.setE(internal_pb.SerialEnum.JSON);
+        input.setUtf8(JSON.stringify(request));
     }
     if (callback !== undefined) {
 
@@ -85,7 +84,7 @@ export class GrpcClient {
         input,
         metadata || {},
         this.methodInfocall,
-        (err: grpcWeb.Error,  response: internal_pb.OutputMessage) =>{
+        (err: grpcWeb.Error,  response: internal_pb.OutputProto) =>{
             if(response){
                callback(err,GrpcClient.toResult(response));
             }else{
@@ -103,18 +102,16 @@ export class GrpcClient {
 
 // Object.assign(new Client(), clientData)
 // https://typescript.bootcss.com/generics.html
-  protected static toResult(response: internal_pb.OutputMessage) {
+  protected static toResult(response: internal_pb.OutputProto) {
     if(response){
        const result = new RpcResult();
        result.code = response.getC();
        result.message = response.getM();
-       if(internal_pb.SerEnum.JSON == response.getSe()){
-            var json = new TextDecoder("utf-8").decode(response.getB());
-            result.data = JSON.parse(json);
-       }else if(null !== response.getS()){
-            result.data =  response.getS();
+       if(response.getDataCase() == internal_pb.OutputProto.DataCase.UTF8 ){
+            // var json = new TextDecoder("utf-8").decode(response.getUtf8());
+            result.data = JSON.parse(response.getUtf8());
        }else{
-            result.data =   response.getB_asU8();
+            result.data = response.getBs();
        }
        return result;
     }

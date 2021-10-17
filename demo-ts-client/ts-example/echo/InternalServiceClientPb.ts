@@ -16,7 +16,7 @@ import * as grpcWeb from 'grpc-web';
 import * as internal_pb from './internal_pb';
 
 
-export class SkeletonClient {
+export class GrpcClient {
   client_: grpcWeb.AbstractClientBase;
   hostname_: string;
   credentials_: null | { [index: string]: string; };
@@ -36,35 +36,35 @@ export class SkeletonClient {
   }
 
   methodInfocall = new grpcWeb.MethodDescriptor(
-    '/com.bt.rpc.internal.Skeleton/call',
+    '/com.bt.rpc.internal.Grpc/call',
     grpcWeb.MethodType.UNARY,
-    internal_pb.InputMessage,
-    internal_pb.OutputMessage,
-    (request: internal_pb.InputMessage) => {
+    internal_pb.InputProto,
+    internal_pb.OutputProto,
+    (request: internal_pb.InputProto) => {
       return request.serializeBinary();
     },
-    internal_pb.OutputMessage.deserializeBinary
+    internal_pb.OutputProto.deserializeBinary
   );
 
   call(
-    request: internal_pb.InputMessage,
-    metadata: grpcWeb.Metadata | null): Promise<internal_pb.OutputMessage>;
+    request: internal_pb.InputProto,
+    metadata: grpcWeb.Metadata | null): Promise<internal_pb.OutputProto>;
 
   call(
-    request: internal_pb.InputMessage,
+    request: internal_pb.InputProto,
     metadata: grpcWeb.Metadata | null,
     callback: (err: grpcWeb.RpcError,
-               response: internal_pb.OutputMessage) => void): grpcWeb.ClientReadableStream<internal_pb.OutputMessage>;
+               response: internal_pb.OutputProto) => void): grpcWeb.ClientReadableStream<internal_pb.OutputProto>;
 
   call(
-    request: internal_pb.InputMessage,
+    request: internal_pb.InputProto,
     metadata: grpcWeb.Metadata | null,
     callback?: (err: grpcWeb.RpcError,
-               response: internal_pb.OutputMessage) => void) {
+               response: internal_pb.OutputProto) => void) {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/com.bt.rpc.internal.Skeleton/call',
+          '/com.bt.rpc.internal.Grpc/call',
         request,
         metadata || {},
         this.methodInfocall,
@@ -72,7 +72,7 @@ export class SkeletonClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/com.bt.rpc.internal.Skeleton/call',
+      '/com.bt.rpc.internal.Grpc/call',
     request,
     metadata || {},
     this.methodInfocall);

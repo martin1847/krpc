@@ -25,7 +25,7 @@ import * as grpcWeb from 'grpc-web';
 
 // Option 2: import_style=typescript
 import {RpcResult,GrpcClient} from '../grpc/GrpcClientPb';
-import {OutputMessage} from '../grpc/internal_pb';
+import {OutputProto} from '../grpc/internal_pb';
 
 class TimeReq {
     name: string;

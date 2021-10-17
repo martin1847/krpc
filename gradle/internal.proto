@@ -23,26 +23,29 @@ package com.bt.rpc.internal;
 //   rpc Mailbox (stream InputMessage) returns (stream OutputMessage) {}
 // }
 // https://developers.google.com/protocol-buffers/docs/proto3#options
-//option optimize_for = LITE_RUNTIME;
+// option optimize_for = LITE_RUNTIME;
+// https://github.com/protocolbuffers/protobuf/blob/master/java/lite.md
 
 
 //service Grpc {
 //  rpc call (InputProto) returns (OutputProto);
 //}
 
-//enum SerEnum {
-//    NONE = 0;
-//    JSON = 1;
-//    MSG_PACK = 2;
-//    HESSIAN = 3;
-//    KRYO = 4;
-//    PSR = 5;
-//}
+enum SerialEnum {
+    JSON = 0;
+    HESSIAN = 1;
+    MSG_PACK = 2;
+    KRYO = 3;
+    PSR = 4;
+}
 
 
 message InputProto {
-  //SerEnum se = 1;
-  string json  = 1;
+  SerialEnum e = 1;
+  oneof data {
+  	string utf8 = 2;//for json , txt like serial
+   	bytes bs = 3; // ByteString, others Serialization transfer by protobuf
+  }
 }
 
 message OutputProto {
@@ -50,11 +53,9 @@ message OutputProto {
   int32 c = 1;
   //detail  message if there is a error ,otherwise  null 
   string m = 2;
-  // Serialization that support both java and c# , and code first , without IDL/proto file
-  // SerEnum se = 3;
   // payload data , oneof  string or bytes
   oneof data {
-	string json = 3;//for json
+	string utf8 = 3;////for json , txt like serial
  	bytes bs = 4; // ByteString, others Serialization transfer by protobuf
   }
 }

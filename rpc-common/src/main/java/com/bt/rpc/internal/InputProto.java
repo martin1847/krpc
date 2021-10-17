@@ -16,7 +16,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private InputProto() {
-    json_ = "";
+    e_ = 0;
   }
 
   @Override
@@ -49,10 +49,21 @@ private static final long serialVersionUID = 0L;
           case 0:
             done = true;
             break;
-          case 10: {
-            String s = input.readStringRequireUtf8();
+          case 8: {
+            int rawValue = input.readEnum();
 
-            json_ = s;
+            e_ = rawValue;
+            break;
+          }
+          case 18: {
+            String s = input.readStringRequireUtf8();
+            dataCase_ = 2;
+            data_ = s;
+            break;
+          }
+          case 26: {
+            dataCase_ = 3;
+            data_ = input.readBytes();
             break;
           }
           default: {
@@ -87,50 +98,157 @@ private static final long serialVersionUID = 0L;
             InputProto.class, Builder.class);
   }
 
-  public static final int JSON_FIELD_NUMBER = 1;
-  private volatile Object json_;
+  private int dataCase_ = 0;
+  private Object data_;
+  public enum DataCase
+      implements com.google.protobuf.Internal.EnumLite,
+          InternalOneOfEnum {
+    UTF8(2),
+    BS(3),
+    DATA_NOT_SET(0);
+    private final int value;
+    private DataCase(int value) {
+      this.value = value;
+    }
+    /**
+     * @param value The number of the enum to look for.
+     * @return The enum associated with the given number.
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @Deprecated
+    public static DataCase valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static DataCase forNumber(int value) {
+      switch (value) {
+        case 2: return UTF8;
+        case 3: return BS;
+        case 0: return DATA_NOT_SET;
+        default: return null;
+      }
+    }
+    public int getNumber() {
+      return this.value;
+    }
+  };
+
+  public DataCase
+  getDataCase() {
+    return DataCase.forNumber(
+        dataCase_);
+  }
+
+  public static final int E_FIELD_NUMBER = 1;
+  private int e_;
+  /**
+   * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+   * @return The enum numeric value on the wire for e.
+   */
+  @Override public int getEValue() {
+    return e_;
+  }
+  /**
+   * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+   * @return The e.
+   */
+  @Override public SerialEnum getE() {
+    @SuppressWarnings("deprecation")
+    SerialEnum result = SerialEnum.valueOf(e_);
+    return result == null ? SerialEnum.UNRECOGNIZED : result;
+  }
+
+  public static final int UTF8_FIELD_NUMBER = 2;
   /**
    * <pre>
-   *SerEnum se = 1;
+   *for json , txt like serial
    * </pre>
    *
-   * <code>string json = 1;</code>
-   * @return The json.
+   * <code>string utf8 = 2;</code>
+   * @return Whether the utf8 field is set.
    */
-  @Override
-  public String getJson() {
-    Object ref = json_;
+  public boolean hasUtf8() {
+    return dataCase_ == 2;
+  }
+  /**
+   * <pre>
+   *for json , txt like serial
+   * </pre>
+   *
+   * <code>string utf8 = 2;</code>
+   * @return The utf8.
+   */
+  public String getUtf8() {
+    Object ref = "";
+    if (dataCase_ == 2) {
+      ref = data_;
+    }
     if (ref instanceof String) {
       return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       String s = bs.toStringUtf8();
-      json_ = s;
+      if (dataCase_ == 2) {
+        data_ = s;
+      }
       return s;
     }
   }
   /**
    * <pre>
-   *SerEnum se = 1;
+   *for json , txt like serial
    * </pre>
    *
-   * <code>string json = 1;</code>
-   * @return The bytes for json.
+   * <code>string utf8 = 2;</code>
+   * @return The bytes for utf8.
    */
-  @Override
   public com.google.protobuf.ByteString
-      getJsonBytes() {
-    Object ref = json_;
+      getUtf8Bytes() {
+    Object ref = "";
+    if (dataCase_ == 2) {
+      ref = data_;
+    }
     if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (String) ref);
-      json_ = b;
+      if (dataCase_ == 2) {
+        data_ = b;
+      }
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
     }
+  }
+
+  public static final int BS_FIELD_NUMBER = 3;
+  /**
+   * <pre>
+   * ByteString, others Serialization transfer by protobuf
+   * </pre>
+   *
+   * <code>bytes bs = 3;</code>
+   * @return Whether the bs field is set.
+   */
+  @Override
+  public boolean hasBs() {
+    return dataCase_ == 3;
+  }
+  /**
+   * <pre>
+   * ByteString, others Serialization transfer by protobuf
+   * </pre>
+   *
+   * <code>bytes bs = 3;</code>
+   * @return The bs.
+   */
+  @Override
+  public com.google.protobuf.ByteString getBs() {
+    if (dataCase_ == 3) {
+      return (com.google.protobuf.ByteString) data_;
+    }
+    return com.google.protobuf.ByteString.EMPTY;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -147,8 +265,15 @@ private static final long serialVersionUID = 0L;
   @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getJsonBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, json_);
+    if (e_ != SerialEnum.JSON.getNumber()) {
+      output.writeEnum(1, e_);
+    }
+    if (dataCase_ == 2) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, data_);
+    }
+    if (dataCase_ == 3) {
+      output.writeBytes(
+          3, (com.google.protobuf.ByteString) data_);
     }
     unknownFields.writeTo(output);
   }
@@ -159,8 +284,17 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!getJsonBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, json_);
+    if (e_ != SerialEnum.JSON.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(1, e_);
+    }
+    if (dataCase_ == 2) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, data_);
+    }
+    if (dataCase_ == 3) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBytesSize(
+            3, (com.google.protobuf.ByteString) data_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -177,8 +311,20 @@ private static final long serialVersionUID = 0L;
     }
     InputProto other = (InputProto) obj;
 
-    if (!getJson()
-        .equals(other.getJson())) return false;
+    if (e_ != other.e_) return false;
+    if (!getDataCase().equals(other.getDataCase())) return false;
+    switch (dataCase_) {
+      case 2:
+        if (!getUtf8()
+            .equals(other.getUtf8())) return false;
+        break;
+      case 3:
+        if (!getBs()
+            .equals(other.getBs())) return false;
+        break;
+      case 0:
+      default:
+    }
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -190,8 +336,20 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + JSON_FIELD_NUMBER;
-    hash = (53 * hash) + getJson().hashCode();
+    hash = (37 * hash) + E_FIELD_NUMBER;
+    hash = (53 * hash) + e_;
+    switch (dataCase_) {
+      case 2:
+        hash = (37 * hash) + UTF8_FIELD_NUMBER;
+        hash = (53 * hash) + getUtf8().hashCode();
+        break;
+      case 3:
+        hash = (37 * hash) + BS_FIELD_NUMBER;
+        hash = (53 * hash) + getBs().hashCode();
+        break;
+      case 0:
+      default:
+    }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -325,8 +483,10 @@ private static final long serialVersionUID = 0L;
     @Override
     public Builder clear() {
       super.clear();
-      json_ = "";
+      e_ = 0;
 
+      dataCase_ = 0;
+      data_ = null;
       return this;
     }
 
@@ -353,7 +513,14 @@ private static final long serialVersionUID = 0L;
     @Override
     public InputProto buildPartial() {
       InputProto result = new InputProto(this);
-      result.json_ = json_;
+      result.e_ = e_;
+      if (dataCase_ == 2) {
+        result.data_ = data_;
+      }
+      if (dataCase_ == 3) {
+        result.data_ = data_;
+      }
+      result.dataCase_ = dataCase_;
       onBuilt();
       return result;
     }
@@ -402,9 +569,23 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(InputProto other) {
       if (other == InputProto.getDefaultInstance()) return this;
-      if (!other.getJson().isEmpty()) {
-        json_ = other.json_;
-        onChanged();
+      if (other.e_ != 0) {
+        setEValue(other.getEValue());
+      }
+      switch (other.getDataCase()) {
+        case UTF8: {
+          dataCase_ = 2;
+          data_ = other.data_;
+          onChanged();
+          break;
+        }
+        case BS: {
+          setBs(other.getBs());
+          break;
+        }
+        case DATA_NOT_SET: {
+          break;
+        }
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -434,23 +615,109 @@ private static final long serialVersionUID = 0L;
       }
       return this;
     }
+    private int dataCase_ = 0;
+    private Object data_;
+    public DataCase
+        getDataCase() {
+      return DataCase.forNumber(
+          dataCase_);
+    }
 
-    private Object json_ = "";
+    public Builder clearData() {
+      dataCase_ = 0;
+      data_ = null;
+      onChanged();
+      return this;
+    }
+
+
+    private int e_ = 0;
+    /**
+     * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+     * @return The enum numeric value on the wire for e.
+     */
+    @Override public int getEValue() {
+      return e_;
+    }
+    /**
+     * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+     * @param value The enum numeric value on the wire for e to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEValue(int value) {
+      
+      e_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+     * @return The e.
+     */
+    @Override
+    public SerialEnum getE() {
+      @SuppressWarnings("deprecation")
+      SerialEnum result = SerialEnum.valueOf(e_);
+      return result == null ? SerialEnum.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+     * @param value The e to set.
+     * @return This builder for chaining.
+     */
+    public Builder setE(SerialEnum value) {
+      if (value == null) {
+        throw new NullPointerException();
+      }
+      
+      e_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearE() {
+      
+      e_ = 0;
+      onChanged();
+      return this;
+    }
+
     /**
      * <pre>
-     *SerEnum se = 1;
+     *for json , txt like serial
      * </pre>
      *
-     * <code>string json = 1;</code>
-     * @return The json.
+     * <code>string utf8 = 2;</code>
+     * @return Whether the utf8 field is set.
      */
-    public String getJson() {
-      Object ref = json_;
+    @Override
+    public boolean hasUtf8() {
+      return dataCase_ == 2;
+    }
+    /**
+     * <pre>
+     *for json , txt like serial
+     * </pre>
+     *
+     * <code>string utf8 = 2;</code>
+     * @return The utf8.
+     */
+    @Override
+    public String getUtf8() {
+      Object ref = "";
+      if (dataCase_ == 2) {
+        ref = data_;
+      }
       if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         String s = bs.toStringUtf8();
-        json_ = s;
+        if (dataCase_ == 2) {
+          data_ = s;
+        }
         return s;
       } else {
         return (String) ref;
@@ -458,20 +725,26 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     *SerEnum se = 1;
+     *for json , txt like serial
      * </pre>
      *
-     * <code>string json = 1;</code>
-     * @return The bytes for json.
+     * <code>string utf8 = 2;</code>
+     * @return The bytes for utf8.
      */
+    @Override
     public com.google.protobuf.ByteString
-        getJsonBytes() {
-      Object ref = json_;
+        getUtf8Bytes() {
+      Object ref = "";
+      if (dataCase_ == 2) {
+        ref = data_;
+      }
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (String) ref);
-        json_ = b;
+        if (dataCase_ == 2) {
+          data_ = b;
+        }
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -479,55 +752,117 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     *SerEnum se = 1;
+     *for json , txt like serial
      * </pre>
      *
-     * <code>string json = 1;</code>
-     * @param value The json to set.
+     * <code>string utf8 = 2;</code>
+     * @param value The utf8 to set.
      * @return This builder for chaining.
      */
-    public Builder setJson(
+    public Builder setUtf8(
         String value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  
-      json_ = value;
+  dataCase_ = 2;
+      data_ = value;
       onChanged();
       return this;
     }
     /**
      * <pre>
-     *SerEnum se = 1;
+     *for json , txt like serial
      * </pre>
      *
-     * <code>string json = 1;</code>
+     * <code>string utf8 = 2;</code>
      * @return This builder for chaining.
      */
-    public Builder clearJson() {
-      
-      json_ = getDefaultInstance().getJson();
-      onChanged();
+    public Builder clearUtf8() {
+      if (dataCase_ == 2) {
+        dataCase_ = 0;
+        data_ = null;
+        onChanged();
+      }
       return this;
     }
     /**
      * <pre>
-     *SerEnum se = 1;
+     *for json , txt like serial
      * </pre>
      *
-     * <code>string json = 1;</code>
-     * @param value The bytes for json to set.
+     * <code>string utf8 = 2;</code>
+     * @param value The bytes for utf8 to set.
      * @return This builder for chaining.
      */
-    public Builder setJsonBytes(
+    public Builder setUtf8Bytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      
-      json_ = value;
+      dataCase_ = 2;
+      data_ = value;
       onChanged();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 3;</code>
+     * @return Whether the bs field is set.
+     */
+    public boolean hasBs() {
+      return dataCase_ == 3;
+    }
+    /**
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 3;</code>
+     * @return The bs.
+     */
+    public com.google.protobuf.ByteString getBs() {
+      if (dataCase_ == 3) {
+        return (com.google.protobuf.ByteString) data_;
+      }
+      return com.google.protobuf.ByteString.EMPTY;
+    }
+    /**
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 3;</code>
+     * @param value The bs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBs(com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  dataCase_ = 3;
+      data_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ByteString, others Serialization transfer by protobuf
+     * </pre>
+     *
+     * <code>bytes bs = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBs() {
+      if (dataCase_ == 3) {
+        dataCase_ = 0;
+        data_ = null;
+        onChanged();
+      }
       return this;
     }
     @Override

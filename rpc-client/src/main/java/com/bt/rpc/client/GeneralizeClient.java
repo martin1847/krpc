@@ -35,7 +35,7 @@ public class GeneralizeClient {
 
         var input = InputProto.newBuilder();
         if (null != inputJson && inputJson.length() > 0) {
-            input.setJson(inputJson);
+            input.setUtf8(inputJson);
         }
         var call = channel.newCall(md, CallOptions.DEFAULT);
 
@@ -51,8 +51,8 @@ public class GeneralizeClient {
         }
         String data = null;
 
-        if (outout.hasJson()) {
-            data = outout.getJson();
+        if (outout.hasUtf8()) {
+            data = outout.getUtf8();
         } else {
             ByteString payload = outout.getBs();
             data = JsonUtils.stringify(

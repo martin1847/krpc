@@ -108,7 +108,7 @@ private static final long serialVersionUID = 0L;
   public enum DataCase
       implements com.google.protobuf.Internal.EnumLite,
           InternalOneOfEnum {
-    JSON(3),
+    UTF8(3),
     BS(4),
     DATA_NOT_SET(0);
     private final int value;
@@ -127,7 +127,7 @@ private static final long serialVersionUID = 0L;
 
     public static DataCase forNumber(int value) {
       switch (value) {
-        case 3: return JSON;
+        case 3: return UTF8;
         case 4: return BS;
         case 0: return DATA_NOT_SET;
         default: return null;
@@ -205,27 +205,27 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int JSON_FIELD_NUMBER = 3;
+  public static final int UTF8_FIELD_NUMBER = 3;
   /**
    * <pre>
-   *for json
+   *&#47;/for json , txt like serial
    * </pre>
    *
-   * <code>string json = 3;</code>
-   * @return Whether the json field is set.
+   * <code>string utf8 = 3;</code>
+   * @return Whether the utf8 field is set.
    */
-  public boolean hasJson() {
+  public boolean hasUtf8() {
     return dataCase_ == 3;
   }
   /**
    * <pre>
-   *for json
+   *&#47;/for json , txt like serial
    * </pre>
    *
-   * <code>string json = 3;</code>
-   * @return The json.
+   * <code>string utf8 = 3;</code>
+   * @return The utf8.
    */
-  public String getJson() {
+  public String getUtf8() {
     Object ref = "";
     if (dataCase_ == 3) {
       ref = data_;
@@ -244,14 +244,14 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   *for json
+   *&#47;/for json , txt like serial
    * </pre>
    *
-   * <code>string json = 3;</code>
-   * @return The bytes for json.
+   * <code>string utf8 = 3;</code>
+   * @return The bytes for utf8.
    */
   public com.google.protobuf.ByteString
-      getJsonBytes() {
+      getUtf8Bytes() {
     Object ref = "";
     if (dataCase_ == 3) {
       ref = data_;
@@ -371,8 +371,8 @@ private static final long serialVersionUID = 0L;
     if (!getDataCase().equals(other.getDataCase())) return false;
     switch (dataCase_) {
       case 3:
-        if (!getJson()
-            .equals(other.getJson())) return false;
+        if (!getUtf8()
+            .equals(other.getUtf8())) return false;
         break;
       case 4:
         if (!getBs()
@@ -398,8 +398,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getM().hashCode();
     switch (dataCase_) {
       case 3:
-        hash = (37 * hash) + JSON_FIELD_NUMBER;
-        hash = (53 * hash) + getJson().hashCode();
+        hash = (37 * hash) + UTF8_FIELD_NUMBER;
+        hash = (53 * hash) + getUtf8().hashCode();
         break;
       case 4:
         hash = (37 * hash) + BS_FIELD_NUMBER;
@@ -638,7 +638,7 @@ private static final long serialVersionUID = 0L;
         onChanged();
       }
       switch (other.getDataCase()) {
-        case JSON: {
+        case UTF8: {
           dataCase_ = 3;
           data_ = other.data_;
           onChanged();
@@ -837,26 +837,26 @@ private static final long serialVersionUID = 0L;
 
     /**
      * <pre>
-     *for json
+     *&#47;/for json , txt like serial
      * </pre>
      *
-     * <code>string json = 3;</code>
-     * @return Whether the json field is set.
+     * <code>string utf8 = 3;</code>
+     * @return Whether the utf8 field is set.
      */
     @Override
-    public boolean hasJson() {
+    public boolean hasUtf8() {
       return dataCase_ == 3;
     }
     /**
      * <pre>
-     *for json
+     *&#47;/for json , txt like serial
      * </pre>
      *
-     * <code>string json = 3;</code>
-     * @return The json.
+     * <code>string utf8 = 3;</code>
+     * @return The utf8.
      */
     @Override
-    public String getJson() {
+    public String getUtf8() {
       Object ref = "";
       if (dataCase_ == 3) {
         ref = data_;
@@ -875,15 +875,15 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     *for json
+     *&#47;/for json , txt like serial
      * </pre>
      *
-     * <code>string json = 3;</code>
-     * @return The bytes for json.
+     * <code>string utf8 = 3;</code>
+     * @return The bytes for utf8.
      */
     @Override
     public com.google.protobuf.ByteString
-        getJsonBytes() {
+        getUtf8Bytes() {
       Object ref = "";
       if (dataCase_ == 3) {
         ref = data_;
@@ -902,14 +902,14 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     *for json
+     *&#47;/for json , txt like serial
      * </pre>
      *
-     * <code>string json = 3;</code>
-     * @param value The json to set.
+     * <code>string utf8 = 3;</code>
+     * @param value The utf8 to set.
      * @return This builder for chaining.
      */
-    public Builder setJson(
+    public Builder setUtf8(
         String value) {
       if (value == null) {
     throw new NullPointerException();
@@ -921,13 +921,13 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     *for json
+     *&#47;/for json , txt like serial
      * </pre>
      *
-     * <code>string json = 3;</code>
+     * <code>string utf8 = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearJson() {
+    public Builder clearUtf8() {
       if (dataCase_ == 3) {
         dataCase_ = 0;
         data_ = null;
@@ -937,14 +937,14 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     *for json
+     *&#47;/for json , txt like serial
      * </pre>
      *
-     * <code>string json = 3;</code>
-     * @param value The bytes for json to set.
+     * <code>string utf8 = 3;</code>
+     * @param value The bytes for utf8 to set.
      * @return This builder for chaining.
      */
-    public Builder setJsonBytes(
+    public Builder setUtf8Bytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();

@@ -39,32 +39,32 @@ public interface OutputProtoOrBuilder extends
 
   /**
    * <pre>
-   *for json
+   *&#47;/for json , txt like serial
    * </pre>
    *
-   * <code>string json = 3;</code>
-   * @return Whether the json field is set.
+   * <code>string utf8 = 3;</code>
+   * @return Whether the utf8 field is set.
    */
-  boolean hasJson();
+  boolean hasUtf8();
   /**
    * <pre>
-   *for json
+   *&#47;/for json , txt like serial
    * </pre>
    *
-   * <code>string json = 3;</code>
-   * @return The json.
+   * <code>string utf8 = 3;</code>
+   * @return The utf8.
    */
-  String getJson();
+  String getUtf8();
   /**
    * <pre>
-   *for json
+   *&#47;/for json , txt like serial
    * </pre>
    *
-   * <code>string json = 3;</code>
-   * @return The bytes for json.
+   * <code>string utf8 = 3;</code>
+   * @return The bytes for utf8.
    */
   com.google.protobuf.ByteString
-      getJsonBytes();
+      getUtf8Bytes();
 
   /**
    * <pre>

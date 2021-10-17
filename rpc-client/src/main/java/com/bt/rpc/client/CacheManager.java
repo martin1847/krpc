@@ -30,7 +30,7 @@ public interface CacheManager {
     default void set(MethodStub stub, String cacheKey, OutputProto message){
         String value;
         if(stub.returnType != byte[].class){
-            value = message.getJson();
+            value = message.getUtf8();
         }else {
             value = message.getBs().toStringUtf8();
         }
@@ -38,6 +38,8 @@ public interface CacheManager {
     }
 
 
+    // TODO check with different serType
+    // change to cache DTO / RpcResult
     default OutputProto get(MethodStub stub, String cacheKey){
         var bs = get(cacheKey);
         if(null == bs){
@@ -45,7 +47,7 @@ public interface CacheManager {
         }
         OutputProto.Builder bd = OutputProto.newBuilder();
         if(stub.returnType != byte[].class){
-            bd.setJson(bs);
+            bd.setUtf8(bs);
         }else{
             bd.setBs(ByteString.copyFromUtf8(bs));
         }
@@ -56,7 +58,7 @@ public interface CacheManager {
     default String cacheKey(MethodStub stub,
                     InputProto input){
 
-        var json = input.getJson();
+        var json = input.getUtf8();
         String paramKey  = json;
         if(json.length()>KEY_MAX_SIZE_UNDIGEST){
             paramKey = json.substring(0,32)+"---"+ SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8));

@@ -19,26 +19,26 @@ import com.bt.rpc.util.JsonUtils;
 public class JsonSerial  implements Serial{
     @Override
     public void writeInput(Object[] args, Builder builder) {
-        builder.setJson(JsonUtils.stringify(args[0]));
+        builder.setUtf8(JsonUtils.stringify(args[0]));
     }
 
     @Override
     public <T> T readOutput(OutputProto proto, Class<T> type) {
-        return JsonUtils.parse(proto.getJson(), type);
+        return JsonUtils.parse(proto.getUtf8(), type);
     }
 
     @Override
     public <T> T readOutput(OutputProto proto, ParameterizedType type) {
-        return JsonUtils.parse(proto.getJson(), type);
+        return JsonUtils.parse(proto.getUtf8(), type);
     }
 
     @Override
     public <T> T readInput(InputProto proto, Class<T> type) {
-        return JsonUtils.parse(proto.getJson(), type);
+        return JsonUtils.parse(proto.getUtf8(), type);
     }
 
     @Override
     public void writeOutput(Object obj, OutputProto.Builder out) {
-        out.setJson(JsonUtils.stringify(obj));
+        out.setUtf8(JsonUtils.stringify(obj));
     }
 }

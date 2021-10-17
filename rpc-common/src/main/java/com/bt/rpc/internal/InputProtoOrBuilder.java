@@ -8,22 +8,63 @@ public interface InputProtoOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <pre>
-   *SerEnum se = 1;
-   * </pre>
-   *
-   * <code>string json = 1;</code>
-   * @return The json.
+   * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+   * @return The enum numeric value on the wire for e.
    */
-  String getJson();
+  int getEValue();
+  /**
+   * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
+   * @return The e.
+   */
+  SerialEnum getE();
+
   /**
    * <pre>
-   *SerEnum se = 1;
+   *for json , txt like serial
    * </pre>
    *
-   * <code>string json = 1;</code>
-   * @return The bytes for json.
+   * <code>string utf8 = 2;</code>
+   * @return Whether the utf8 field is set.
+   */
+  boolean hasUtf8();
+  /**
+   * <pre>
+   *for json , txt like serial
+   * </pre>
+   *
+   * <code>string utf8 = 2;</code>
+   * @return The utf8.
+   */
+  String getUtf8();
+  /**
+   * <pre>
+   *for json , txt like serial
+   * </pre>
+   *
+   * <code>string utf8 = 2;</code>
+   * @return The bytes for utf8.
    */
   com.google.protobuf.ByteString
-      getJsonBytes();
+      getUtf8Bytes();
+
+  /**
+   * <pre>
+   * ByteString, others Serialization transfer by protobuf
+   * </pre>
+   *
+   * <code>bytes bs = 3;</code>
+   * @return Whether the bs field is set.
+   */
+  boolean hasBs();
+  /**
+   * <pre>
+   * ByteString, others Serialization transfer by protobuf
+   * </pre>
+   *
+   * <code>bytes bs = 3;</code>
+   * @return The bs.
+   */
+  com.google.protobuf.ByteString getBs();
+
+  public InputProto.DataCase getDataCase();
 }

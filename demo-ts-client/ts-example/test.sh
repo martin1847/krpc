@@ -1,1 +1,0 @@
- npm link grpc-web &&   tsc &&   npm t

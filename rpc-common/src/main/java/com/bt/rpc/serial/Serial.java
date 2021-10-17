@@ -8,16 +8,23 @@ import java.lang.reflect.ParameterizedType;
 
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
+import com.bt.rpc.internal.SerialEnum;
+import com.google.protobuf.ByteString;
 
 /**
  *
  * @author martin.cong
  * @version 2021-10-17 13:01
  */
-public interface Serial  extends ServerSerial{
+public interface Serial  extends ServerWriter {
 
-    void writeInput(Object[] args, InputProto.Builder builder);
+    void writeInput(Object obj, InputProto.Builder builder);
 
+    default void writeInput(byte[] obj, InputProto.Builder builder){
+        //System.out.println("input is bytes , ignore serialEnum");
+        //todo verfiy write bytes for input
+        builder.setBs(ByteString.copyFrom(obj));
+    }
 
     <T> T readOutput(OutputProto proto , Class<T> type) ;
 
@@ -25,20 +32,23 @@ public interface Serial  extends ServerSerial{
 
 
     // server side
-    //
-    //<T> T  readInput(InputProto proto, Class<T> type);
-    //
-    //void writeOutput(Object obj, OutputProto.Builder out);
+    // TODO server input support ParameterizedType
+    <T> T  readInput(InputProto proto, Class<T> type);
+
+    SerialEnum id();
 
 
     class Instance{
         static final   Serial JSON =  new JsonSerial();
-        private static Serial instance = JSON;
-        public static Serial get(){
-            return instance;
+        //TODO more than json
+        public static Serial get(int seValue){
+            if(seValue == SerialEnum.JSON_VALUE){
+                return JSON;
+            }
+            throw new RuntimeException("Serial of [ "+ SerialEnum.forNumber(seValue) +" ] not support now!");
         }
-        public static void set(Serial ins){
-            instance = ins;
+        static Serial get(SerialEnum se){
+            return get(se.getNumber());
         }
     }
 

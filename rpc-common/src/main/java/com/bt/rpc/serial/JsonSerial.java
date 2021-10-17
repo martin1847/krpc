@@ -9,6 +9,7 @@ import java.lang.reflect.ParameterizedType;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.InputProto.Builder;
 import com.bt.rpc.internal.OutputProto;
+import com.bt.rpc.internal.SerialEnum;
 import com.bt.rpc.util.JsonUtils;
 
 /**
@@ -18,8 +19,8 @@ import com.bt.rpc.util.JsonUtils;
  */
 public class JsonSerial  implements Serial{
     @Override
-    public void writeInput(Object[] args, Builder builder) {
-        builder.setUtf8(JsonUtils.stringify(args[0]));
+    public void writeInput(Object arg, Builder builder) {
+        builder.setUtf8(JsonUtils.stringify(arg));
     }
 
     @Override
@@ -35,6 +36,11 @@ public class JsonSerial  implements Serial{
     @Override
     public <T> T readInput(InputProto proto, Class<T> type) {
         return JsonUtils.parse(proto.getUtf8(), type);
+    }
+
+    @Override
+    public SerialEnum id() {
+        return SerialEnum.JSON;
     }
 
     @Override

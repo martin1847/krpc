@@ -5,7 +5,7 @@ import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
-import com.bt.rpc.serial.ServerSerial;
+import com.bt.rpc.serial.ServerWriter;
 import com.bt.rpc.util.EnvUtils;
 import com.bt.rpc.common.MethodStub;
 import io.grpc.Metadata;
@@ -22,7 +22,6 @@ import java.lang.reflect.InvocationTargetException;
 @Slf4j
 public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto> {
     private final Class                                    service;
-    //private final Object serviceToInvoke;
     private final MethodStub                               stub;
     private final FilterChain<ServerResult, ServerContext> filterChain;
 
@@ -30,7 +29,6 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     private DynamicInvoke invoke;
 
-    private ServerSerial serverSerial;
 
     //    static {
     //        // -J-Djava.util.logging.manager=org.jboss.logmanager.LogManager
@@ -47,7 +45,6 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         this.service = service;
         methodName = stub.method.getName();
 
-        serverSerial =  (byte[].class == stub.returnType)? ServerSerial.BARE : Serial.Instance.get();
 
         var inputArgTypes = stub.method.getParameterTypes();
         Class firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];
@@ -56,10 +53,12 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         if (System.getProperty("java.vm.name").contains("Substrate")) {
             if (firstInputType == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
-            } else {
-
+            } else if(byte[].class == firstInputType){
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
-                        serverSerial.readInput(sc.getArg(),firstInputType));
+                        sc.getArg().getBs().toByteArray());
+            }else {
+                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
+                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),firstInputType));
             }
             return;
         }
@@ -76,12 +75,16 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             if (firstInputType == null) {
                 // compiler time
                 invoke = sc -> (RpcResult) mh.invokeExact();
+            } else if(byte[].class == firstInputType){
+                invoke = sc -> (RpcResult) mh.invokeExact(sc.getArg().getBs().toByteArray());
             } else {
 
                 // may has method override issue , int / string  both change to Object Param,
                 //                var objInputMh=mh.asType(mh.type().changeParameterType(0, Object.class));
                 //                invoke = sc ->  (RpcResult) objInputMh.invokeExact(sc.readInput.apply(sc.getArg()));
-                invoke = sc -> (RpcResult) mh.invoke(serverSerial.readInput(sc.getArg(),firstInputType));
+                invoke = sc -> (RpcResult) mh.invoke(
+                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),firstInputType)
+                );
             }
 
         } catch (Exception e) {
@@ -100,7 +103,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     public ServerResult invoke(ServerContext req) throws Throwable {
         var res = invoke.invoke(req);
-        return new ServerResult(res, serverSerial);
+        return new ServerResult(res, Serial.Instance.get(req.getArg().getEValue()));
     }
 
     // https://github.com/openzipkin/brave
@@ -118,7 +121,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     public void invoke(InputProto im, StreamObserver<OutputProto> responseObserver) {
 
         var ctx = new ServerContext(service, methodName, stub.returnType,
-                im, this::invoke, serverSerial, ((UnaryCallObserver) responseObserver).getHeaders());
+                im, this::invoke, ((UnaryCallObserver) responseObserver).getHeaders());
         ServerContext.LOCAL.set(ctx);
 
         //1.  https://github.com/perfmark/perfmark

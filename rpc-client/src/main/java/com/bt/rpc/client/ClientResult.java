@@ -4,9 +4,8 @@ import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.Code;
 import com.bt.rpc.model.RpcResult;
-import com.bt.rpc.serial.ClientSerial;
-
-import java.util.function.Function;
+import com.bt.rpc.serial.ClientReader;
+import com.bt.rpc.serial.Serial;
 
 /**
  * 2020-04-03 16:12
@@ -15,16 +14,19 @@ import java.util.function.Function;
  */
 public class ClientResult extends ResultWrapper {
 
-    ClientSerial clientSerial;
+    ClientReader clientReader;
+    Serial serial;
 
-    public ClientResult(OutputProto output, ClientSerial clientSerial) {
+    public ClientResult(OutputProto output, ClientReader clientReader, Serial serial) {
         super(output);
-        this.clientSerial = clientSerial;
+        this.clientReader = clientReader;
+        this.serial = serial;
     }
 
-    public ClientResult(Code code, String message, ClientSerial clientSerial) {
+    public ClientResult(Code code, String message, ClientReader clientReader, Serial serial) {
         super(code, message);
-        this.clientSerial = clientSerial;
+        this.clientReader = clientReader;
+        this.serial = serial;
     }
 
 
@@ -33,7 +35,7 @@ public class ClientResult extends ResultWrapper {
         var res = new RpcResult<DTO>();
         res.setCode(Code.forNumber(output.getC()));
         res.setMessage(output.getM());
-        res.setData((DTO)clientSerial.readOutput(output));
+        res.setData((DTO) clientReader.readOutput(serial,output));
         return res;
     }
 }

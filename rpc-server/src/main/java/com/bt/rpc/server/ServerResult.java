@@ -3,9 +3,8 @@ package com.bt.rpc.server;
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
-import com.bt.rpc.serial.ServerSerial;
-
-import java.util.function.BiConsumer;
+import com.bt.rpc.serial.Serial;
+import com.bt.rpc.serial.ServerWriter;
 
 /**
  * 2020-04-07 13:41
@@ -14,7 +13,7 @@ import java.util.function.BiConsumer;
  */
 public class ServerResult extends ResultWrapper {
 
-    public <DTO> ServerResult(RpcResult<DTO> result, ServerSerial serverSerial)
+    public <DTO> ServerResult(RpcResult<DTO> result, ServerWriter serverSerial)
     {
         if (null != result)
         {

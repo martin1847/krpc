@@ -6,7 +6,7 @@ import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 //import com.bt.rpc.internal.SerEnum;
 import com.google.protobuf.ByteString;
-import com.bt.rpc.util.MethodStub;
+import com.bt.rpc.common.MethodStub;
 
 /**
  * 2020-08-25 15:27

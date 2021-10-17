@@ -1,4 +1,4 @@
-package com.bt.rpc.util;
+package com.bt.rpc.common;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -9,6 +9,8 @@ import com.bt.rpc.annotation.Cached;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
+import com.bt.rpc.util.JsonUtils;
+import com.bt.rpc.util.RefUtils;
 import com.google.protobuf.ByteString;
 import io.grpc.MethodDescriptor;
 import io.grpc.protobuf.lite.ProtoLiteUtils;
@@ -31,9 +33,9 @@ public class MethodStub {
     public final Type                                     returnType;
     public final BiConsumer<Object[], InputProto.Builder> writeInput;
     public final Function<OutputProto, Object>            readOutput;
-    public final Function<InputProto, Object>             readInput;
+    //public final Function<InputProto, Object>             readInput;
 
-    public final BiConsumer<Object, OutputProto.Builder>   writeOutput;
+    //public final BiConsumer<Object, OutputProto.Builder>   writeOutput;
     public final MethodDescriptor<InputProto, OutputProto> methodDescriptor;
 
     public final Method method;
@@ -60,14 +62,14 @@ public class MethodStub {
         var types = method.getParameterTypes();
 
         if (types.length == 0) {
-            readInput = null;
+            //readInput = null;
             writeInput = (objects, builder) -> {
             };
         } else {
 
-            readInput = in -> JSON.parse(in.getJson(), types[0]);
+            //readInput = in -> JsonUtils.parse(in.getJson(), types[0]);
             //SerializationUtils.deserialize(in.getB(),types[0]);
-            writeInput = (objects, builder) -> builder.setJson(JSON.stringify(objects[0]));
+            writeInput = (objects, builder) -> builder.setJson(JsonUtils.stringify(objects[0]));
             //{
             //    builder.setSe(SerEnum.JSON);
             //    builder.setB(SerializationUtils.serialize(objects[0]));
@@ -76,15 +78,15 @@ public class MethodStub {
 
         this.returnType = RefUtils.findRpcResultGenericType(method);
         if (byte[].class != returnType) {
-            writeOutput = (obj, output) -> output.setJson(JSON.stringify(obj));
+            //writeOutput = (obj, output) -> output.setJson(JsonUtils.stringify(obj));
             //{
             //    output.setSe(SerEnum.JSON);
             //    output.setB(SerializationUtils.serialize(obj));
             //};
-            readOutput = output -> JSON.parse(output.getJson(), returnType);
+            readOutput = output -> JsonUtils.parse(output.getJson(), returnType);
             //SerializationUtils.deserialize(output.getB(), returnType);
         } else {
-            writeOutput = (obj, output) -> output.setBs(ByteString.copyFrom((byte[]) obj));
+            //writeOutput = (obj, output) -> output.setBs(ByteString.copyFrom((byte[]) obj));
             readOutput = o -> o.getBs().toByteArray();
         }
         methodDescriptor = buildMd(clzName, method.getName());
@@ -99,4 +101,9 @@ public class MethodStub {
                 .setFullMethodName(methodName).build();
     }
 
+    //public static void main(String[] args) {
+    //    byte[] bytes = new byte[]{12,34};
+    //    Class<byte[]> bytesCls = byte[].class;
+    //    System.out.println(bytes.getClass() == bytesCls);
+    //}
 }

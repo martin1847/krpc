@@ -3,6 +3,7 @@ package com.bt.rpc.server;
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.serial.ServerSerial;
 
 import java.util.function.BiConsumer;
 
@@ -13,7 +14,7 @@ import java.util.function.BiConsumer;
  */
 public class ServerResult extends ResultWrapper {
 
-    public <DTO> ServerResult(RpcResult<DTO> result, BiConsumer<Object, OutputProto.Builder> writeOutput)
+    public <DTO> ServerResult(RpcResult<DTO> result, ServerSerial serverSerial)
     {
         if (null != result)
         {
@@ -27,7 +28,7 @@ public class ServerResult extends ResultWrapper {
             var data = result.getData();
             if (null != data)
             {
-                writeOutput.accept(data, output);
+                serverSerial.writeOutput(data, output);
             }
             super.output = output.build();
         }

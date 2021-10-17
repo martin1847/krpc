@@ -4,8 +4,8 @@ import java.util.Base64;
 
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.util.JSON;
-import com.bt.rpc.util.MethodStub;
+import com.bt.rpc.util.JsonUtils;
+import com.bt.rpc.common.MethodStub;
 import com.google.protobuf.ByteString;
 import io.grpc.CallOptions;
 import io.grpc.ManagedChannel;
@@ -47,7 +47,7 @@ public class GeneralizeClient {
         sb.append("{\"code\":").append(outout.getC());//.append("\"");
         var message = outout.getM();
         if (null != message && message.length() > 0) {
-            sb.append(",\"message\":").append(JSON.stringify(message));
+            sb.append(",\"message\":").append(JsonUtils.stringify(message));
         }
         String data = null;
 
@@ -55,7 +55,7 @@ public class GeneralizeClient {
             data = outout.getJson();
         } else {
             ByteString payload = outout.getBs();
-            data = JSON.stringify(
+            data = JsonUtils.stringify(
                     Base64.getEncoder().encodeToString(payload.toByteArray()));
         }
         sb.append(",\"data\":").append(data);

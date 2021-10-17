@@ -24,7 +24,7 @@ public abstract class SerializationUtils {
         if (null == obj) {
             return null;
         }
-        return ByteString.copyFromUtf8(JSON.stringify(obj));
+        return ByteString.copyFromUtf8(JsonUtils.stringify(obj));
     }
 //
 
@@ -38,7 +38,7 @@ public abstract class SerializationUtils {
 
     public static <T> T deserialize(ByteString str, Class<T> type) {
         if (null != str) {
-            return JSON.parse(str.toStringUtf8(),type);
+            return JsonUtils.parse(str.toStringUtf8(),type);
         }
         return null;
     }
@@ -46,7 +46,7 @@ public abstract class SerializationUtils {
 
     public static <T> T deserialize(ByteString str, ParameterizedType type) {
         if (null != str) {
-            return JSON.parse(str.toStringUtf8(),type);
+            return JsonUtils.parse(str.toStringUtf8(),type);
         }
         return  null;
 

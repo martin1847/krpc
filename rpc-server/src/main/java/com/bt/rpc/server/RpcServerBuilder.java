@@ -17,13 +17,12 @@ import com.bt.rpc.common.FilterInvokeHelper;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.server.RpcMetaServiceImpl.RpcMetaMethod;
-import com.bt.rpc.util.MethodStub;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerServiceDefinition;
-import io.grpc.stub.ServerCalls;
 import lombok.extern.slf4j.Slf4j;
 
 /**

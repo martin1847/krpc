@@ -2,6 +2,7 @@ package com.bt.rpc.util;
 
 //import com.alibaba.fastjson.util.ParameterizedTypeImpl;
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.model.RpcResult;
 
 import java.lang.reflect.Field;

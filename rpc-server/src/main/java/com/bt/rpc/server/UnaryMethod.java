@@ -4,8 +4,9 @@ import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.serial.ServerSerial;
 import com.bt.rpc.util.EnvUtils;
-import com.bt.rpc.util.MethodStub;
+import com.bt.rpc.common.MethodStub;
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
 import io.grpc.Status;
@@ -26,7 +27,9 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     private final String methodName;
 
-    DynamicInvoke invoke;
+    private DynamicInvoke invoke;
+
+    private ServerSerial serverSerial;
 
     //    static {
     //        // -J-Djava.util.logging.manager=org.jboss.logmanager.LogManager
@@ -43,15 +46,19 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         this.service = service;
         methodName = stub.method.getName();
 
-        //"java.vm.name :Substrate VM"
-        boolean useRefDirect = System.getProperty("java.vm.name").contains("Substrate");
+        serverSerial =  (byte[].class == stub.returnType)? ServerSerial.BARE : ServerSerial.JSON;
 
-        if (useRefDirect) {
-            if (stub.readInput == null) {
+        var inputArgTypes = stub.method.getParameterTypes();
+        Class firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];
+
+        //"java.vm.name :Substrate VM" , graalVM just use Reflection
+        if (System.getProperty("java.vm.name").contains("Substrate")) {
+            if (firstInputType == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
             } else {
 
-                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, sc.readInput.apply(sc.getArg()));
+                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
+                        serverSerial.readInput(sc.getArg(),firstInputType));
             }
             return;
         }
@@ -65,7 +72,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             // vs JavassistProxyFactory https://bytebuddy.net/#/
             var mh = publicLookup.unreflect(stub.method).bindTo(serviceToInvoke);
 
-            if (stub.readInput == null) {
+            if (firstInputType == null) {
                 // compiler time
                 invoke = sc -> (RpcResult) mh.invokeExact();
             } else {
@@ -73,11 +80,11 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 // may has method override issue , int / string  both change to Object Param,
                 //                var objInputMh=mh.asType(mh.type().changeParameterType(0, Object.class));
                 //                invoke = sc ->  (RpcResult) objInputMh.invokeExact(sc.readInput.apply(sc.getArg()));
-                invoke = sc -> (RpcResult) mh.invoke(sc.readInput.apply(sc.getArg()));
+                invoke = sc -> (RpcResult) mh.invoke(serverSerial.readInput(sc.getArg(),firstInputType));
             }
 
         } catch (Exception e) {
-            log.error("To RuntimeException : ", e);
+            log.error("Init server side MethodHandles error, change To RuntimeException : ", e);
             throw new RuntimeException(e);
         }
 
@@ -92,7 +99,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     public ServerResult invoke(ServerContext req) throws Throwable {
         var res = invoke.invoke(req);
-        return new ServerResult(res, stub.writeOutput);
+        return new ServerResult(res, serverSerial);
     }
 
     // https://github.com/openzipkin/brave
@@ -110,7 +117,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     public void invoke(InputProto im, StreamObserver<OutputProto> responseObserver) {
 
         var ctx = new ServerContext(service, methodName, stub.returnType,
-                im, this::invoke, stub.readInput, ((UnaryCallObserver) responseObserver).getHeaders());
+                im, this::invoke, serverSerial, ((UnaryCallObserver) responseObserver).getHeaders());
         ServerContext.LOCAL.set(ctx);
 
         //1.  https://github.com/perfmark/perfmark

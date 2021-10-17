@@ -5,7 +5,7 @@ import com.bt.rpc.common.FilterInvokeHelper;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.Code;
-import com.bt.rpc.util.MethodStub;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.ClientCalls;

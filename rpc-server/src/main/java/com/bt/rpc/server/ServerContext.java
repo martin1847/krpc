@@ -3,6 +3,7 @@ package com.bt.rpc.server;
 import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.serial.ServerSerial;
 import io.grpc.Context;
 import io.grpc.Metadata;
 
@@ -34,13 +35,13 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     public ServerContext(Class service, String method, Type resDto, InputProto arg,
                          FilterChain<ServerResult,ServerContext> lastChain,
-                         Function<InputProto,Object> readInput, Metadata headers) {
+                         ServerSerial serverSerial, Metadata headers) {
         super(service, method, resDto, arg, lastChain);
-        this.readInput = readInput;
+        this.serverSerial = serverSerial;
         this.headers = headers;
     }
 
-    public Function<InputProto,Object> readInput;
+    public ServerSerial serverSerial;
 
     public Metadata getHeaders(){
         return headers;

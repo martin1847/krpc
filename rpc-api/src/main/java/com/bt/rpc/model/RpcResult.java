@@ -16,7 +16,8 @@ public class RpcResult<Obj> implements Serializable {
 
     /**
      * google.rpc.Code/CommonCode 的超集<br>
-     * 自定义业务异常码，以百为业务区间，大业务以千为区间
+     * 自定义业务异常码，以百为业务区间，大业务以千为区间<br>
+     * 除非必要，禁止使用java Exception传递错误信息，请定义异常码
      */
     int code = 0 ;
 

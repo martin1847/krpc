@@ -25,13 +25,13 @@ public class MyTimeService implements TimeService {
     public RpcResult<TimeResult> hello(TimeReq req) {
         var res = new TimeResult();
         res.setTime( new Date()+ " \t Java   " + getClass().getName() + " : " + req);
-        //if(2>1) throw  new RuntimeException("jjj");
+        res.setTimestamp(System.currentTimeMillis());
         return RpcResult.success(res);
     }
 
     @Override
     public RpcResult<byte[]> ping() {
-        return RpcResult.success("124gshhh".getBytes());
+        return RpcResult.success("9527".getBytes());
     }
 
     @Override

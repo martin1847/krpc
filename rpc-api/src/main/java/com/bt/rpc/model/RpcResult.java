@@ -31,7 +31,7 @@ public class RpcResult<DTO> implements Serializable {
     }
 
 
-    public static <T> RpcResult<T> success(T data){
+    public static <T> RpcResult<T> ok(T data){
         RpcResult<T> res = new RpcResult<>();
         res.data = data;
         return res;

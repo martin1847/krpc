@@ -26,22 +26,22 @@ public class MyTimeService implements TimeService {
         var res = new TimeResult();
         res.setTime( new Date()+ " \t Java   " + getClass().getName() + " : " + req);
         res.setTimestamp(System.currentTimeMillis());
-        return RpcResult.success(res);
+        return RpcResult.ok(res);
     }
 
     @Override
     public RpcResult<byte[]> ping() {
-        return RpcResult.success("9527".getBytes());
+        return RpcResult.ok("9527".getBytes());
     }
 
     @Override
     public RpcResult<String> ping2() {
-        return RpcResult.success("java5678");
+        return RpcResult.ok("java5678");
     }
 
     @Override
     public RpcResult<Map<String, Integer>> ping1() {
-        return RpcResult.success(Collections.singletonMap("mappppa",123));
+        return RpcResult.ok(Collections.singletonMap("mappppa",123));
     }
 
     @Override
@@ -52,6 +52,6 @@ public class MyTimeService implements TimeService {
 
     @Override
     public RpcResult<List<Integer>> ping3() {
-        return RpcResult.success(List.of(123,456));
+        return RpcResult.ok(List.of(123,456));
     }
 }

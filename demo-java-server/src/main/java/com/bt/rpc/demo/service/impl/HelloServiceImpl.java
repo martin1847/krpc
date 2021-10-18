@@ -21,11 +21,11 @@ public class HelloServiceImpl implements HelloService {
 
     @Override
     public RpcResult<HelloRes> hello(HelloBean request1, HelloBean request2) {
-        return RpcResult.success(new HelloRes(new Date().toString() +" \t " + request1 +"\t" + request2));
+        return RpcResult.ok(new HelloRes(new Date().toString() +" \t " + request1 +"\t" + request2));
     }
 
     @Override
     public RpcResult<String> hello2() {
-        return RpcResult.success(System.currentTimeMillis() + "");
+        return RpcResult.ok(System.currentTimeMillis() + "");
     }
 }

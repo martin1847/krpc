@@ -10,7 +10,7 @@ import java.io.Serializable;
  * @author Martin.C
  */
 @Data
-public class RpcResult<Obj> implements Serializable {
+public class RpcResult<DTO> implements Serializable {
 
     public static final int OK = 0;
 
@@ -23,10 +23,10 @@ public class RpcResult<Obj> implements Serializable {
 
     String message;
 
-    Obj data;
+    DTO data;
 
 
-    public boolean isSuccess(){
+    public boolean isOk(){
         return OK == code;
     }
 
@@ -34,7 +34,6 @@ public class RpcResult<Obj> implements Serializable {
     public static <T> RpcResult<T> success(T data){
         RpcResult<T> res = new RpcResult<>();
         res.data = data;
-        //res.code = Code.OK;
         return res;
     }
 
@@ -42,15 +41,7 @@ public class RpcResult<Obj> implements Serializable {
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
         res.message = msg;
-//        res.errors = Collections.singletonList(new CodeMsg(code, msg));
         return res;
     }
-//
-//    public void setCodeVal(int val){
-//        code = Code.forNumber(val);
-//    }
 
-//    public int getCodeVal(){
-//        return code.value;
-//    }
 }

@@ -18,7 +18,7 @@ public class ServerResult extends ResultWrapper {
         if (null != result)
         {
             var output = OutputProto.newBuilder();
-            output.setC(result.getCode().value);
+            output.setC(result.getCode());
             var msg = result.getMessage();
             if (null != msg)
             {

@@ -13,7 +13,7 @@ import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
-import com.bt.rpc.model.Code;
+import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.ClientReader;
 import com.bt.rpc.serial.ClientReader.Generic;
 import com.bt.rpc.serial.ClientReader.Normal;
@@ -112,7 +112,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
                 return out;
             }
             out = super.rpc(req, input);
-            if (out.getC() == Code.OK.value) {
+            if (out.getC() == RpcResult.OK) {
                 cacheManager.set(stub, cacheKey, out);
             }
             return out;

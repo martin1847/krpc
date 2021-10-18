@@ -12,8 +12,13 @@ import java.io.Serializable;
 @Data
 public class RpcResult<Obj> implements Serializable {
 
-    // default value , same with c# side
-    Code code = Code.OK;
+    public static final int OK = 0;
+
+    /**
+     * google.rpc.Code/CommonCode 的超集<br>
+     * 自定义业务异常码，以百为业务区间，大业务以千为区间
+     */
+    int code = 0 ;
 
     String message;
 
@@ -21,7 +26,7 @@ public class RpcResult<Obj> implements Serializable {
 
 
     public boolean isSuccess(){
-        return Code.OK == code;
+        return OK == code;
     }
 
 
@@ -32,7 +37,7 @@ public class RpcResult<Obj> implements Serializable {
         return res;
     }
 
-    public static <T> RpcResult<T> error(Code code, String msg) {
+    public static <T> RpcResult<T> error(int code, String msg) {
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
         res.message = msg;

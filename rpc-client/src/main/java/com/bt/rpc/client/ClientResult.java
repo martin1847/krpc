@@ -2,7 +2,6 @@ package com.bt.rpc.client;
 
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.model.Code;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.ClientReader;
 import com.bt.rpc.serial.Serial;
@@ -23,7 +22,7 @@ public class ClientResult extends ResultWrapper {
         this.serial = serial;
     }
 
-    public ClientResult(Code code, String message, ClientReader clientReader, Serial serial) {
+    public ClientResult(int code, String message, ClientReader clientReader, Serial serial) {
         super(code, message);
         this.clientReader = clientReader;
         this.serial = serial;
@@ -33,7 +32,7 @@ public class ClientResult extends ResultWrapper {
     public <DTO> RpcResult<DTO> toReturn()
     {
         var res = new RpcResult<DTO>();
-        res.setCode(Code.forNumber(output.getC()));
+        res.setCode(output.getC());
         res.setMessage(output.getM());
         res.setData((DTO) clientReader.readOutput(serial,output));
         return res;

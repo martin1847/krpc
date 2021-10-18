@@ -14,7 +14,7 @@ package com.bt.rpc.model;
  *
  * Protobuf enum {@code google.rpc.Code}
  */
-public enum Code {
+public enum CommonCode {
   /**
    * <pre>
    * Not an error; returned on success
@@ -233,7 +233,7 @@ public enum Code {
   //UNRECOGNIZED(-1),
   ;
 
-  public static Code forNumber(int value) {
+  public static CommonCode forNumber(int value) {
     switch (value) {
       case 0: return OK;
       case 1: return CANCELLED;
@@ -258,7 +258,7 @@ public enum Code {
 
   public final int value;
 
-  private Code(int value) {
+  private CommonCode(int value) {
     this.value = value;
   }
 

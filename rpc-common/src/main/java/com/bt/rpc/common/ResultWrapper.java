@@ -1,7 +1,6 @@
 package com.bt.rpc.common;
 
 import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.model.Code;
 
 public class ResultWrapper
     {
@@ -15,10 +14,10 @@ public class ResultWrapper
             this.output = Output;
         }
 
-        public ResultWrapper(Code code, String message)
+        public ResultWrapper(int code, String message)
         {
             var out = OutputProto.newBuilder();
-            out.setC(code.value);
+            out.setC(code);
             out.setM(message);
             this.output = out.build();
         }

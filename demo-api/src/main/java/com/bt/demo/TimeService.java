@@ -17,7 +17,9 @@ public interface TimeService {
 //    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
 
-    RpcResult<byte[]> ping();
+    RpcResult<byte[]> bytes();
+
+    RpcResult<byte[]> incBytes(byte[] bytes);
 
     @Deprecated
 //    @Cached

@@ -30,8 +30,16 @@ public class MyTimeService implements TimeService {
     }
 
     @Override
-    public RpcResult<byte[]> ping() {
+    public RpcResult<byte[]> bytes() {
         return RpcResult.ok("9527".getBytes());
+    }
+
+    @Override
+    public RpcResult<byte[]> incBytes(byte[] bytes) {
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (bytes[i]+1);
+        }
+        return RpcResult.ok(bytes);
     }
 
     @Override

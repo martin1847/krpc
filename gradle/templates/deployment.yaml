@@ -17,10 +17,8 @@ spec:
       labels:
         app: {{ .Values.appName }}
         component: java
+        grpc: web
     spec:
-#     serviceAccountName: {{ .Values.deployment.serviceAccount | default "fabric8-service-account" }}
-#      securityContext:
-#        fsGroup: 1000
       containers:
         - name: {{ .Values.appName  }}
           image: {{ .Values.deployment.image.name }}

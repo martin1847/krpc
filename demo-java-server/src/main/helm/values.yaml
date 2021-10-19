@@ -29,6 +29,17 @@ deployment:
     APP_ENV: TEST
     LOG_LEVEL: warn
 
+# TODO grpc_health_probe
+#readinessProbe:
+#  exec:
+#    command: ["/bin/grpc_health_probe", "-addr=localhost:50051"]
+#  initialDelaySeconds: 5
+#livenessProbe:
+#  exec:
+#    command: ["/bin/grpc_health_probe", "-addr=localhost:50051"]
+#  initialDelaySeconds: 10
+
+
 prod:
   replicas: 2
   weight: 100

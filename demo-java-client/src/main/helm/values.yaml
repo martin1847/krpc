@@ -2,8 +2,8 @@ appName: demo-java-server
 
 service:
   type: ClusterIP
-  ports: 
-    grpc: 50051
+  port: 50051
+  portName: grpc-web
 
 resources:
   limits:

@@ -10,6 +10,10 @@ package com.bt.rpc.model;
  * the most specific error code that applies.  For example, prefer
  * `OUT_OF_RANGE` over `FAILED_PRECONDITION` if both codes apply.
  * Similarly prefer `NOT_FOUND` or `ALREADY_EXISTS` over `FAILED_PRECONDITION`.
+ *
+ * http code mapping :
+ * https://github.com/grpc/grpc-web/blob/1.3.0/javascript/net/grpc/web/statuscode.js
+ *
  * </pre>
  *
  * Protobuf enum {@code google.rpc.Code}

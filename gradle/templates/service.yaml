@@ -8,10 +8,8 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-  {{- range $key, $val := .Values.service.ports }}
-  - port: {{ $val }}
-    targetPort: {{ $val }}
-    name: {{ $key }} 
-  {{- end }}
+  - port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.port }}
+    name: {{ .Values.service.portName | default "http" }}
   selector:
     app: {{ .Values.appName  }}

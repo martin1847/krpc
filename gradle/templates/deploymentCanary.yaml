@@ -4,32 +4,32 @@ metadata:
   labels:
     app: {{ .Values.appName }}
     revision: {{ .Chart.Version | replace "+" "_"  }}
-    canary: "false"
-  name: {{ .Values.appName  }}
+    canary: "true"
+  name: {{ .Values.appName  }}-canary
 spec:
   selector:
     matchLabels:
       app: {{ .Values.appName  }}
-      canary: "false"
-  replicas: {{ .Values.prod.replicas | default 2 }}
+      canary: "true"
+  replicas: {{ .Values.canary.replicas | default 0 }}
   template:
     metadata:
-      annotations:
+      annotations: 
         sidecar.istio.io/inject: "{{ .Values.deployment.istioInject | default true }}"
       labels:
         app: {{ .Values.appName }}
         component: java
         grpc: web
-        canary: "false"
+        canary: "true"
     spec:
       containers:
         - name: {{ .Values.appName  }}
-          image: "{{ .Values.deployment.image.name }}:{{ .Values.prod.tag }}"
+          image: "{{ .Values.deployment.image.name }}:{{ .Values.canary.tag }}"
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
           command: ["/bin/bash","-c","{{ .Values.deployment.image.command  | default "./application" }}" ]
           env:
           - name: CLUSTER_NAME
-            value: {{ .Values.cd.cluster }}
+            value: {{.Values.cd.cluster}}
           {{- range $key, $val := .Values.deployment.env }}
           - name: {{ $key }}
             value: {{ $val | quote}}
@@ -40,7 +40,7 @@ spec:
                 name: {{ .Values.appName }}
           {{- end }}
           ports:
-            - containerPort: {{ .Values.service.port }}
+          - containerPort: {{ .Values.service.port }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- $http_port := .Values.service.port }}

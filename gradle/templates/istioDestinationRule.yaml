@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: {{ .Values.appName  }}
+  labels:
+    app: {{ .Values.appName }}
+    revision: {{ .Chart.Version | replace "+" "_" }}
+spec:
+  host: {{ .Values.appName  }}.{{ .Release.Namespace }}
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: prod
+      labels:
+        canary: "false"
+    - name: canary
+      labels:
+        canary: "true"

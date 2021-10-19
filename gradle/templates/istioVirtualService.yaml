@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.appName  }}
+  labels:
+    app: {{ .Values.appName }}
+    revision: {{ .Chart.Version | replace "+" "_" }}
+spec:
+  hosts:
+    - {{ .Values.deployment.host }}
+  gateways:
+    - {{ .Values.appName  }}
+  http:
+    - route:
+        - destination:
+            host: {{ .Values.appName  }}.{{ .Release.Namespace }}
+            subset: prod
+            port:
+              number: {{ .Values.service.port }}
+          weight: {{ .Values.prod.weight }}
+        - destination:
+            host: {{ .Values.appName  }}.{{ .Release.Namespace }}
+            subset: canary
+            port:
+              number: {{ .Values.service.port }}
+          weight: {{ .Values.canary.weight }}

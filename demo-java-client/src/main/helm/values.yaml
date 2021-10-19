@@ -16,14 +16,24 @@ resources:
 cd:
   cluster: local-test
 
+
 deployment:
-  replicas: 2
+  host: demo-java-client.botaoyx.com
   image:
     pullPolicy: IfNotPresent
-    name: "docker-local.jfrog.io/demo-java-server:latest"
+    name: "jcr.botaoyx.com/img/example/demo-java-client"
     command: "./application -Dquarkus.http.host=0.0.0.0"
   env:
     APP_ENV: TEST
     LOG_LEVEL: warn
 
+prod:
+  replicas: 2
+  weight: 100
+  tag: 83
 
+
+canary:
+  replicas: 0
+  weight: 0
+  tag: ""

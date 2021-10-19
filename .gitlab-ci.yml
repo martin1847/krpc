@@ -18,7 +18,8 @@ variables:
   variables:
     APP_VERSION: 1.0.$CI_PIPELINE_ID
     DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
-    DOCKER_TAG: $CI_PIPELINE_ID-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
+    DOCKER_TAG: $CI_PIPELINE_ID
+    #-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
 
 build:
   stage: build
@@ -80,9 +81,9 @@ chart:
       for APP_NAME in ${APP_NAMES}
       do
         chartDir=./$APP_NAME/src/main/helm
-        imgFullName="$DOCKER_REPO/$APP_NAME:$DOCKER_TAG"
+        img="$DOCKER_REPO/$APP_NAME"
         yq e -i ".name= \"$APP_NAME\" | .version= \"$APP_VERSION\"" $chartDir/Chart.yaml
-        yq e -i ".appName= \"$APP_NAME\" | .deployment.image.name = \"$imgFullName\""  $chartDir/values.yaml
+        yq e -i ".appName= \"$APP_NAME\" | .deployment.image.name = \"$img\" | .prod.tag = \"$DOCKER_TAG\" "  $chartDir/values.yaml
         helm template --debug  --dry-run $chartDir
         helm package $chartDir
         curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${APP_NAME}-$APP_VERSION.tgz" \

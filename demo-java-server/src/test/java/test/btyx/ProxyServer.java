@@ -25,7 +25,7 @@ public class ProxyServer {
 
     private int port = RpcConstants.DEFAULT_PORT;
     private void start() throws Exception {
-        RpcServerBuilder proxyServerBuilder = new RpcServerBuilder.Builder("Test Java Server")
+        RpcServerBuilder proxyServerBuilder = new RpcServerBuilder.Builder("demo-java-server")
                 .addService(new HelloServiceImpl())
 //                .addService(new ServerApp.GreeterImpl())
                 .addService(new MyTimeService())

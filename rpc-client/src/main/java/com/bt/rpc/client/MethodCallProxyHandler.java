@@ -40,11 +40,13 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     private final CacheManager cacheManager;
 
     private final SerialEnum serialEnum;
+    private final String serverName;
 
-    public MethodCallProxyHandler(ManagedChannel channel, Class<T> clz,
+    public MethodCallProxyHandler(String serverName,ManagedChannel channel, Class<T> clz,
                                   List<ClientFilter> filterList,
                                   CacheManager cacheManager,
                                   SerialEnum serialEnum) {
+        this.serverName = serverName;
         this.channel = channel;
         this.clz = clz;
 
@@ -122,7 +124,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     //(Lcom/bt/rpc/demo/service/HelloBean;Lcom/bt/rpc/demo/service/HelloBean;)
     // Lcom/bt/rpc/model/RpcResult<Lcom/bt/rpc/demo/service/HelloRes;>;
     private void initStub() {
-        for (MethodStub stub : RefUtils.toRpcMethods(clz)) {
+        for (MethodStub stub : RefUtils.toRpcMethods(serverName,clz)) {
 
             if (cacheManager != null && stub.cached != null) {
 

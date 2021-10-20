@@ -27,6 +27,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class TestJavaProxyClient {
 
+
+    static final String SERVER_APP = "demo-java-server";
+
     private final ManagedChannel channel;
     private final RpcClientFactory builder;
 
@@ -37,7 +40,7 @@ public class TestJavaProxyClient {
                 .usePlaintext()
                 .build();
         CacheManager cacheManager =  new SimpleLRUCache();
-        builder = new RpcClientFactory(channel,cacheManager);
+        builder = new RpcClientFactory(SERVER_APP,channel,cacheManager);
     }
 
     public void shutdown() throws InterruptedException {
@@ -104,7 +107,9 @@ public class TestJavaProxyClient {
 
             var inputJson="{\"name\":\"JavaGener\",\"age\":2020}";
 
-            var msg = GeneralizeClient.call(client.channel,TimeService.class.getName() ,"hello",inputJson);
+            var fullHelloName = SERVER_APP+"/"+TimeService.class.getSimpleName()+"/hello";
+
+            var msg = GeneralizeClient.call(client.channel, fullHelloName,inputJson);
 
             System.out.println(
                     GeneralizeClient.toJson(msg)

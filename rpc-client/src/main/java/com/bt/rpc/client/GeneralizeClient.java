@@ -25,13 +25,11 @@ public class GeneralizeClient {
     //   .weakValues()
     //   .maximumSize(10000)
     //   .expiration(10, TimeUnit.MINUTES)
-    public static OutputProto call(ManagedChannel channel, String service, String method, String inputJson) {
+    public static OutputProto call(ManagedChannel channel, String fullRpcMethodName, String inputJson) {
 
-        assert service != null;
-        assert method != null;
-
+        assert fullRpcMethodName != null;
         // may use lru cache
-        var md = MethodStub.buildMd(service, method);
+        var md = MethodStub.buildMd(fullRpcMethodName);
 
         var input = InputProto.newBuilder();
         if (null != inputJson && inputJson.length() > 0) {

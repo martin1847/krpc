@@ -96,27 +96,27 @@ public abstract class RefUtils {
     }
 
 
-    public static List<MethodStub> toRpcMethods(Class clz) {
-        String serviceInterfaceName = toServericeName(clz);
+    public static List<MethodStub> toRpcMethods(String appName,Class clz) {
+        String rpcServiceName = rpcServiceName(appName,clz);
         RpcService grpcServive = (RpcService) clz.getDeclaredAnnotation(RpcService.class);
 
         return Stream.of(clz.getMethods())
                 .filter(m -> m.getReturnType() == RpcResult.class && m.getParameterCount() <= 1)
-                .map(m -> new MethodStub(grpcServive,serviceInterfaceName, m))
+                .map(m -> new MethodStub(grpcServive,rpcServiceName, m))
                 .collect(Collectors.toList());
 
     }
 
-    public static String toServericeName(Class clz) {
-        var pac =  clz.getPackageName();
-        if(TRIM_SERVICE_NAME && pac.startsWith("com.")){
-            pac = pac.substring(4);
-        }
+    public static String rpcServiceName(String appName,Class clz) {
+        //var pac =  clz.getPackageName();
+        //if(TRIM_SERVICE_NAME && pac.startsWith("com.")){
+        //    pac = pac.substring(4);
+        //}
         var name = clz.getSimpleName();
         if(name.startsWith("I")){
             name = name.substring(1);
         }
-        return pac + "." + name;
+        return appName + "/" + name;
     }
 
 }

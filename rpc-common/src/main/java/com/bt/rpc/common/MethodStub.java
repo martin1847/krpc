@@ -39,7 +39,7 @@ public class MethodStub {
     @Setter
     int expireSeconds;
 
-    public MethodStub(RpcService rpcService, String clzName, Method method) {
+    public MethodStub(RpcService rpcService, String rpcServiceName, Method method) {
         this.method = method;
         this.rpcService = rpcService;
 
@@ -50,16 +50,15 @@ public class MethodStub {
         }
 
         this.returnType = RefUtils.findRpcResultGenericType(method);
-        methodDescriptor = buildMd(clzName, method.getName());
+        methodDescriptor = buildMd(rpcServiceName+ "/" +method.getName());
 
     }
 
-    public static MethodDescriptor<InputProto, OutputProto> buildMd(String service, String method) {
-        var methodName = service + "/" + method;
+    public static MethodDescriptor<InputProto, OutputProto> buildMd(String fullMethodName) {
         return MethodDescriptor
                 .newBuilder(REQUEST_MARSHALLER, RESPONSE_MARSHALLER)
                 .setType(MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName(methodName).build();
+                .setFullMethodName(fullMethodName).build();
     }
 
     //public static void main(String[] args) {

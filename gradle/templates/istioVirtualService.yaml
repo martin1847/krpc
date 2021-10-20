@@ -11,13 +11,14 @@ spec:
 #    - {{ .Values.deployment.host | default "api.xx.com" }}
 #    - {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
   gateways:
-    - istio-system/api-gateway
+#    - istio-system/api-gateway
+    - {{ .Release.Namespace }}-api-gateway
   http:
     - match:
       - uri:
           prefix: "/{{ .Values.appName }}/"
-      rewrite:
-        uri: /
+#      rewrite:
+#        uri: /
       route:
       - destination:
           host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local

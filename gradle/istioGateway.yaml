@@ -1,18 +1,19 @@
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
-  name: {{ .Values.appName  }}
-  labels:
-    app: {{ .Values.appName }}
-    revision: {{ .Chart.Version | replace "+" "_" }}
+  name: {{ .Release.Namespace }}-api-gateway
 spec:
   selector:
     istio: ingressgateway
   servers:
     - port:
-        number: 80
-        name: http
-        protocol: HTTP
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: botaoyx-com-prod-tls
+#        serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
+#        privateKey: /etc/istio/ingressgateway-certs/tls.key
       hosts:
-        - "{{ .Values.deployment.host }}"
-#        - "*"
+        - {{ .Release.Namespace }}-api.botaoyx.com

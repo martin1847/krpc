@@ -19,7 +19,6 @@ spec:
       labels:
         app: {{ .Values.appName }}
         component: java
-        grpc: web
         canary: "true"
     spec:
       containers:

@@ -3,7 +3,7 @@ appName: demo-java-server
 service:
   type: ClusterIP
   port: 50051
-  portName: grpc
+  appProtocol: grpc-web
 
 resources:
   limits:

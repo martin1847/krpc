@@ -10,6 +10,7 @@ spec:
   ports:
   - port: {{ .Values.service.port }}
     targetPort: {{ .Values.service.port }}
-    name: {{ .Values.service.portName | default "http" }}
+    name: {{ .Values.service.appProtocol | default "http" }}-{{ .Values.service.port }}
+    appProtocol: {{ .Values.service.appProtocol | default "http" }}
   selector:
     app: {{ .Values.appName  }}

@@ -7,32 +7,31 @@ metadata:
     revision: {{ .Chart.Version | replace "+" "_" }}
 spec:
   hosts:
-    - {{ .Values.deployment.host }}
+    - {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
   gateways:
     - {{ .Values.appName  }}
   http:
     - route:
       - destination:
-          host: {{ .Values.appName  }}.{{ .Release.Namespace }}
+          host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
           subset: prod
           port:
             number: {{ .Values.service.port }}
         weight: {{ .Values.prod.weight }}
       - destination:
-          host: {{ .Values.appName  }}.{{ .Release.Namespace }}
+          host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
           subset: canary
           port:
             number: {{ .Values.service.port }}
         weight: {{ .Values.canary.weight }}
       corsPolicy:
         allowOrigins:
-        - prefix: "*"
+        - prefix: "http://localhost"
+        - exact: https://course.botaoyx.com
         allowMethods:
         - POST
         - GET
         - OPTIONS
-        - PUT
-        - DELETE
         allowCredentials: false
         allowHeaders:
         - grpc-timeout
@@ -53,4 +52,4 @@ spec:
         - custom-header-1
         - grpc-status
         - grpc-message
-        maxAge: "24h"
+        maxAge: "1h"

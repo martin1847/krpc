@@ -17,4 +17,5 @@ public interface RpcMetaService {
     RpcResult<ApiMeta> listApis();
 
 
+    RpcResult<String> v();
 }

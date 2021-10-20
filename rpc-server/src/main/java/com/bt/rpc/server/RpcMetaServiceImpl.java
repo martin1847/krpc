@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.common.meta.Api;
 import com.bt.rpc.common.meta.ApiMeta;
@@ -32,6 +33,11 @@ class RpcMetaServiceImpl implements RpcMetaService {
     @Override
     public RpcResult<ApiMeta> listApis() {
         return result;
+    }
+
+    @Override
+    public RpcResult<String> v() {
+        return RpcResult.ok(RpcConstants.CI_BUILD_ID);
     }
 
     public void init(List<RpcMetaMethod> methods) {

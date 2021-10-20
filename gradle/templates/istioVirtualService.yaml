@@ -9,10 +9,9 @@ spec:
   hosts:
     - "*"
 #    - {{ .Values.deployment.host | default "api.xx.com" }}
-#    - {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
   gateways:
 #    - istio-system/api-gateway
-    - {{ .Release.Namespace }}-api-gateway
+    - {{ .Values.deployment.gateway | default "api-gateway" }}
   http:
     - match:
       - uri:

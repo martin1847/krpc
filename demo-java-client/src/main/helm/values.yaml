@@ -18,7 +18,6 @@ cd:
 
 
 deployment:
-  host: api.botaoyx.com
   corsAllow: course.botaoyx.com
   image:
     pullPolicy: IfNotPresent

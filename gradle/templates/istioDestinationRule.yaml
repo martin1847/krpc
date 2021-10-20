@@ -7,9 +7,9 @@ metadata:
     revision: {{ .Chart.Version | replace "+" "_" }}
 spec:
   host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
-  trafficPolicy:
-    tls:
-      mode: ISTIO_MUTUAL
+#  trafficPolicy:
+#    tls:
+#      mode: ISTIO_MUTUAL
   subsets:
     - name: prod
       labels:

@@ -1,6 +1,3 @@
-
-
-# default the module name
 appName: demo-java-server
 
 service:
@@ -20,7 +17,8 @@ cd:
   cluster: local-test
 
 deployment:
-  host: demo-java-server.botaoyx.com
+  host: api.botaoyx.com
+  corsAllow: course.botaoyx.com
   image:
     pullPolicy: IfNotPresent
     name: "jcr.botaoyx.com/img/example/demo-java-server"

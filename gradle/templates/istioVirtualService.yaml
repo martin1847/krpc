@@ -7,12 +7,17 @@ metadata:
     revision: {{ .Chart.Version | replace "+" "_" }}
 spec:
   hosts:
-    - {{ .Values.deployment.host }}
-    - {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
+    - {{ .Values.deployment.host | default "api.botaoyx.com" }}
+#    - {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
   gateways:
-    - {{ .Values.appName  }}
+    - istio-system/api-gateway
   http:
-    - route:
+    - match:
+      - uri:
+          prefix: "/{{ .Values.appName }}/"
+      rewrite:
+        uri: /
+      route:
       - destination:
           host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
           subset: prod
@@ -28,7 +33,7 @@ spec:
       corsPolicy:
         allowOrigins:
         - prefix: "http://localhost"
-        - exact: https://course.botaoyx.com
+        - exact: "https://{{ .Values.deployment.corsAllow }}"
         allowMethods:
         - POST
         - GET
@@ -41,11 +46,10 @@ spec:
         - user-agent
         - cache-control
         - content-type
-        - content-transfer-encoding
         - deadline
         - authorization
-        - x-accept-content-transfer-encoding
-        - x-accept-response-streaming
+        - x-b3-traceid
+        - x-forwarded-for
         - x-user-agent
         - x-grpc-web
         - custom-header-1

@@ -23,7 +23,7 @@ dependencies {
 
 //    implementation 'org.yaml:snakeyaml:1.28'
     implementation 'org.apache.commons:commons-lang3:3.12.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.4'
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
 
 //    testImplementation 'junit:junit:4.13.1'

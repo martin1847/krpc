@@ -1,30 +1,5 @@
-//sourceCompatibility = '11'
-//targetCompatibility = "11"
-//apply from: "$rootProject.projectDir/gradle/upload.gradle"
-
-//artifactoryPublish.skip = true
-
-//
-//def mainClass = 'com.bt.ProxyServer'
-
-//apply plugin:'application'
-//mainClassName=mainClass
-
-
 apply plugin:  'io.quarkus'
 
-////jar {
-//task fatJar(type: Jar) {
-//
-//    manifest {
-//        attributes "Main-Class": mainClass
-//    }
-//    baseName = 'fatJar'
-//    from {
-//        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-//    }
-//    with jar
-//}
 
 dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"
@@ -55,8 +30,9 @@ dependencies {
     implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
     implementation "io.grpc:grpc-netty:${grpcVersion}"
+
     // graalvm not support
-    implementation 'io.netty:netty-transport-native-epoll:4.1.65.Final:linux-x86_64'
+//    implementation 'io.netty:netty-transport-native-epoll:4.1.65.Final:linux-x86_64'
 
 //    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
 
@@ -64,12 +40,9 @@ dependencies {
 //    implementation 'io.quarkus:quarkus-resteasy'
 //    testImplementation 'io.rest-assured:rest-assured'
     testImplementation 'io.quarkus:quarkus-junit5'
-    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
-}
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+//    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
+    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
 }
 
 compileJava {

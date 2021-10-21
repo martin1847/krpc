@@ -1,30 +1,5 @@
-//sourceCompatibility = '11'
-//targetCompatibility = "11"
-//apply from: "$rootProject.projectDir/gradle/upload.gradle"
-
-//artifactoryPublish.skip = true
-
-//
-//def mainClass = 'com.ProxyServer'
-
-//apply plugin:'application'
-//mainClassName=mainClass
-
 
 apply plugin:  'io.quarkus'
-
-////jar {
-//task fatJar(type: Jar) {
-//
-//    manifest {
-//        attributes "Main-Class": mainClass
-//    }
-//    baseName = 'fatJar'
-//    from {
-//        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-//    }
-//    with jar
-//}
 
 dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"
@@ -46,7 +21,6 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 //    runtimeOnly "io.netty:netty-tcnative-boringssl-static:2.0.28.Final"
 
-//    implementation ("org.springframework.boot:spring-boot-starter:2.2.0.RELEASE") //TODO tang
 
     implementation platform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
 //  implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
@@ -55,8 +29,9 @@ dependencies {
     implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
     implementation "io.grpc:grpc-netty:${grpcVersion}"
+
     // graalvm not support
-    implementation 'io.netty:netty-transport-native-epoll:4.1.65.Final:linux-x86_64'
+//    implementation 'io.netty:netty-transport-native-epoll:4.1.68.Final:linux-x86_64'
 
 //    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
 
@@ -64,13 +39,15 @@ dependencies {
 //    implementation 'io.quarkus:quarkus-resteasy'
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
+
+//    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
 //    testImplementation 'io.rest-assured:rest-assured'
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
+//java {
+//    sourceCompatibility = JavaVersion.VERSION_11
+//    targetCompatibility = JavaVersion.VERSION_11
+//}
 
 compileJava {
     options.encoding = 'UTF-8'
@@ -87,6 +64,8 @@ compileJava {
 // gradle build -Dquarkus.package.type=native
 //  ./build/demo-java-server-1.0.0-SNAPSHOT-runner -Dquarkus.log.level=all
 //https://quarkus.io/guides/writing-native-applications-tips
+
+/*
 quarkusBuild {
 
     nativeArgs {
@@ -176,4 +155,5 @@ quarkusBuild {
 
 
 }
+*/
 

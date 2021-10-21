@@ -8,16 +8,12 @@ metadata:
 spec:
   hosts:
     - "*"
-#    - {{ .Values.deployment.host | default "api.xx.com" }}
   gateways:
-#    - istio-system/api-gateway
-    - {{ .Values.deployment.gateway | default "api-gateway" }}
+    - istio-system/api-gateway
   http:
     - match:
       - uri:
           prefix: "/{{ .Values.appName }}/"
-#      rewrite:
-#        uri: /
       route:
       - destination:
           host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
@@ -59,3 +55,20 @@ spec:
         - grpc-status
         - grpc-message
         maxAge: "1h"
+
+{{- /*
+
+      hosts: 可以有多个，取gw的交集，用*交给gw控制
+        #    - {{ .Values.deployment.host | default "api.xx.com" }}
+        gateways:
+          #  - mesh # applies to all the sidecars in the mesh
+          #    - {{ .Values.deployment.gateway | default "api-gateway" }}
+          - match:
+              - uri:
+                  prefix: "/{{ .Values.appName }}/"
+
+      #      rewrite:
+      #        uri: /
+
+
+*/}}

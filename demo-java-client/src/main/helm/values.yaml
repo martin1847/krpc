@@ -22,7 +22,7 @@ deployment:
   image:
     pullPolicy: IfNotPresent
     name: "jcr.botaoyx.com/img/example/demo-java-client"
-    command: "./application -Dquarkus.http.host=0.0.0.0"
+  #    command: "./app  -Dquarkus.log.level=all"
   env:
     APP_ENV: TEST
     LOG_LEVEL: warn

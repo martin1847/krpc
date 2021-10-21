@@ -26,7 +26,7 @@ spec:
         - name: {{ .Values.appName  }}
           image: "{{ .Values.deployment.image.name }}:{{ .Values.canary.tag }}"
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
-          command: ["/bin/bash","-c","{{ .Values.deployment.image.command  | default "./application" }}" ]
+          command: ["/bin/bash","-c","{{ .Values.deployment.image.command  | default "./app" }}" ]
           env:
           - name: CLUSTER_NAME
             value: {{.Values.cd.cluster}}

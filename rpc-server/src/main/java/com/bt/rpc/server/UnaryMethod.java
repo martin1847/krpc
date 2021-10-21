@@ -50,6 +50,17 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         Class firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];
 
         //"java.vm.name :Substrate VM" , graalVM just use Reflection
+        /*
+        [ Use Method Invoke ] with :Substrate VM
+100 Exception , avgCost :1.78 ms
+200 Exception , avgCost :1.31 ms
+300 Exception , avgCost :1.17 ms
+1000 Exception , avgCost :1.247 ms
+2000 Exception , avgCost :1.003 ms
+5000 Exception , avgCost :0.522 ms
+10000 Exception , avgCost :0.3184 ms
+20000 Exception , avgCost :0.3076 ms
+         */
         if (System.getProperty("java.vm.name").contains("Substrate")) {
             if (firstInputType == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
@@ -66,6 +77,16 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         var publicLookup = MethodHandles.publicLookup();
         //        var mt = MethodType.methodType(stub.method.getReturnType(),stub.method.getParameterTypes());
 
+        /**
+         * 100 Exception , avgCost :1.66 ms
+         * 200 Exception , avgCost :1.345 ms
+         * 300 Exception , avgCost :1.21 ms
+         * 1000 Exception , avgCost :1.276 ms
+         * 2000 Exception , avgCost :1.181 ms
+         * 5000 Exception , avgCost :0.6622 ms
+         * 10000 Exception , avgCost :0.3655 ms
+         * 20000 Exception , avgCost :0.3569 ms
+         */
         try {
             //var mh = publicLookup.findVirtual(service,stub.method.getName(),mt).bindTo(serviceToInvoke);
 

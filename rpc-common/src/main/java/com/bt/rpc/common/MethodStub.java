@@ -49,6 +49,8 @@ public class MethodStub {
             cached = null;
         }
 
+        // RefUtils.GenericTypeBySignature.findRpcResultGenericType(method);
+
         this.returnType = RefUtils.findRpcResultGenericType(method);
         methodDescriptor = buildMd(rpcServiceName+ "/" +method.getName());
 

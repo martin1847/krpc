@@ -70,7 +70,18 @@ public class TestJavaProxyClient {
             System.out.println("hello2 : " + timeService.hello(new TimeReq("Java",2020)));
 
 
-
+            //
+            //testException(timeService,500);
+            //
+            //testException(timeService,1000);
+            //
+            //testException(timeService,2000);
+            //
+            //testException(timeService,5000);
+            //
+            //testException(timeService,10000);
+            //
+            //testException(timeService,20000);
             System.out.println("time pingWithRuntimeException 4 : "
                     + timeService.pingWithRuntimeException());
 
@@ -93,6 +104,20 @@ public class TestJavaProxyClient {
         } catch (Exception e) {
             log.error( "RPC failed with greeting ", e);
         }
+    }
+
+    public void testException(TimeService timeService, int times){
+        long b = System.currentTimeMillis();
+        for (int i = 0; i < times; i++) {
+            try {
+                timeService.pingWithRuntimeException();
+            }catch (Exception e){
+                // ignore
+            }
+        }
+        var avgCost = (System.currentTimeMillis() - b) / (double)times;
+        System.out.println(times + " Exception , avgCost :" + avgCost +" ms");
+
     }
 
     /**

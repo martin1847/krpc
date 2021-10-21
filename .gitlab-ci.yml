@@ -1,4 +1,4 @@
-image: "jcr.botaoyx.com/img/common/graalvm-gradle:7.21.3"
+image: "jcr.botaoyx.com/img/common/graalvm-gradle:7.21"
 #stages: .pre build  test  deploy .post
 
 variables:

@@ -1,11 +1,9 @@
-image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.2"
+image: "jcr.botaoyx.com/img/graalvm-gradle:7.21.3"
 #stages: .pre build  test  deploy .post
 
 variables:
   APP_NAMES: "demo-java-server demo-java-client"
   APP_NAMESPACE: example
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-#  APP_NAME: course
 
 #
 #cache: &global_cache

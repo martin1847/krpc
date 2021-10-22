@@ -12,6 +12,7 @@ spec:
       app: {{ .Values.appName  }}
       canary: "true"
   replicas: {{ .Values.canary.replicas | default 0 }}
+  revisionHistoryLimit: 3
   template:
     metadata:
       annotations: 

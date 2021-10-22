@@ -17,6 +17,7 @@ import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.ClientReader;
 import com.bt.rpc.serial.ClientReader.Generic;
 import com.bt.rpc.serial.ClientReader.Normal;
+import com.bt.rpc.serial.ClientWriter;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.ManagedChannel;
@@ -63,13 +64,21 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     private class ChannelMethodInvoker implements FilterChain<ClientResult, ClientContext> {
         //        ClientCall<InputMessage, OutputMessage> clientCall;
         final MethodStub   stub;
-        final boolean      hasInputs;
         final ClientReader clientReader;
+        final ClientWriter clientWriter;
         //        ManagedChannel channel;
 
         public ChannelMethodInvoker(MethodStub stub) {
             this.stub = stub;
-            hasInputs = stub.method.getParameterCount() > 0;
+            //hasInputs = stub.method.getParameterCount() > 0;
+            if(0 == stub.method.getParameterCount() ){
+                clientWriter = ClientWriter.ZERO_INPUT;
+            }else if (byte[].class == stub.method.getParameterTypes()[0]) {
+                clientWriter = ClientWriter.BYTES;
+            }else {
+                clientWriter = ClientWriter.BY_USER;
+            }
+
             var returnType = stub.returnType;
             if (byte[].class == returnType) {
                 clientReader = ClientReader.BARE;
@@ -86,9 +95,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
             var input = InputProto.newBuilder();
             input.setE(req.getSerial());
-            if (hasInputs) {
-                serial.writeInput(req.getArg()[0], input);
-            }
+            clientWriter.writeParameters(req.getArg(), input);
             OutputProto response = rpc(req, input.build());
             return new ClientResult(response, clientReader, serial);
         }

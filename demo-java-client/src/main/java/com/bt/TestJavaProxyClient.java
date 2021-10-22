@@ -15,6 +15,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
@@ -152,7 +153,18 @@ public class TestJavaProxyClient {
             var timeService = client.builder.get(TimeService.class, Collections.singletonList(new TestFilter()));
 
 
-            var request = new HelloBean("Test1",18);
+            var bytes = timeService.bytesTime();
+            System.out.println("bytes from server :" + Arrays.toString(bytes.getData()));
+
+
+            bytes = timeService.incBytes(new byte[]{1,2,3});
+            System.out.println("incBytes from server :" + Arrays.toString(bytes.getData()));
+
+            var by = new byte[]{1,2,3};
+            var sum  = timeService.bytesSum(by);
+            System.out.println("bytesSum from server :" +  Arrays.toString(by) +" =  " + sum.getData());
+
+
 
 
             var rpcObj = timeService.hello(new TimeReq("Java",2020));

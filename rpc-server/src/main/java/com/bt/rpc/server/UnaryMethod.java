@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 
 @Slf4j
 public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto> {
@@ -38,6 +39,8 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     //        System.out.println("Java.logging.manager :" + System.getProperty("java.util.logging.manager"));
     //    }
 
+    private final boolean bytesWrite;
+
     public UnaryMethod(Class service, Object serviceToInvoke, MethodStub stub, FilterChain<ServerResult, ServerContext> filterChain) {
         //this.serviceToInvoke = serviceToInvoke;
         this.stub = stub;
@@ -45,6 +48,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         this.service = service;
         methodName = stub.method.getName();
 
+        bytesWrite = stub.returnType == byte[].class;
 
         var inputArgTypes = stub.method.getParameterTypes();
         Class firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];
@@ -124,7 +128,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     public ServerResult invoke(ServerContext req) throws Throwable {
         var res = invoke.invoke(req);
-        return new ServerResult(res, Serial.Instance.get(req.getArg().getEValue()));
+        return new ServerResult(res, bytesWrite ? ServerWriter.BYTES : Serial.Instance.get(req.getArg().getEValue()));
     }
 
     // https://github.com/openzipkin/brave

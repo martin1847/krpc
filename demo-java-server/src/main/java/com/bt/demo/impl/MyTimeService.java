@@ -7,10 +7,15 @@ import com.bt.rpc.model.RpcResult;
 import io.quarkus.runtime.Startup;
 
 import javax.enterprise.context.ApplicationScoped;
+
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * TODO change this comment
@@ -30,8 +35,16 @@ public class MyTimeService implements TimeService {
     }
 
     @Override
-    public RpcResult<byte[]> bytes() {
-        return RpcResult.ok("9527".getBytes());
+    public RpcResult<byte[]> bytesTime() {
+        var now = LocalDateTime.now();
+        return RpcResult.ok(new byte[]{
+                (byte) ( now.get(ChronoField.YEAR_OF_ERA) -2000 ),
+                (byte) now.get(ChronoField.MONTH_OF_YEAR),
+                (byte) now.get(ChronoField.DAY_OF_MONTH),
+                (byte) now.get(ChronoField.HOUR_OF_DAY),
+                (byte) now.get(ChronoField.MINUTE_OF_HOUR),
+                (byte) now.get(ChronoField.SECOND_OF_MINUTE)
+        });
     }
 
     @Override
@@ -40,6 +53,15 @@ public class MyTimeService implements TimeService {
             bytes[i] = (byte) (bytes[i]+1);
         }
         return RpcResult.ok(bytes);
+    }
+
+    @Override
+    public RpcResult<Integer> bytesSum(byte[] bytes) {
+        int sum = bytes[0];
+        for (int i = 1; i < bytes.length; i++) {
+            sum += bytes[i];
+        }
+        return RpcResult.ok(sum);
     }
 
     @Override
@@ -62,4 +84,5 @@ public class MyTimeService implements TimeService {
     public RpcResult<List<Integer>> ping3() {
         return RpcResult.ok(List.of(123,456));
     }
+
 }

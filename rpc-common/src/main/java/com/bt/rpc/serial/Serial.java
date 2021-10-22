@@ -16,15 +16,9 @@ import com.google.protobuf.ByteString;
  * @author martin.cong
  * @version 2021-10-17 13:01
  */
-public interface Serial  extends ServerWriter {
+public interface Serial  extends ServerWriter{
 
     void writeInput(Object obj, InputProto.Builder builder);
-
-    default void writeInput(byte[] obj, InputProto.Builder builder){
-        //System.out.println("input is bytes , ignore serialEnum");
-        //todo verfiy write bytes for input
-        builder.setBs(ByteString.copyFrom(obj));
-    }
 
     <T> T readOutput(OutputProto proto , Class<T> type) ;
 

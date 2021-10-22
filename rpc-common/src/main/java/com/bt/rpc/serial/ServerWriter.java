@@ -18,14 +18,16 @@ public interface ServerWriter {
 
     void writeOutput(Object obj, OutputProto.Builder out);
 
-    default void writeOutput(byte[] obj, OutputProto.Builder out){
-        out.setBs(ByteString.copyFrom(obj));
-    }
+    //default void writeOutput(byte[] obj, OutputProto.Builder out){
+    //
+    //    System.out.println("Server write bytes ....");
+    //
+    //    out.setBs(ByteString.copyFrom(obj));
+    //}
 
-    //ServerSerial JSON = (obj, out) -> out.setJson(JsonUtils.stringify(obj));
 
-    ///**
-    // * only for bare byte[].
-    // */
-    //ServerWriter BARE = (obj, out) -> out.setBs(ByteString.copyFrom((byte[]) obj));
+    /**
+     * only for bare byte[]. ignore the
+     */
+    ServerWriter BYTES = (obj, out) ->  out.setBs(ByteString.copyFrom((byte[]) obj));
 }

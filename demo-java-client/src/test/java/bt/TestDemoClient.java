@@ -27,7 +27,7 @@ public class TestDemoClient {
         ) {
             TestJavaProxyClient.test("127.0.0.1", RpcConstants.DEFAULT_PORT,false);
 
-            //TestJavaProxyClient.test("example-api.botaoyx.com", 443,true);
+           // TestJavaProxyClient.test("example-api.botaoyx.com", 443,true);
         }else{
             logger.info("Skip Test Server");
         }

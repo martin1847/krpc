@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: {{ .Values.appName }}
-    revision: {{ .Chart.Version | replace "+" "_"  }}
+    version: {{ .Chart.Version | replace "+" "_" }}
     canary: "false"
   name: {{ .Values.appName  }}
 spec:
@@ -20,7 +20,7 @@ spec:
         app: {{ .Values.appName }}
         component: java
         canary: "false"
-        revision: {{ .Chart.Version | replace "+" "_" }}
+        version: {{ .Chart.Version | replace "+" "_" }}
     spec:
       containers:
         - name: {{ .Values.appName  }}

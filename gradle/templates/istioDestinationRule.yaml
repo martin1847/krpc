@@ -4,7 +4,6 @@ metadata:
   name: {{ .Values.appName  }}
   labels:
     app: {{ .Values.appName }}
-    revision: {{ .Chart.Version | replace "+" "_" }}
 spec:
   host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
   subsets:
@@ -16,6 +15,7 @@ spec:
         canary: "true"
 
 {{- /*
+    revision: {{ .Chart.Version | replace "+" "_" }}
     #  trafficPolicy:
     #    tls:
     #      mode: ISTIO_MUTUAL

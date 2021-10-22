@@ -4,7 +4,6 @@ metadata:
   name: {{ .Values.appName  }}
   labels:
     app: {{ .Values.appName }}
-    revision: {{ .Chart.Version | replace "+" "_"  }}
 spec:
   type: {{ .Values.service.type }}
   ports:

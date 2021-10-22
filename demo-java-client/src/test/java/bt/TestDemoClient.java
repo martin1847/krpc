@@ -5,6 +5,7 @@
 package bt;
 
 import com.bt.TestJavaProxyClient;
+import com.bt.rpc.common.RpcConstants;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,9 @@ public class TestDemoClient {
         if("yyc".equals(System.getenv("LOGNAME"))
                 || "young".equals(System.getenv("LOGNAME"))
         ) {
-            TestJavaProxyClient.test("127.0.0.1");
+            TestJavaProxyClient.test("127.0.0.1", RpcConstants.DEFAULT_PORT,false);
+
+            //TestJavaProxyClient.test("example-api.botaoyx.com", 443,true);
         }else{
             logger.info("Skip Test Server");
         }

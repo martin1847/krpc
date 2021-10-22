@@ -33,12 +33,18 @@ public class TestJavaProxyClient {
     private final ManagedChannel channel;
     private final RpcClientFactory builder;
 
-
-    /** Construct client connecting to HelloWorld server at {@code host:port}. */
     public TestJavaProxyClient(String host, int port) {
-        channel = ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext()
-                .build();
+        this(host,port,false);
+    }
+    /** Construct client connecting to HelloWorld server at {@code host:port}. */
+    public TestJavaProxyClient(String host, int port,boolean tls) {
+        var channelBuilder = ManagedChannelBuilder.forAddress(host, port);
+        if(tls){
+            channelBuilder.useTransportSecurity();
+        }else {
+            channelBuilder.usePlaintext();
+        }
+        channel =       channelBuilder .build();
         CacheManager cacheManager =  new SimpleLRUCache();
         builder = new RpcClientFactory(SERVER_APP,channel,cacheManager);
     }
@@ -124,8 +130,8 @@ public class TestJavaProxyClient {
      * Greet server. If provided, the first element of {@code args} is the name to use in the
      * greeting.
      */
-    public static void test(String host) throws Exception {
-        TestJavaProxyClient client = new TestJavaProxyClient(host, RpcConstants.DEFAULT_PORT);
+    public static void test(String host,int port,boolean tls) throws Exception {
+        TestJavaProxyClient client = new TestJavaProxyClient(host, port,tls);
         try {
             /* Access a service running on the local machine on port 50051 */
 

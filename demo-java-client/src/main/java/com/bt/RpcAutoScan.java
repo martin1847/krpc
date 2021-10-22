@@ -1,5 +1,6 @@
 package com.bt;
 
+import com.bt.rpc.common.RpcConstants;
 import io.quarkus.runtime.Startup;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,7 +16,6 @@ import javax.inject.Inject;
 import java.util.Set;
 
 /**
- * @author kl : http://kailing.pub
  * @version 1.0
  * @date 2020/9/25
  */
@@ -65,7 +65,7 @@ public class RpcAutoScan {//} extends SimpleBuildItem{
             serverIp = "127.0.0.1";
         }
         log.info("RpcClient Begin Conn to  {}  ", serverIp);
-        TestJavaProxyClient.test(serverIp);
+        TestJavaProxyClient.test(serverIp, RpcConstants.DEFAULT_PORT,false);
         log.info("RpcClient Init {} Service ", 0);
     }
 

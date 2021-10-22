@@ -3,13 +3,18 @@
   {
     "name" : "com.bt.demo.TimeReq",
     "allPublicConstructors" : true,
-    "allPublicMethods" : true
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
   },
   {
     "name" : "com.bt.demo.TimeResult",
     "allPublicConstructors" : true,
-    "allPublicMethods" : true
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
   },
+
+
+
   {
     "name" : "com.bt.demo.TimeService",
     "allPublicConstructors" : true,

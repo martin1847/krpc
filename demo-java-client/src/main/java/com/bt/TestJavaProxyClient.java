@@ -1,13 +1,11 @@
 package com.bt;
 
 import com.bt.demo.TimeReq;
-import com.bt.demo.TimeService;
-import com.bt.demo.service.HelloBean;
+import com.bt.demo.DemoService;
 import com.bt.rpc.client.CacheManager;
 import com.bt.rpc.client.GeneralizeClient;
 import com.bt.rpc.client.RpcClientFactory;
 import com.bt.rpc.client.SimpleLRUCache;
-import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.demo.filter.TestFilter;
 import com.bt.rpc.util.JsonUtils;
@@ -55,7 +53,7 @@ public class TestJavaProxyClient {
     }
 
     /** Say hello to server. */
-    public void greet(TimeService timeService,  String name) {
+    public void greet(DemoService timeService, String name) {
         try {
 
 
@@ -65,11 +63,11 @@ public class TestJavaProxyClient {
 //
 //            timeService = timeService2;
 //            System.out.println("time ping" + timeService.ping());
-            System.out.println("time ping 1" + timeService.ping1());
-            System.out.println("time ping 2" + timeService.ping2());
+            System.out.println("time ping 1" + timeService.map());
+            System.out.println("time ping 2" + timeService.str());
             Thread.sleep(100L);
-            System.out.println("time ping 2" + timeService.ping2());
-            System.out.println("time ping 3" + timeService.ping3());
+            System.out.println("time ping 2" + timeService.str());
+            System.out.println("time ping 3" + timeService.list());
 
 
             System.out.println("hello1 : " + timeService.hello(new TimeReq("Java",2020)));
@@ -113,11 +111,11 @@ public class TestJavaProxyClient {
         }
     }
 
-    public void testException(TimeService timeService, int times){
+    public void testException(DemoService demoService, int times){
         long b = System.currentTimeMillis();
         for (int i = 0; i < times; i++) {
             try {
-                timeService.pingWithRuntimeException();
+                demoService.pingWithRuntimeException();
             }catch (Exception e){
                 // ignore
             }
@@ -139,7 +137,7 @@ public class TestJavaProxyClient {
 
             var inputJson="{\"name\":\"JavaGener\",\"age\":2020}";
 
-            var fullHelloName = SERVER_APP+"/"+TimeService.class.getSimpleName()+"/hello";
+            var fullHelloName = SERVER_APP+"/"+ DemoService.class.getSimpleName()+"/hello";
 
             var msg = GeneralizeClient.call(client.channel, fullHelloName,inputJson);
 
@@ -150,7 +148,7 @@ public class TestJavaProxyClient {
 
 
 
-            var timeService = client.builder.get(TimeService.class, Collections.singletonList(new TestFilter()));
+            var timeService = client.builder.get(DemoService.class, Collections.singletonList(new TestFilter()));
 
 
             var bytes = timeService.bytesTime();

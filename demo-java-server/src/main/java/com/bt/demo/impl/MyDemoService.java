@@ -2,20 +2,18 @@ package com.bt.demo.impl;
 
 import com.bt.demo.TimeReq;
 import com.bt.demo.TimeResult;
-import com.bt.demo.TimeService;
+import com.bt.demo.DemoService;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.util.EnvUtils;
 import io.quarkus.runtime.Startup;
 
 import javax.enterprise.context.ApplicationScoped;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * TODO change this comment
@@ -25,11 +23,11 @@ import java.util.stream.Stream;
  */
 @ApplicationScoped
 @Startup
-public class MyTimeService implements TimeService {
+public class MyDemoService implements DemoService {
     @Override
     public RpcResult<TimeResult> hello(TimeReq req) {
         var res = new TimeResult();
-        res.setTime( new Date()+ " \t Java   " + getClass().getName() + " : " + req);
+        res.setTime(" from  (" + EnvUtils.hostName() + ") : " + req);
         res.setTimestamp(System.currentTimeMillis());
         return RpcResult.ok(res);
     }
@@ -65,13 +63,13 @@ public class MyTimeService implements TimeService {
     }
 
     @Override
-    public RpcResult<String> ping2() {
+    public RpcResult<String> str() {
         return RpcResult.ok("java5678");
     }
 
     @Override
-    public RpcResult<Map<String, Integer>> ping1() {
-        return RpcResult.ok(Collections.singletonMap("mappppa",123));
+    public RpcResult<Map<String, Integer>> map() {
+        return RpcResult.ok(Collections.singletonMap("key1",123));
     }
 
     @Override
@@ -81,7 +79,7 @@ public class MyTimeService implements TimeService {
     }
 
     @Override
-    public RpcResult<List<Integer>> ping3() {
+    public RpcResult<List<Integer>> list() {
         return RpcResult.ok(List.of(123,456));
     }
 

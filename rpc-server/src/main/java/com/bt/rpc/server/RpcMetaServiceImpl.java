@@ -17,6 +17,7 @@ import com.bt.rpc.common.meta.Dto;
 import com.bt.rpc.common.meta.Method;
 import com.bt.rpc.common.meta.Property;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.util.EnvUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -37,7 +38,7 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
     @Override
     public RpcResult<String> v() {
-        return RpcResult.ok(RpcConstants.CI_BUILD_ID);
+        return RpcResult.ok(RpcConstants.CI_BUILD_ID+"-"+ EnvUtils.hostName());
     }
 
     public void init(List<RpcMetaMethod> methods) {

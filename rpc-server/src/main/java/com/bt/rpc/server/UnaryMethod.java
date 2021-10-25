@@ -169,7 +169,9 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 wrapToClient = ex.getCause();
             }
             if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
-                wrapToClient = Status.INTERNAL.withDescription(
+                //Server side application throws an exception (or does something other than returning a Status code to terminate an RPC)
+                //https://grpc.github.io/grpc/core/md_doc_statuscodes.html
+                wrapToClient = Status.UNKNOWN.withDescription(
                                 msg + " - " + wrapToClient.getClass().getName() + ": " + wrapToClient.getMessage())
                         .withCause(wrapToClient).asRuntimeException();
             }

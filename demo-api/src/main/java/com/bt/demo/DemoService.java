@@ -12,7 +12,7 @@ import java.util.Map;
  * @author Martin.C
  */
 @RpcService(description = "this is a Java test service")
-public interface TimeService {
+public interface DemoService {
 
 //    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
@@ -25,10 +25,10 @@ public interface TimeService {
 
     @Deprecated
 //    @Cached
-    RpcResult<String> ping2();
-    RpcResult<Map<String,Integer>> ping1();
+    RpcResult<String> str();
+    RpcResult<Map<String,Integer>> map();
 
     RpcResult<Integer> pingWithRuntimeException();
 
-    RpcResult<List<Integer>> ping3();
+    RpcResult<List<Integer>> list();
 }

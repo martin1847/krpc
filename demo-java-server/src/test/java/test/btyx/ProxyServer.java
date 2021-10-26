@@ -1,6 +1,6 @@
 package test.btyx;
 
-import com.bt.demo.impl.MyTimeService;
+import com.bt.demo.impl.MyDemoService;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.demo.service.impl.HelloServiceImpl;
 import com.bt.rpc.server.RpcServerBuilder;
@@ -28,7 +28,7 @@ public class ProxyServer {
         RpcServerBuilder proxyServerBuilder = new RpcServerBuilder.Builder("demo-java-server")
                 .addService(new HelloServiceImpl())
 //                .addService(new ServerApp.GreeterImpl())
-                .addService(new MyTimeService())
+                .addService(new MyDemoService())
                 //.setDiContext(new DiContextGrpcImpl())
                 //.regGlobalFilter(new ExecServerFilter())
                 .build();

@@ -1,5 +1,5 @@
 #image: "jcr.botaoyx.com/img/common/graalvm-gradle:7.2.21"
-image: "jcr.botaoyx.com/img/common/gradle-ubi:7.tmp2"
+image: "jcr.botaoyx.com/img/common/gradle-ubi:7.2"
 
 variables:
   APP_NAMES: "demo-java-server demo-java-client"

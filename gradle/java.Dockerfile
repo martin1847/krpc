@@ -1,5 +1,5 @@
 #FROM jcr.botaoyx.com/img/common/java:17
-FROM jcr.botaoyx.com/img/common/java:17-ubi
+FROM jcr.botaoyx.com/img/common/java:17-ubi79
 
 
 # COPY --chown=1001 ${TARGET}/build/quarkus-app/lib/ .

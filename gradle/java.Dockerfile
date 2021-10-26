@@ -2,12 +2,14 @@ FROM jcr.botaoyx.com/img/common/java:17
 ARG TARGET=.
 
 
-COPY --chown=1001 ${TARGET}/build/quarkus-app/lib/ ./lib/
-COPY --chown=1001 ${TARGET}/build/quarkus-app/*.jar ./app.jar
-COPY --chown=1001 ${TARGET}/build/quarkus-app/app/ ./app/
-COPY --chown=1001 ${TARGET}/build/quarkus-app/quarkus/ ./quarkus/
+# COPY --chown=1001 ${TARGET}/build/quarkus-app/lib/ .
+# COPY --chown=1001 ${TARGET}/build/quarkus-app/*.jar ./app.jar
+# COPY --chown=1001 ${TARGET}/build/quarkus-app/app/ .
+# COPY --chown=1001 ${TARGET}/build/quarkus-app/quarkus/ .
 
-CMD java ${JAVA_OPT} ${EXT_OPT} -XshowSettings:all -jar app.jar
+COPY --chown=1001 ${TARGET}/build/quarkus-app/ .
+#  -XshowSettings:all
+CMD java ${JAVA_OPT} ${EXT_OPT} -jar quarkus-run.jar
 
 #  -Dquarkus.log.level=all
 

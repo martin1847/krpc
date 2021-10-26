@@ -58,10 +58,12 @@ docker:
       for APP_NAME in ${APP_NAMES}
       do
         imgFullName="$DOCKER_REPO/$APP_NAME:$DOCKER_TAG"
-        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$APP_NAME -d $imgFullName
-        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$APP_NAME -d "${imgFullName}-jvm" -f java.Dockerfile
+        echo "use dir -> $CI_PROJECT_DIR/$APP_NAME"
+        /kaniko/executor -c $CI_PROJECT_DIR/$APP_NAME -d $imgFullName
+        /kaniko/executor -c $CI_PROJECT_DIR/$APP_NAME -d "${imgFullName}-jvm" -f java.Dockerfile
+        sleep 1
       done
-
+#  /kaniko/executor --cache
 #        cd $CI_PROJECT_DIR/$APP_NAME && pwd && ls -la ./build
 #  rules:
 #    - if: $CI_COMMIT_TAG

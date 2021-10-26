@@ -57,6 +57,7 @@ docker:
       do
         imgFullName="$DOCKER_REPO/$APP_NAME:$DOCKER_TAG"
         /kaniko/executor --cache  -c $CI_PROJECT_DIR/$APP_NAME -d $imgFullName
+        /kaniko/executor --cache  -c $CI_PROJECT_DIR/$APP_NAME -d "${imgFullName}-jvm" -f java.Dockerfile
       done
 
 #        cd $CI_PROJECT_DIR/$APP_NAME && pwd && ls -la ./build

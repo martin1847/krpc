@@ -30,7 +30,8 @@ build:
   artifacts:
     expire_in: 7 days
     paths:
-      - ./*/build/
+      - ./*/build/*-runner
+      - ./*/build/quarkus-app
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
   script:

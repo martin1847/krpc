@@ -35,6 +35,7 @@ build:
 #      - ./*/build/quarkus-app
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
+    - export TZ=Asia/Shanghai
   script:
     - gradle build -Dquarkus.package.type=native
 #    - gradle publish

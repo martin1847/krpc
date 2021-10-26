@@ -22,7 +22,7 @@
 
 
   {
-    "name" : "com.bt.demo.TimeService",
+    "name" : "com.bt.demo.DemoService",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   },

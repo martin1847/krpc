@@ -35,10 +35,20 @@ dependencies {
 
 //    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
 
+    //JDBC
+//    @Inject
+//    AgroalDataSource defaultDataSource;
+    implementation "io.quarkus:quarkus-agroal"
+    implementation "io.quarkus:quarkus-jdbc-mysql"
 
 //    implementation 'io.quarkus:quarkus-resteasy'
-    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation('io.quarkus:quarkus-junit5'){
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+//        exclude group: 'org.jmock' //by group
+    }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
+
+    implementation 'org.mybatis:mybatis:3.5.7'
 
 //    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
 //    testImplementation 'io.rest-assured:rest-assured'

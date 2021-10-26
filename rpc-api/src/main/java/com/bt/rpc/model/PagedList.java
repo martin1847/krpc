@@ -9,7 +9,7 @@ import java.util.List;
 public class PagedList<DTO> implements Serializable {
 
         /// int is enough.maybeNull when use lastkey
-        Integer totalCount ;
+        Integer count ;
 
         /// current page data 
         List<DTO> data;

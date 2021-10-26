@@ -2,30 +2,13 @@ apply plugin:  'io.quarkus'
 
 
 dependencies {
-//    compileOnly "javax.annotation:javax.annotation-api:1.2"
-
 
     implementation project(':demo-api')
     implementation project(':rpc-client')
-    //implementation project(':grpc-server-spring')
-
-//    runtimeOnly "org.slf4j:slf4j-simple:$slf4jVersion"
-
-//    implementation 'javax.validation:validation-api:2.0.0.Final'
-//
-//    implementation 'io.protostuff:protostuff-core:1.6.2'
-//    implementation 'io.protostuff:protostuff-runtime:1.6.2'
-//    implementation 'com.alibaba:fastjson:1.2.62'
-//    implementation 'org.slf4j:slf4j-api:1.7.28'
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
-//    runtimeOnly "io.netty:netty-tcnative-boringssl-static:2.0.28.Final"
-
-//    implementation ("org.springframework.boot:spring-boot-starter:2.2.0.RELEASE") //TODO tang
 
     implementation platform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-//  implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-////    implementation 'io.quarkus:quarkus-kubernetes'
     implementation "io.quarkus:quarkus-arc"
     implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
@@ -39,8 +22,10 @@ dependencies {
 
 //    implementation 'io.quarkus:quarkus-resteasy'
 //    testImplementation 'io.rest-assured:rest-assured'
-    testImplementation 'io.quarkus:quarkus-junit5'
-
+    testImplementation('io.quarkus:quarkus-junit5'){
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+//        exclude group: 'org.jmock' //by group
+    }
 //    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
 }

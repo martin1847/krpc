@@ -3,10 +3,13 @@ rpc:
     name: demo-java-server
     port: 50051
 
-
-#
-#quarkus:
-#  index-dependency:
-#    demo:
-#      group-id: com.bt.rpc
-#      artifact-id: demo-api
+# export QUARKUS_DATASOURCE_PASSWORD=youshallnotpass ;
+# {_DEV_}QUARKUS_HTTP_PORT=8181
+# OR   -Dquarkus.datasource.password=youshallnotpass
+quarkus:
+  datasource:
+    db-kind: mysql
+    username: example
+    password:
+    jdbc:
+      url: jdbc:mysql://localhost/example

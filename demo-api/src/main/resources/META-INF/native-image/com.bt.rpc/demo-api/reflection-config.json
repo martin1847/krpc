@@ -1,6 +1,12 @@
 [
 
   {
+    "name" : "com.bt.demo.User",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+  {
     "name" : "com.bt.demo.TimeReq",
     "allPublicConstructors" : true,
     "allPublicMethods" : true,

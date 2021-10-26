@@ -1,12 +1,12 @@
-FROM jcr.botaoyx.com/img/common/java:17
-ARG TARGET=.
+#FROM jcr.botaoyx.com/img/common/java:17
+FROM jcr.botaoyx.com/img/common/java:17-ubi
 
 
 # COPY --chown=1001 ${TARGET}/build/quarkus-app/lib/ .
 # COPY --chown=1001 ${TARGET}/build/quarkus-app/*.jar ./app.jar
 # COPY --chown=1001 ${TARGET}/build/quarkus-app/app/ .
 # COPY --chown=1001 ${TARGET}/build/quarkus-app/quarkus/ .
-
+ARG TARGET=.
 COPY --chown=1001 ${TARGET}/build/quarkus-app/ .
 #  -XshowSettings:all
 CMD java ${JAVA_OPT} ${EXT_OPT} -jar quarkus-run.jar

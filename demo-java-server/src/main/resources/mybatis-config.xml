@@ -19,7 +19,7 @@
         <setting name="jdbcTypeForNull" value="OTHER"/>
         <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
 
-        <setting name="logImpl" value="SLF4J"/>
+<!--        <setting name="logImpl" value="SLF4J"/>-->
     </settings>
 
 <!--    <typeHandlers>-->

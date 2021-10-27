@@ -35,7 +35,7 @@ public class TestDemoClient {
             var u1 =            userService.getUser(1);
             System.out.println(u1.getData().getName());
 
-            client.test();
+            //client.test();
 
         }else{
             logger.info("Skip Test Server");

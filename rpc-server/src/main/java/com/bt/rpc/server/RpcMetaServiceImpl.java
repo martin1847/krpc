@@ -60,7 +60,7 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
                 });
 
-        var serviceMeta = new ApiMeta(apis, new ArrayList<>(dtos.values()));
+        var serviceMeta = new ApiMeta(ServerContext.applicationName(),apis, new ArrayList<>(dtos.values()));
         this.result = RpcResult.ok(serviceMeta);
 
     }

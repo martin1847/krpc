@@ -50,6 +50,8 @@ dependencies {
 
     implementation 'org.mybatis:mybatis:3.5.7'
 
+    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
+
 //    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
 //    testImplementation 'io.rest-assured:rest-assured'
 }

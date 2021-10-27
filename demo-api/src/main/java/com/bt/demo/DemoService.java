@@ -1,5 +1,7 @@
 package com.bt.demo;
 
+import com.bt.demo.dto.TimeReq;
+import com.bt.demo.dto.TimeResult;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
 

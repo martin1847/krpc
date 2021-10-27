@@ -6,10 +6,17 @@ rpc:
 # export QUARKUS_DATASOURCE_PASSWORD=youshallnotpass ;
 # {_DEV_}QUARKUS_HTTP_PORT=8181
 # OR   -Dquarkus.datasource.password=youshallnotpass
+# kubectl port-forward service/mysql-primary 3306:3306 -n infra
 quarkus:
   datasource:
     db-kind: mysql
     username: example
-    password:
     jdbc:
-      url: jdbc:mysql://localhost/example
+      url: jdbc:mysql://mysql-primary.infra/example
+
+#  @Inject
+#  SqlSessionFactory sqlSessionFactory;
+  mybatis:
+#    environment: quarkus
+    xmlconfig:
+      enable: true

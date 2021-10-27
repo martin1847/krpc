@@ -1,7 +1,7 @@
 package com.bt.demo.impl;
 
-import com.bt.demo.TimeReq;
-import com.bt.demo.TimeResult;
+import com.bt.demo.dto.TimeReq;
+import com.bt.demo.dto.TimeResult;
 import com.bt.demo.DemoService;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.util.EnvUtils;
@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @ApplicationScoped
 @Startup
-public class MyDemoService implements DemoService {
+public class DemoServiceImpl implements DemoService {
     @Override
     public RpcResult<TimeResult> hello(TimeReq req) {
         var res = new TimeResult();

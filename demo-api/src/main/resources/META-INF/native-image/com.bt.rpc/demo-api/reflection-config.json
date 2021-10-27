@@ -1,19 +1,19 @@
 [
 
   {
-    "name" : "com.bt.demo.User",
+    "name" : "com.bt.demo.dto.User",
     "allPublicConstructors" : true,
     "allPublicMethods" : true,
     "allDeclaredFields" : true
   },
   {
-    "name" : "com.bt.demo.TimeReq",
+    "name" : "com.bt.demo.dto.TimeReq",
     "allPublicConstructors" : true,
     "allPublicMethods" : true,
     "allDeclaredFields" : true
   },
   {
-    "name" : "com.bt.demo.TimeResult",
+    "name" : "com.bt.demo.dto.TimeResult",
     "allPublicConstructors" : true,
     "allPublicMethods" : true,
     "allDeclaredFields" : true
@@ -27,7 +27,7 @@
     "allPublicMethods" : true
   },
   {
-    "name" : "com.bt.demo.service.HelloService",
+    "name" : "com.bt.demo.UserService",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   }

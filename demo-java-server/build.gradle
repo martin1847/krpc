@@ -26,7 +26,7 @@ dependencies {
 //  implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
 ////    implementation 'io.quarkus:quarkus-kubernetes'
     implementation "io.quarkus:quarkus-arc"
-    implementation 'io.quarkus:quarkus-config-yaml'
+//    implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
     implementation "io.grpc:grpc-netty:${grpcVersion}"
 

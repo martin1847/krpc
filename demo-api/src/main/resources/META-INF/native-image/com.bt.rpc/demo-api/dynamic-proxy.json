@@ -1,4 +1,4 @@
 [
   ["com.bt.demo.DemoService"],
-  ["com.bt.demo.service.HelloService"]
+  ["com.bt.demo.UserService"]
 ]

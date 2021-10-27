@@ -65,7 +65,8 @@ public class RpcAutoScan {//} extends SimpleBuildItem{
             serverIp = "127.0.0.1";
         }
         log.info("RpcClient Begin Conn to  {}  ", serverIp);
-        TestJavaProxyClient.test(serverIp, RpcConstants.DEFAULT_PORT,false);
+        var client = new TestJavaProxyClient(serverIp, RpcConstants.DEFAULT_PORT);
+        client.test();
         log.info("RpcClient Init {} Service ", 0);
     }
 

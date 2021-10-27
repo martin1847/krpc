@@ -1,0 +1,56 @@
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <settings>
+        <setting name="cacheEnabled" value="true"/>
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="multipleResultSetsEnabled" value="true"/>
+        <setting name="useColumnLabel" value="true"/>
+        <setting name="useGeneratedKeys" value="true"/>
+        <setting name="autoMappingBehavior" value="PARTIAL"/>
+        <setting name="defaultExecutorType" value="SIMPLE"/>
+        <setting name="defaultStatementTimeout" value="25"/>
+        <setting name="defaultFetchSize" value="100"/>
+        <setting name="safeRowBoundsEnabled" value="false"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <setting name="localCacheScope" value="SESSION"/>
+        <setting name="jdbcTypeForNull" value="OTHER"/>
+        <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
+
+        <setting name="logImpl" value="SLF4J"/>
+    </settings>
+
+<!--    <typeHandlers>-->
+<!--        <package name="io.quarkiverse.it.mybatis"/>-->
+<!--    </typeHandlers>-->
+
+    <!-- setup environment with Quarkus data source -->
+    <environments default="quarkus">
+        <environment id="quarkus">
+            <transactionManager type="JDBC"/>
+            <dataSource type="QUARKUS"/>
+<!--                <property name="db" value="h2"/>-->
+<!--            </dataSource>-->
+        </environment>
+    </environments>
+
+    <mappers>
+        <package name="com.bt.dao.mapper"/>
+    </mappers>
+
+
+<!--    <typeAliases>-->
+<!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2IntList" alias="Json2IntList"/>-->
+<!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2LongList" alias="Json2LongList"/>-->
+<!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
+<!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
+<!--        <package name="com.alipay.imdopcore.domain"/>-->
+<!--    </typeAliases>-->
+
+<!--    <plugins>-->
+<!--        <plugin interceptor="com.alipay.intl.comm.mybatis.page.MysqlPagingInterceptor"/>-->
+<!--    </plugins>-->
+
+</configuration>

@@ -1,8 +1,9 @@
 package com.bt;
 
-import com.bt.demo.TimeReq;
+import com.bt.demo.dto.TimeReq;
 import com.bt.demo.DemoService;
 import com.bt.rpc.client.CacheManager;
+import com.bt.rpc.client.ClientFilter;
 import com.bt.rpc.client.GeneralizeClient;
 import com.bt.rpc.client.RpcClientFactory;
 import com.bt.rpc.client.SimpleLRUCache;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -129,8 +131,8 @@ public class TestJavaProxyClient {
      * Greet server. If provided, the first element of {@code args} is the name to use in the
      * greeting.
      */
-    public static void test(String host,int port,boolean tls) throws Exception {
-        TestJavaProxyClient client = new TestJavaProxyClient(host, port,tls);
+    public void test() throws Exception {
+        TestJavaProxyClient client = this;
         try {
             /* Access a service running on the local machine on port 50051 */
 
@@ -148,7 +150,7 @@ public class TestJavaProxyClient {
 
 
 
-            var timeService = client.builder.get(DemoService.class, Collections.singletonList(new TestFilter()));
+            var timeService = getService(DemoService.class, Collections.singletonList(new TestFilter()));
 
 
             var bytes = timeService.bytesTime();
@@ -192,6 +194,9 @@ public class TestJavaProxyClient {
         }
     }
 
+    public <T> T getService(Class<T> typeClass, List<ClientFilter> filterList) {
+        return this.builder.get(typeClass, filterList);
+    }
     //public static void main(String[] args) throws Exception {
     //    test("127.0.0.1");
     //}

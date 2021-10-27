@@ -1,8 +1,7 @@
 package test.btyx;
 
-import com.bt.demo.impl.MyDemoService;
+import com.bt.demo.impl.DemoServiceImpl;
 import com.bt.rpc.common.RpcConstants;
-import com.bt.rpc.demo.service.impl.HelloServiceImpl;
 import com.bt.rpc.server.RpcServerBuilder;
 import io.grpc.Server;
 import org.junit.jupiter.api.Test;
@@ -26,9 +25,8 @@ public class ProxyServer {
     private int port = RpcConstants.DEFAULT_PORT;
     private void start() throws Exception {
         RpcServerBuilder proxyServerBuilder = new RpcServerBuilder.Builder("demo-java-server")
-                .addService(new HelloServiceImpl())
-//                .addService(new ServerApp.GreeterImpl())
-                .addService(new MyDemoService())
+                //.addService(new ServerApp.GreeterImpl())
+                .addService(new DemoServiceImpl())
                 //.setDiContext(new DiContextGrpcImpl())
                 //.regGlobalFilter(new ExecServerFilter())
                 .build();

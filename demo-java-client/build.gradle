@@ -8,7 +8,7 @@ dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
-    implementation platform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
     implementation "io.quarkus:quarkus-arc"
 //    implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'

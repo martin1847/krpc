@@ -2,6 +2,7 @@
 plugins {
     id 'java-library'
     id 'io.quarkus'  version "$quarkusPluginVersion" apply false
+    id "io.quarkus.extension"  version "$quarkusPluginVersion" apply false
 //    id 'maven-publish' //apply false
 }
 

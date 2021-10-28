@@ -32,6 +32,8 @@ dependencies {
     implementation "io.quarkus:quarkus-hibernate-validator"
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
 
+//    implementation project(':quarkus-mybatis')
+
 //    implementation 'io.quarkus:quarkus-resteasy'
     testImplementation('io.quarkus:quarkus-junit5'){
         exclude module: 'quarkus-bootstrap-maven-resolver'

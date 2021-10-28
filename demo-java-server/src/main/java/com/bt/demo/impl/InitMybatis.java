@@ -27,7 +27,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 @Slf4j
 public class InitMybatis {
 
-    //@Inject by the ext
+    //@Inject// by the ext
     SqlSessionFactory sqlSessionFactory;
 
     @Inject

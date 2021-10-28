@@ -22,3 +22,4 @@ include 'demo-api','demo-java-server','demo-java-client'
 
 include 'rpc-api','rpc-common','rpc-client','rpc-server'
 
+//include 'quarkus-mybatis','quarkus-mybatis-deployment'

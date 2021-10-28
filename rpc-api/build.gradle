@@ -6,7 +6,7 @@ targetCompatibility = "11"
 
 dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
-    compileOnly 'javax.validation:validation-api:2.0.1.Final'
+    compileOnly 'jakarta.validation:jakarta.validation-api:2.0.2'
 
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 }

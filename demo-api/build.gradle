@@ -5,7 +5,8 @@ dependencies {
 
     api project(':rpc-api')
 
-    api 'javax.validation:validation-api:2.0.1.Final'
+//    api 'javax.validation:validation-api:2.0.1.Final'
+    api 'jakarta.validation:jakarta.validation-api:2.0.2'
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

@@ -1,6 +1,16 @@
 
 apply plugin:  'io.quarkus'
 
+
+//
+//quarkusDev {
+//    doFirst {
+//      println(project.sourceSets)
+////        project.buildscript.repositories.gradlePluginPortal()
+////        project.buildscript.dependencies.add('classpath', "io.quarkus:quarkus-gradle-plugin:$quarkusVersion")
+//    }
+//}
+
 dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"
 
@@ -40,6 +50,8 @@ dependencies {
 //    AgroalDataSource defaultDataSource;
     implementation "io.quarkus:quarkus-agroal"
     implementation "io.quarkus:quarkus-jdbc-mysql"
+    implementation "io.quarkus:quarkus-hibernate-validator"
+//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
 
 //    implementation 'io.quarkus:quarkus-resteasy'
     testImplementation('io.quarkus:quarkus-junit5'){
@@ -50,7 +62,6 @@ dependencies {
 
     implementation 'org.mybatis:mybatis:3.5.7'
 
-    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
 
 //    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
 //    testImplementation 'io.rest-assured:rest-assured'

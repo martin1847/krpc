@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bt.dao.mapper.UserMapper">
+
+    <resultMap type="com.bt.demo.dto.User" id="DTO" autoMapping="true">
+<!--        <id property="shopId" column="shop_id"/>-->
+<!--        <result property="extInfo" column="ext_info" typeHandler="Json2ShopExtInfo"/>-->
+    </resultMap>
+
+    <select id="getUser" resultMap="DTO">
+        <include refid="base"/>
+        where id = #{_parameter}
+    </select>
+
+
+    <select id="listBy" resultMap="DTO">
+        <include refid="base"/>
+<!--        where 1-->
+<!--        <if test="isvId != null">and isv_id = #{isvId}</if>-->
+<!--        <if test="staffId != null">and staff_id = #{staffId}</if>-->
+<!--        <if test="statuses != null">and build_status in-->
+<!--            <foreach item="it" collection="statuses" open="(" separator="," close=")">-->
+<!--                #{it}-->
+<!--            </foreach>-->
+<!--        </if>-->
+<!--        order by gmt_modified desc,gmt_create desc-->
+        limit #{offset},#{limit}
+    </select>
+
+
+    <sql id="field">
+        select id, name
+    </sql>
+    <sql id="base">
+        <include refid="field"/>
+        from users
+    </sql>
+
+</mapper>

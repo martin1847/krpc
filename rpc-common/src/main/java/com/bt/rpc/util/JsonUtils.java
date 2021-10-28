@@ -6,12 +6,14 @@ package com.bt.rpc.util;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,6 +58,17 @@ public abstract class JsonUtils {
             throw new RuntimeException(e);
         }
     }
+
+    public static <T> List<T> parseArray(String json, Class<T> type) {
+        //var typeFactory = MAPPER.getTypeFactory();
+        //var listType = typeFactory.constructCollectionType(List.class, type));
+        try {
+            return MAPPER.readValue(json, new TypeReference<List<T>>(){});
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     public static <T> T parse(String json, ParameterizedType type) {
         JavaType genc = TYPES_MAP.computeIfAbsent(type, t -> {

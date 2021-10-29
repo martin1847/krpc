@@ -3,6 +3,11 @@
         "http://mybatis.org/dtd/mybatis-3-config.dtd">
 
 <configuration>
+
+    <properties>
+        <property name="SqlXmlFolder" value="/mapper"/>
+    </properties>
+
     <settings>
         <setting name="lazyLoadingEnabled" value="true"/>
         <setting name="useGeneratedKeys" value="true"/>
@@ -22,6 +27,7 @@
         <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
         -->
 
+
     </settings>
 
     <typeAliases>
@@ -30,11 +36,12 @@
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
         <package name="com.bt.demo.dto"/>
+        <package name="com.bt.typehandler"/>
     </typeAliases>
 
-    <typeHandlers>
-        <package name="io.test.mybatis"/>
-    </typeHandlers>
+<!--    <typeHandlers>-->
+<!--        <package name="com.bt.typehandler"/>-->
+<!--    </typeHandlers>-->
 
     <plugins>
         <plugin interceptor="com.bt.mybatis.MysqlPagingInterceptor"/>
@@ -44,8 +51,10 @@
     <!-- setup environment with Quarkus data source -->
     <environments default="quarkus">
         <environment id="quarkus">
-            <transactionManager type="JDBC"/>
-            <dataSource type="QUARKUS"/>
+            <transactionManager type="MANAGED">
+                <property name="closeConnection" value="false"/>
+            </transactionManager>
+            <dataSource type="QUARKUS" />
 <!--                <property name="db" value="h2"/>-->
 <!--            </dataSource>-->
         </environment>
@@ -53,7 +62,10 @@
 
 
 
-<!--    show variables like 'lower_case_table_names'-->
+<!--    show variables like 'lower_case_table_names'
+
+SqlXmlFolder
+-->
     <mappers>
 <!--
 <mapper resource="mapper/*UserMapper.xml"/>-->

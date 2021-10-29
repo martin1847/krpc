@@ -33,6 +33,9 @@ dependencies {
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
 
 //    implementation project(':quarkus-mybatis')
+    implementation "com.bt:quarkus-mybatis:1.0.1"
+    implementation "com.bt:bt-mybatis:1.0.1"
+//    implementation "com.bt:quarkus-mybatis:1.+"
 
 //    implementation 'io.quarkus:quarkus-resteasy'
     testImplementation('io.quarkus:quarkus-junit5'){

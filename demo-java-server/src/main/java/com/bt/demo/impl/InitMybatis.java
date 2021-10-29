@@ -6,6 +6,11 @@ package com.bt.demo.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Enumeration;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -27,15 +32,40 @@ import org.apache.ibatis.session.SqlSessionFactory;
 @Slf4j
 public class InitMybatis {
 
-    //@Inject// by the ext
+    @Inject// by the ext
     SqlSessionFactory sqlSessionFactory;
 
     @Inject
     Validator validator;
 
-    void onStart(@Observes StartupEvent ev) {
+    void onStart(@Observes StartupEvent ev) throws IOException, URISyntaxException {
         log.info("The application is starting  InitMybatis ..." + sqlSessionFactory);
         log.info("The application is starting  validator ..." + validator);
+
+        //String path ="mapper/*.xml";
+        //ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        //Enumeration<URL> resourceUrls = (cl != null ? cl.getResources(path) : ClassLoader.getSystemResources(path));
+        //while (resourceUrls.hasMoreElements()) {
+        //    URL url = resourceUrls.nextElement();
+        //    System.out.println("Find URL : " + url);
+        //}
+        //
+        //private List<File> getAllFilesFromResource(String folder)
+        //throws URISyntaxException, IOException {
+
+            ClassLoader classLoader = getClass().getClassLoader();
+
+            URL resource = classLoader.getResource("mapper");
+
+            // dun walk the root path, we will walk all the classes
+             Files.walk(Paths.get(resource.toURI()))
+                    .filter(Files::isRegularFile)
+                    .map(x -> x.toFile().getPath())
+                    .forEach(it-> System.out.println("Got XML SQL File : " + it));
+
+        //    return collect;
+        //}
+
         //var configuration = sqlSessionFactory.getConfiguration();
         //
         //System.out.println(configuration);

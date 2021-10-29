@@ -6,7 +6,7 @@ import com.bt.demo.dto.User;
 import com.bt.mybatis.DbBounds;
 import org.apache.ibatis.annotations.Mapper;
 
-@Mapper
+//@Mapper
 public interface UserMapper {
 
     //单个用get/多个用list

@@ -30,17 +30,16 @@ dependencies {
     implementation "io.quarkus:quarkus-agroal"
     implementation "io.quarkus:quarkus-jdbc-mysql"
     implementation "io.quarkus:quarkus-hibernate-validator"
-//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
 
-//    implementation project(':quarkus-mybatis')
-    implementation "com.bt:quarkus-mybatis:1.0.1"
-    implementation "com.bt:bt-mybatis:1.0.1"
-//    implementation "com.bt:quarkus-mybatis:1.+"
 
-//    implementation 'io.quarkus:quarkus-resteasy'
+//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis-deployment:0.0.10'
+//    implementation "com.bt:quarkus-mybatis-deployment:1.0.1"
+
+    implementation "com.bt:quarkus-mybatis:1.0.0"
+    implementation "com.bt:bt-mybatis:1.0.0"
+
     testImplementation('io.quarkus:quarkus-junit5'){
         exclude module: 'quarkus-bootstrap-maven-resolver'
-//        exclude group: 'org.jmock' //by group
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
 
@@ -66,7 +65,7 @@ quarkusBuild {
     nativeArgs {
 //        containerBuild = true //--static
 //        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
-        additionalBuildArgs ="--verbose"
+        additionalBuildArgs2 ="--report-unsupported-elements-at-runtime"//"--verbose"
     }
 }
 

@@ -53,15 +53,15 @@ public class InitMybatis {
         //private List<File> getAllFilesFromResource(String folder)
         //throws URISyntaxException, IOException {
 
-            ClassLoader classLoader = getClass().getClassLoader();
-
-            URL resource = classLoader.getResource("mapper");
-
-            // dun walk the root path, we will walk all the classes
-             Files.walk(Paths.get(resource.toURI()))
-                    .filter(Files::isRegularFile)
-                    .map(x -> x.toFile().getPath())
-                    .forEach(it-> System.out.println("Got XML SQL File : " + it));
+            //ClassLoader classLoader = getClass().getClassLoader();
+            //
+            //URL resource = classLoader.getResource("mapper");
+            //
+            //// dun walk the root path, we will walk all the classes
+            // Files.walk(Paths.get(resource.toURI()))
+            //        .filter(Files::isRegularFile)
+            //        .map(x -> x.toFile().getPath())
+            //        .forEach(it-> System.out.println("Got XML SQL File : " + it));
 
         //    return collect;
         //}

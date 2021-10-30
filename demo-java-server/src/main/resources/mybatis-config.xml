@@ -31,7 +31,6 @@
     </settings>
 
     <typeAliases>
-                <typeAlias type="com.bt.demo.dto.User" alias="User"/>
         <!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2LongList" alias="Json2LongList"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
@@ -49,8 +48,8 @@
 
 
     <!-- setup environment with Quarkus data source -->
-    <environments default="quarkus">
-        <environment id="quarkus">
+    <environments default="q">
+        <environment id="q">
             <transactionManager type="MANAGED">
                 <property name="closeConnection" value="false"/>
             </transactionManager>

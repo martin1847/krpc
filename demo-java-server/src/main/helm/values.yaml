@@ -25,6 +25,7 @@ deployment:
   env:
     APP_ENV: TEST
     LOG_LEVEL: warn
+    QUARKUS_DATASOURCE_JDBC_URL: "jdbc:mysql://mysql-primary.infra/example"
 
 # TODO grpc_health_probe
 #readinessProbe:

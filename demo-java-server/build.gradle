@@ -36,8 +36,8 @@ dependencies {
 //    implementation "com.bt:quarkus-mybatis-deployment:1.0.1"
 
 
-    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-//    implementation "com.bt:quarkus-mybatis:1.0.0"
+//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
+    implementation "com.bt:quarkus-mybatis:1.0.0"
     implementation "com.bt:bt-mybatis:1.0.0"
 
     testImplementation('io.quarkus:quarkus-junit5'){
@@ -67,7 +67,7 @@ quarkusBuild {
     nativeArgs {
 //        containerBuild = true //--static
 //        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
-        additionalBuildArgs2 ="--report-unsupported-elements-at-runtime"//"--verbose"
+        additionalBuildArgs =""//--report-unsupported-elements-at-runtime"//"--verbose"
     }
 }
 

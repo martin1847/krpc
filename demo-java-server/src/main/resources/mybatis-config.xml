@@ -53,7 +53,7 @@
             <transactionManager type="MANAGED">
                 <property name="closeConnection" value="false"/>
             </transactionManager>
-            <dataSource type="QUARKUS" />
+            <dataSource type="com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory" />
 <!--                <property name="db" value="h2"/>-->
 <!--            </dataSource>-->
         </environment>

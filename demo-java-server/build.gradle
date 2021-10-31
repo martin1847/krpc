@@ -38,7 +38,7 @@ dependencies {
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
     implementation "com.bt:quarkus-mybatis:1.0.0"
-    implementation "com.bt:bt-mybatis:1.0.0"
+//    implementation "com.bt:bt-mybatis:1.0.0"
 
     testImplementation('io.quarkus:quarkus-junit5'){
         exclude module: 'quarkus-bootstrap-maven-resolver'

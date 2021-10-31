@@ -25,7 +25,7 @@ import io.quarkus.runtime.Startup;
 @Startup
 public class UserServiceImpl implements UserService {
 
-    @Inject //by the ext
+    //@Inject //by the ext
     UserMapper userMapper;
 
 

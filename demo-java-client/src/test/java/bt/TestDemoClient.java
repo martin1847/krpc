@@ -6,8 +6,9 @@ package bt;
 
 import com.bt.TestJavaProxyClient;
 import com.bt.demo.UserService;
+import com.bt.demo.dto.User;
 import com.bt.rpc.common.RpcConstants;
-import com.bt.rpc.model.PagedQuery;
+import com.bt.model.PagedQuery;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +37,11 @@ public class TestDemoClient {
             var u1 =            userService.getUser(1);
             System.out.println(u1.getData().getName());
 
-            var pl = userService.listUser(new PagedQuery<>(1,3));
-            System.out.println(pl.getData());
+            var user = new User();
+            user.setName("test");
+
+            var pl = userService.listUser(new PagedQuery<>(1,3,user)).getData();
+            System.out.println(pl.getCount() +" \n " + pl.getData());
 
             //client.test();
 

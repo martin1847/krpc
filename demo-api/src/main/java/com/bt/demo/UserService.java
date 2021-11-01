@@ -6,8 +6,8 @@ package com.bt.demo;
 
 import com.bt.demo.dto.User;
 import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.model.PagedList;
-import com.bt.rpc.model.PagedQuery;
+import com.bt.model.PagedList;
+import com.bt.model.PagedQuery;
 import com.bt.rpc.model.RpcResult;
 
 /**
@@ -20,7 +20,7 @@ public interface UserService {
 
     RpcResult<User> getUser(Integer id);
 
-    RpcResult<PagedList<User>> listUser(PagedQuery<String> query);
+    RpcResult<PagedList<User>> listUser(PagedQuery<User> query);
 
     RpcResult<Integer> createUser(User u);
 

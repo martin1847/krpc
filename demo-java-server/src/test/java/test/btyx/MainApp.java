@@ -1,19 +1,21 @@
 package test.btyx;
 
-import io.quarkus.runtime.Quarkus;
-import io.quarkus.runtime.QuarkusApplication;
-import io.quarkus.runtime.annotations.QuarkusMain;
+import com.bt.convert.UserConvert;
+import com.bt.demo.dto.User;
 
-@QuarkusMain
-public class MainApp implements QuarkusApplication {
+public class MainApp {
 
     public static void main(String[] args) {
-        Quarkus.run(MainApp.class);
-    }
 
-    @Override
-    public int run(String... args) throws Exception {
-        System.out.println("Hello");
-        return 0;
+        var user = new User();
+        user.setId(11);
+        user.setName("who am i");
+
+        //System.out.println(
+        //        UserConvert.INSTANCE.toQuery(user)
+        //);
+
+
+
     }
 }

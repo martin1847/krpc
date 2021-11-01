@@ -7,12 +7,13 @@ package com.bt.demo.impl;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import com.bt.convert.UserConvert;
 import com.bt.dao.mapper.UserMapper;
 import com.bt.demo.UserService;
 import com.bt.demo.dto.User;
-//import com.bt.mybatis.MapperHelp;
-import com.bt.rpc.model.PagedList;
-import com.bt.rpc.model.PagedQuery;
+import com.bt.model.PagedList;
+import com.bt.model.PagedQuery;
+import com.bt.mybatis.PagedQueryHelper;
 import com.bt.rpc.model.RpcResult;
 import io.quarkus.runtime.Startup;
 
@@ -28,6 +29,10 @@ public class UserServiceImpl implements UserService {
     @Inject //by the ext
     UserMapper userMapper;
 
+    @Inject
+    UserConvert userConvert;
+
+
 
     @Override
     public RpcResult<User> getUser(Integer id) {
@@ -35,9 +40,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public RpcResult<PagedList<User>> listUser(PagedQuery<String> query) {
-        //var list = MapperHelp.pageQuery(query.getPage(), query.getPageSize(), query.getQ(),userMapper::listBy);
-        return RpcResult.ok(null);
+    public RpcResult<PagedList<User>> listUser(PagedQuery<User> query) {
+        //var list = Mappers.pager(query.getPage(), query.getPageSize(), query.getQ(), userMapper::listBy);
+        //return RpcResult.ok(list);
+        var list  = userConvert.pager(query,userMapper::listBy);
+
+
+        //var pl = ((PageQueryHelper<User>) dto -> {
+        //    var map = new HashMap<String,Object>();
+        //    return map;
+        //});
+
+        //var pl = PagedQueryHelper.pager(query,
+        //        //map,//
+        //        (dto,m) -> m.put("name",dto.getName()),
+        //        userMapper::listBy);
+
+        //var bounds = DbBounds.fromPage(query.getPage(), query.getPageSize());
+        //var qMap = userConvert.toQuery(query.getQ());
+        //System.out.println(qMap);
+        //var list = userMapper.listBy(new HashMap<>(), bounds);
+        //HACK , this call rewrite count to bounds
+        //var pl = new  PagedList<>(bounds.getCount(), list);
+
+        return RpcResult.ok(list);
     }
 
     @Override

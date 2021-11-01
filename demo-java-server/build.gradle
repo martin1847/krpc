@@ -54,7 +54,7 @@ dependencies {
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
 
-    implementation 'org.mybatis:mybatis:3.5.7'
+//    implementation 'org.mybatis:mybatis:3.5.7'
 
 
 //    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"

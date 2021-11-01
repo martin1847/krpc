@@ -3,7 +3,7 @@ apply plugin:  'io.quarkus'
 
 dependencies {
 
-    implementation project(':demo-api')
+    implementation project(':test-api')
     implementation project(':rpc-client')
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

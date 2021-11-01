@@ -40,7 +40,7 @@ public class TestDemoClient {
             var user = new User();
             user.setName("test");
 
-            var pl = userService.listUser(new PagedQuery<>(1,3,user)).getData();
+            var pl = userService.listUser(new PagedQuery<>(2,3,user)).getData();
             System.out.println(pl.getCount() +" \n " + pl.getData());
 
             //client.test();

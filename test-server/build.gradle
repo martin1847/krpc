@@ -6,7 +6,7 @@ dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"
 
 
-    implementation project(':demo-api')
+    implementation project(':test-api')
     implementation project(':rpc-server')
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"

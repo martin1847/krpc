@@ -26,8 +26,9 @@ public interface Serial  extends ServerWriter{
 
 
     // server side
-    // TODO server input support ParameterizedType
     <T> T  readInput(InputProto proto, Class<T> type);
+
+    <T> T  readInput(InputProto proto, ParameterizedType type);
 
     SerialEnum id();
 

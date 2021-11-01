@@ -39,6 +39,11 @@ public class JsonSerial  implements Serial{
     }
 
     @Override
+    public <T> T readInput(InputProto proto, ParameterizedType type) {
+        return JsonUtils.parse(proto.getUtf8(), type);
+    }
+
+    @Override
     public SerialEnum id() {
         return SerialEnum.JSON;
     }

@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 
 @Slf4j
@@ -50,8 +52,9 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
         bytesWrite = stub.returnType == byte[].class;
 
-        var inputArgTypes = stub.method.getParameterTypes();
-        Class firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];
+        //stub.method.getGenericParameterTypes();
+        var inputArgTypes = stub.method.getGenericParameterTypes();
+        Type firstInputType = (inputArgTypes.length == 0) ? null : inputArgTypes[0];
 
         //"java.vm.name :Substrate VM" , graalVM just use Reflection
         /*
@@ -69,11 +72,17 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             if (firstInputType == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
             } else if(byte[].class == firstInputType){
+                log.info("Found byte[] input  {} " ,stub.method.getName());
+
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
                         sc.getArg().getBs().toByteArray());
-            }else {
+            }else if( firstInputType instanceof Class){
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
-                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),firstInputType));
+                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(Class)firstInputType));
+            }else{
+                log.info("Found ParameterizedType {} " ,firstInputType);
+                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
+                        (Object) Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(ParameterizedType)firstInputType));
             }
             return;
         }
@@ -101,14 +110,21 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 // compiler time
                 invoke = sc -> (RpcResult) mh.invokeExact();
             } else if(byte[].class == firstInputType){
+
+                log.info("found byte[] input MH {} " ,stub.method.getName());
                 invoke = sc -> (RpcResult) mh.invokeExact(sc.getArg().getBs().toByteArray());
-            } else {
+            } else if( firstInputType instanceof Class){
 
                 // may has method override issue , int / string  both change to Object Param,
                 //                var objInputMh=mh.asType(mh.type().changeParameterType(0, Object.class));
                 //                invoke = sc ->  (RpcResult) objInputMh.invokeExact(sc.readInput.apply(sc.getArg()));
                 invoke = sc -> (RpcResult) mh.invoke(
-                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),firstInputType)
+                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(Class)firstInputType)
+                );
+            }else{
+                log.info("Found ParameterizedType MH {} " ,firstInputType);
+                invoke = sc -> (RpcResult) mh.invoke(
+                        (Object) Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(ParameterizedType)firstInputType)
                 );
             }
 

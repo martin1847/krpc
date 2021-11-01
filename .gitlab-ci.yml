@@ -42,7 +42,7 @@ build:
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
 
-docker:
+.docker:
   stage: deploy
   extends: .docker-var
 #  cache:
@@ -72,7 +72,7 @@ docker:
 
 # helm
 
-chart:
+.chart:
   stage: deploy
   extends: .docker-var
   cache: []

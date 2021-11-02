@@ -1,32 +1,31 @@
 
 plugins {
-    id "com.jfrog.artifactory" version "4.9.6" apply false
     id 'java-library'
-//    id 'com.google.protobuf' version '0.8.17' apply false
     id 'io.quarkus'  version "$quarkusPluginVersion" apply false
+//    id "io.quarkus.extension"  version "$quarkusPluginVersion"// apply false
+//    id 'maven-publish' //apply false
 }
+
+
 
 allprojects {
 
     repositories {
-//        mavenLocal()
-        mavenCentral()
-        jcenter()
- //       maven { 
-  //          url "https://jfrog.io/gradle-dev/"
-  //          credentials {
-  //              username = "${artifactory_user}"
-  //              password = "${artifactory_password}"
-  //          }
-  //      }
-        maven {
-            url 'https://repo.maven.apache.org/maven2'
-            name 'Maven Central'
+        maven{
+            url "$MAVEN_REPO"
+            credentials(HttpHeaderCredentials) {
+                name = "X-JFrog-Art-API"
+                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
         }
+        maven {
+            url 'https://maven.aliyun.com/repository/public/'
+        }
+        mavenCentral()
     }
-
-
-
 
 }
 
@@ -34,8 +33,12 @@ subprojects {
     apply plugin: 'java-library'
     
     group = "com.bt.rpc"
-    version = '1.0.0-SNAPSHOT'
+    version = '1.0.0'//-SNAPSHOT'
     
-    sourceCompatibility = '11'
+    sourceCompatibility = "11"
     targetCompatibility = "11"
+
+
 }
+//sourceCompatibility = JavaVersion.VERSION_17
+//targetCompatibility = JavaVersion.VERSION_17

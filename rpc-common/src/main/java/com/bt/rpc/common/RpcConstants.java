@@ -1,5 +1,7 @@
 package com.bt.rpc.common;
 
+import java.time.LocalDateTime;
+
 /**
  * 2020-04-28 16:52
  *
@@ -16,6 +18,10 @@ public interface RpcConstants {
     String SERVER = "server";
 
     String VENDOR = "java";
+
+    //利用graalVM特性，缓存构建信息
+    String CI_BUILD_ID = System.getenv("CI_PIPELINE_ID")+"-"
+            +System.getenv("CI_COMMIT_SHORT_SHA")+"-"+ LocalDateTime.now();
 
     int DEFAULT_PORT = 50051;
 

@@ -17,13 +17,12 @@ import com.bt.rpc.common.FilterInvokeHelper;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.server.RpcMetaServiceImpl.RpcMetaMethod;
-import com.bt.rpc.util.MethodStub;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerServiceDefinition;
-import io.grpc.stub.ServerCalls;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -46,6 +45,8 @@ public class RpcServerBuilder {
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
 //		private final List<BindableService> protoServiceList = new ArrayList<>();
 
+		//public final String applicationName;
+
 
 		public Builder(String applicationName) {
 			this(applicationName, RpcConstants.DEFAULT_PORT);
@@ -54,6 +55,7 @@ public class RpcServerBuilder {
 			if(null == applicationName || applicationName.isBlank()){
 				throw new RuntimeException("ApplicationName must not be null ! ");
 			}
+			//this.applicationName = applicationName;
 			ServerContext.applicationName = applicationName;
 			this.port = port;
 		}
@@ -130,15 +132,17 @@ public class RpcServerBuilder {
 					continue;
 				}
 				io.grpc.ServerServiceDefinition.Builder serviceDefBuilder = ServerServiceDefinition
-						.builder(RefUtils.toServericeName(clz));
+						.builder(RefUtils.rpcServiceName(ServerContext.applicationName,clz));
 
 				var attr = (RpcService)clz.getAnnotation(RpcService.class);
 
 				boolean needMeta = clz != RpcMetaService.class;
-				for(MethodStub stub : RefUtils.toRpcMethods(clz)){
+				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 
-					MethodInvocation methodInvokation = new MethodInvocation(clz ,serviceToInvoke, stub, filterChain);
-					serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
+					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
+					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
+
+					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
 						var methodArgs = stub.method.getParameterTypes();
 

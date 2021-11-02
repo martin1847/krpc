@@ -1,0 +1,109 @@
+#image: "jcr.botaoyx.com/img/common/graalvm-gradle:7.2.21"
+image: "jcr.botaoyx.com/img/common/gradle-ubi:7.2"
+
+variables:
+  APP_NAMES: "demo-java-server demo-java-client"
+  APP_NAMESPACE: example
+
+#
+#cache: &global_cache
+#  key: build-$CI_COMMIT_REF_SLUG
+#  paths:
+#    - ./*/build/
+#  policy: push
+
+.docker-var:
+  variables:
+    APP_VERSION: 1.0.$CI_PIPELINE_ID
+    DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
+    DOCKER_TAG: $CI_PIPELINE_ID
+    #-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
+
+build:
+  stage: build
+  cache:
+    - key: gradle-deps
+      paths:
+        - .gradle/caches
+#    - <<: *global_cache
+#https://docs.gitlab.com/ee/ci/yaml/index.html#artifactsreportsjunit
+  artifacts:
+    expire_in: 7 days
+    paths:
+      - ./*/build/
+#      - ./*/build/*-runner
+#      - ./*/build/quarkus-app
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+    - export TZ=Asia/Shanghai
+  script:
+    - gradle build -Dquarkus.package.type=native
+#    - gradle publish
+
+# https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
+
+.docker:
+  stage: deploy
+  extends: .docker-var
+#  cache:
+#    <<: *global_cache
+#    policy: pull
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_JCR\":{\"auth\":\"$(echo -n gitlab:${CI_JCR_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
+  script:
+    - |
+      for APP_NAME in ${APP_NAMES}
+      do
+        imgFullName="$DOCKER_REPO/$APP_NAME:$DOCKER_TAG"
+        /kaniko/executor --cleanup --use-new-run  -c $CI_PROJECT_DIR/$APP_NAME -d $imgFullName
+        /kaniko/executor -c $CI_PROJECT_DIR/$APP_NAME -d "${imgFullName}-jvm" -f java.Dockerfile
+      done
+#  /kaniko/executor --cache
+#        cd $CI_PROJECT_DIR/$APP_NAME && pwd && ls -la ./build
+#  rules:
+#    - if: $CI_COMMIT_TAG
+# if src/main/changed
+# docker run --rm -it --entrypoint=/busybox/sh -v $(pwd):/workspace gcr.io/kaniko-project/executor:debug
+
+
+# helm
+
+.chart:
+  stage: deploy
+  extends: .docker-var
+  cache: []
+  dependencies: []
+  image:
+    name: jcr.botaoyx.com/img/helm-kubectl:3.5.3
+  script:
+    - |
+      for APP_NAME in ${APP_NAMES}
+      do
+        chartDir=./$APP_NAME/src/main/helm
+        img="$DOCKER_REPO/$APP_NAME"
+        yq e -i ".name= \"$APP_NAME\" | .version= \"$APP_VERSION\"" $chartDir/Chart.yaml
+        yq e -i ".appName= \"$APP_NAME\" | .deployment.image.name = \"$img\" | .prod.tag = \"$DOCKER_TAG\" "  $chartDir/values.yaml
+        helm template --debug  --dry-run $chartDir
+        helm package $chartDir
+        curl -H "X-JFrog-Art-Api:$JCR_TOKEN" -T "./${APP_NAME}-$APP_VERSION.tgz" \
+          "https://${CI_JCR}/artifactory/charts/${APP_NAMESPACE}/"
+      done
+#  only:
+#    refs:
+#      - branches
+#    changes:
+#      - Dockerfile
+#      - docker/scripts/*
+#      - dockerfiles/**/*
+#  except:
+#    - tags
+
+
+# deploy
+# helm repo add charts https://jcr.botaoyx.com/artifactory/api/helm/charts \
+#--username <USERNAME> --password <PASSWORD>
+

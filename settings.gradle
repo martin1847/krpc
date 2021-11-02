@@ -1,14 +1,25 @@
 pluginManagement {
     repositories {
+//        maven {
+            // must auth
+//            url "https://jcr.botaoyx.com/artifactory/gradle-plugins/"
+//        }
+        maven{
+            url "$MAVEN_REPO"
+            credentials(HttpHeaderCredentials) {
+                name = "X-JFrog-Art-API"
+                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
         gradlePluginPortal()
     }
 }
 
-
-//rootProject.name = 'users.dao'
-
-include 'demo-api','demo-java-server','demo-java-client'
+include 'test-api','test-server','test-client'
 
 include 'rpc-api','rpc-common','rpc-client','rpc-server'
-//include 'grpc-server-spring'
 
+//include 'quarkus-mybatis','quarkus-mybatis-deployment'

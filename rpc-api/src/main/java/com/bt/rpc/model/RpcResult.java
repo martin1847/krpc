@@ -10,41 +10,38 @@ import java.io.Serializable;
  * @author Martin.C
  */
 @Data
-public class RpcResult<Obj> implements Serializable {
+public class RpcResult<DTO> implements Serializable {
 
-    // default value , same with c# side
-    Code code = Code.OK;
+    public static final int OK = 0;
+
+    /**
+     * google.rpc.Code/CommonCode 的超集<br>
+     * 自定义业务异常码，以百为业务区间，大业务以千为区间<br>
+     * 除非必要，禁止使用java Exception传递错误信息，请定义异常码
+     */
+    int code = 0 ;
 
     String message;
 
-    Obj data;
+    DTO data;
 
 
-    public boolean isSuccess(){
-        return Code.OK == code;
+    public boolean isOk(){
+        return OK == code;
     }
 
 
-    public static <T> RpcResult<T> success(T data){
+    public static <T> RpcResult<T> ok(T data){
         RpcResult<T> res = new RpcResult<>();
         res.data = data;
-        //res.code = Code.OK;
         return res;
     }
 
-    public static <T> RpcResult<T> error(Code code, String msg) {
+    public static <T> RpcResult<T> error(int code, String msg) {
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
         res.message = msg;
-//        res.errors = Collections.singletonList(new CodeMsg(code, msg));
         return res;
     }
-//
-//    public void setCodeVal(int val){
-//        code = Code.forNumber(val);
-//    }
 
-//    public int getCodeVal(){
-//        return code.value;
-//    }
 }

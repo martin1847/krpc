@@ -1,0 +1,1 @@
+../gradle/java.Dockerfile

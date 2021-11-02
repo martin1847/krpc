@@ -1,11 +1,10 @@
 package com.bt.rpc.client;
 
 import com.bt.rpc.common.ResultWrapper;
-import com.bt.rpc.internal.OutputMessage;
-import com.bt.rpc.model.Code;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
-
-import java.util.function.Function;
+import com.bt.rpc.serial.ClientReader;
+import com.bt.rpc.serial.Serial;
 
 /**
  * 2020-04-03 16:12
@@ -14,25 +13,28 @@ import java.util.function.Function;
  */
 public class ClientResult extends ResultWrapper {
 
-    Function<OutputMessage, Object> ReadOutput;
+    ClientReader clientReader;
+    Serial serial;
 
-    public ClientResult(OutputMessage output, Function<OutputMessage, Object> reader) {
+    public ClientResult(OutputProto output, ClientReader clientReader, Serial serial) {
         super(output);
-        this.ReadOutput = reader;
+        this.clientReader = clientReader;
+        this.serial = serial;
     }
 
-    public ClientResult(Code code, String message, Function<OutputMessage, Object> reader) {
+    public ClientResult(int code, String message, ClientReader clientReader, Serial serial) {
         super(code, message);
-        this.ReadOutput = reader;
+        this.clientReader = clientReader;
+        this.serial = serial;
     }
 
 
     public <DTO> RpcResult<DTO> toReturn()
     {
         var res = new RpcResult<DTO>();
-        res.setCode(Code.forNumber(output.getC()));
+        res.setCode(output.getC());
         res.setMessage(output.getM());
-        res.setData((DTO)ReadOutput.apply(output));
+        res.setData((DTO) clientReader.readOutput(serial,output));
         return res;
     }
 }

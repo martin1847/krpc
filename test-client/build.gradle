@@ -1,0 +1,51 @@
+apply plugin:  'io.quarkus'
+
+
+dependencies {
+
+    implementation project(':test-api')
+    implementation project(':rpc-client')
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+    implementation "io.quarkus:quarkus-arc"
+//    implementation 'io.quarkus:quarkus-config-yaml'
+//    implementation 'io.quarkus:quarkus-grpc-common-deployment'
+    implementation "io.grpc:grpc-netty:${grpcVersion}"
+
+    // graalvm not support
+//    implementation 'io.netty:netty-transport-native-epoll:4.1.65.Final:linux-x86_64'
+
+//    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
+
+
+//    implementation 'io.quarkus:quarkus-resteasy'
+//    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation('io.quarkus:quarkus-junit5'){
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+//        exclude group: 'org.jmock' //by group
+    }
+//    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
+    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+//test {
+//    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+//}
+
+// gradle build -Dquarkus.package.type=native
+//  ./build/demo-java-client-1.0.0-SNAPSHOT-runner -Dquarkus.log.level=all
+//https://quarkus.io/guides/writing-native-applications-tips
+quarkusBuild {
+
+    nativeArgs {
+//        containerBuild = true //--static
+//        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
+        additionalBuildArgs ="" //""--verbose"
+    }
+}

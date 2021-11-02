@@ -1,0 +1,185 @@
+
+apply plugin:  'io.quarkus'
+
+
+dependencies {
+//    compileOnly "javax.annotation:javax.annotation-api:1.2"
+
+
+    implementation project(':test-api')
+    implementation project(':rpc-server')
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+
+    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+    implementation "io.quarkus:quarkus-arc"
+//    implementation 'io.quarkus:quarkus-config-yaml'
+//    implementation 'io.quarkus:quarkus-grpc-common-deployment'
+    implementation "io.grpc:grpc-netty:${grpcVersion}"
+
+    // graalvm not support
+//    implementation 'io.netty:netty-transport-native-epoll:4.1.68.Final:linux-x86_64'
+
+//    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
+
+    //JDBC
+//    @Inject
+//    AgroalDataSource defaultDataSource;
+    implementation "io.quarkus:quarkus-agroal"
+    implementation "io.quarkus:quarkus-jdbc-mysql"
+    implementation "io.quarkus:quarkus-hibernate-validator"
+
+
+//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis-deployment:0.0.10'
+//    implementation "com.bt:quarkus-mybatis-deployment:1.0.1"
+
+
+//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
+    implementation "com.bt.ext:ext-mybatis:1.0.0"
+    implementation "com.bt.common:mybatis:1.0.0"
+//    implementation 'com.bt:1.0.0'
+
+    //1.4.2.Final  1.5.0.Beta1
+    implementation 'org.mapstruct:mapstruct:1.5.0.Beta1'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.0.Beta1'
+
+//    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+
+
+
+    testImplementation('io.quarkus:quarkus-junit5'){
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+    }
+    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
+
+//    implementation 'org.mybatis:mybatis:3.5.7'
+
+
+//    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
+//    testImplementation 'io.rest-assured:rest-assured'
+}
+
+//java {
+//    sourceCompatibility = JavaVersion.VERSION_11
+//    targetCompatibility = JavaVersion.VERSION_11
+//}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+quarkusBuild {
+
+    nativeArgs {
+//        containerBuild = true //--static
+//        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
+        additionalBuildArgs =""//--report-unsupported-elements-at-runtime"//"--verbose"
+    }
+}
+
+//To use GraalVM CE LTS, you may want to change your `JAVA_HOME`:
+//  export JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-ce-lts-java11-20.3.1/Contents/Home
+//   export GRAALVM_HOME=/Library/Java/JavaVirtualMachines/graalvm-ce-lts-java11-20.3.1/Contents/Home
+////
+//or you may want to add its `bin` directory to your `PATH`:
+//  export PATH=/Library/Java/JavaVirtualMachines/graalvm-ce-lts-java11-20.3.1/Contents/Home/bin:"$PATH"
+
+// gradle build -Dquarkus.package.type=native
+//  ./build/demo-java-server-1.0.0-SNAPSHOT-runner -Dquarkus.log.level=all
+//https://quarkus.io/guides/writing-native-applications-tips
+
+/*
+quarkusBuild {
+
+    nativeArgs {
+//        containerBuild = true //--static
+//        buildImage = "-docker-local.jfrog.io/cibuildslave/graalvm-gradle:7"
+//        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
+//
+//        additionalBuildArgs2 ="--verbose,-H:ReflectionConfigurationFiles=reflection-config.json"
+        additionalBuildArgs2 = "--allow-incomplete-classpath," +
+//                "-H:DynamicProxyConfigurationFiles=dynamic-proxy.json,"+
+                "-H:ReflectionConfigurationFiles=reflection-config.json," +
+                "--initialize-at-build-time=com.bt.RuntimeToNativeBuild,"+
+                "--initialize-at-run-time=" +
+                    "io.netty.util.internal.logging.Log4JLogger" +
+                    "\\,io.netty.buffer.PooledByteBufAllocator" +
+
+
+                "\\,io.netty.channel.epoll.Native" +
+                "\\,io.netty.channel.epoll.Epoll" +
+                "\\,io.netty.channel.epoll.EpollEventLoop" +
+                "\\,io.netty.channel.epoll.EpollEventArray" +
+                "\\,io.netty.channel.unix.Socket" +
+                "\\,io.netty.channel.DefaultFileRegion" +
+
+
+//                "\\,io.netty.handler.ssl.util.ThreadLocalInsecureRandom" +
+//        "\\,io.netty.channel.unix" +
+//        "\\,io.netty.channel.epoll" +
+//        "\\,io.netty.channel.kqueue" +
+        "\\,io.netty.channel.kqueue.KQueueEventArray" +
+//                "\\,io.netty.util.AbstractReferenceCounted" +
+                "\\,io.netty.channel.kqueue.KQueueEventLoop" +
+                    "\\,io.netty.channel.kqueue.Native" +
+                    "\\,io.netty.channel.unix.Errors" +
+                    "\\,io.netty.channel.unix.IovArray" +
+                    "\\,io.netty.channel.unix.Limits" +
+                    "\\,io.netty.channel.ChannelHandlerMask" +
+                    "\\,io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator" +
+                    "\\,io.netty.handler.ssl.ReferenceCountedOpenSslContext" +
+
+
+
+                    '\\,io.grpc.netty.Utils$ByteBufAllocatorPreferDirectHolder'+
+                    '\\,io.grpc.netty.Utils$ByteBufAllocatorPreferHeapHolder'+
+                    '\\,io.grpc.netty.Utils'+
+                    '\\,io.grpc.netty.NettyServerBuilder'+
+                    '\\,io.grpc.netty.NettyChannelBuilder'+
+                    '\\,io.grpc.internal.RetriableStream'
+        //Thanks Config: io.quarkus.grpc.common.deployment.GrpcCommonProcessor
+        //https://github.com/quarkusio/quarkus/blob/main/extensions/netty/deployment/src/main/java/io/quarkus/netty/deployment/NettyProcessor.java
+
+        // https://github.com/quarkusio/quarkus/blob/main/extensions/netty/runtime/src/main/java/io/quarkus/netty/runtime/graal/NettySubstitutions.java
+
+
+//        @TargetClass(className = "io.netty.util.AbstractReferenceCounted")
+//        final class Target_io_netty_util_AbstractReferenceCounted {
+//
+//            @Alias
+//            @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.FieldOffset, name = "refCnt")
+//            private static long REFCNT_FIELD_OFFSET;
+//        }
+
+//        @TargetClass(className = "io.netty.channel.ChannelHandlerMask")
+//        final class Target_io_netty_channel_ChannelHandlerMask {
+//
+//            // Netty tries to self-optimized itself, but it requires lots of reflection. We disable this behavior and avoid
+//            // misleading DEBUG messages in the log.
+//            @Substitute
+//            private static boolean isSkippable(final Class<?> handlerType, final String methodName, final Class... paramTypes) {
+//                return false;
+//            }
+//        }
+//
+//        @TargetClass(className = "io.netty.util.internal.NativeLibraryLoader")
+//        final class Target_io_netty_util_internal_NativeLibraryLoader {
+//
+//            // This method can trick GraalVM into thinking that Classloader#defineClass is getting called
+//            @Substitute
+//            static Class<?> tryToLoadClass(final ClassLoader loader, final Class<?> helper)
+//                    throws ClassNotFoundException {
+//                return Class.forName(helper.getName(), false, loader);
+//            }
+//
+//        }
+
+    }
+
+
+}
+*/
+

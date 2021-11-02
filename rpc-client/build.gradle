@@ -10,7 +10,7 @@ dependencies {
     
     ////  TEST //////
 
-    testImplementation project(':demo-api')
+//    testImplementation project(':demo-api')
 //    testImplementation group: 'junit', name: 'junit', version: '4.12'
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

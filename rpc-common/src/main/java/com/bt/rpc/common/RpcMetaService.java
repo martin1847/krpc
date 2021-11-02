@@ -12,7 +12,10 @@ import com.bt.rpc.model.RpcResult;
 @RpcService
 public interface RpcMetaService {
 
+
+
     RpcResult<ApiMeta> listApis();
 
 
+    RpcResult<String> v();
 }

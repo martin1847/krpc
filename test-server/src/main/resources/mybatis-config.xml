@@ -1,0 +1,79 @@
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+    <properties>
+        <property name="SqlXmlFolder" value="/mapper"/>
+    </properties>
+
+    <settings>
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="useGeneratedKeys" value="true"/>
+        <setting name="defaultStatementTimeout" value="25"/>
+        <setting name="defaultFetchSize" value="100"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+
+        <!--  https://mybatis.org/mybatis-3/zh/configuration.html
+        <setting name="cacheEnabled" value="true"/>
+        <setting name="multipleResultSetsEnabled" value="true"/>
+        <setting name="useColumnLabel" value="true"/>
+        <setting name="autoMappingBehavior" value="PARTIAL"/>
+        <setting name="defaultExecutorType" value="SIMPLE"/>
+        <setting name="safeRowBoundsEnabled" value="false"/>
+        <setting name="localCacheScope" value="SESSION"/>
+        <setting name="jdbcTypeForNull" value="OTHER"/>
+        <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
+        -->
+
+
+    </settings>
+
+    <typeAliases>
+        <!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2LongList" alias="Json2LongList"/>-->
+        <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
+        <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
+        <package name="com.bt.demo.dto"/>
+        <package name="com.bt.typehandler"/>
+    </typeAliases>
+
+<!--    <typeHandlers>-->
+<!--        <package name="com.bt.typehandler"/>-->
+<!--    </typeHandlers>-->
+
+    <plugins>
+        <plugin interceptor="com.bt.mybatis.MysqlPagingInterceptor"/>
+    </plugins>
+
+
+    <!-- setup environment with Quarkus data source -->
+    <environments default="q">
+        <environment id="q">
+            <transactionManager type="MANAGED">
+                <property name="closeConnection" value="false"/>
+            </transactionManager>
+            <dataSource type="com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory" />
+<!--                <property name="db" value="h2"/>-->
+<!--            </dataSource>-->
+        </environment>
+    </environments>
+
+
+
+<!--    show variables like 'lower_case_table_names'
+
+SqlXmlFolder
+-->
+    <mappers>
+<!--
+<mapper resource="mapper/*UserMapper.xml"/>-->
+        <package name="com.bt.dao.mapper"/>
+    </mappers>
+
+
+
+
+
+
+</configuration>

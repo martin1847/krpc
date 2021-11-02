@@ -1,0 +1,51 @@
+appName: demo-java-server
+
+service:
+  type: ClusterIP
+  port: 50051
+  appProtocol: grpc-web
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 500Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
+
+cd:
+  cluster: local-test
+
+deployment:
+  corsAllow: course.botaoyx.com
+  image:
+    pullPolicy: IfNotPresent
+    name: "jcr.botaoyx.com/img/example/demo-java-server"
+#    command: "./app  -Dquarkus.log.level=all"
+  env:
+    APP_ENV: TEST
+    LOG_LEVEL: warn
+    QUARKUS_DATASOURCE_JDBC_URL: "jdbc:mysql://mysql-primary.infra/example"
+
+# TODO grpc_health_probe
+#readinessProbe:
+#  exec:
+#    command: ["/bin/grpc_health_probe", "-addr=localhost:50051"]
+#  initialDelaySeconds: 5
+#livenessProbe:
+#  exec:
+#    command: ["/bin/grpc_health_probe", "-addr=localhost:50051"]
+#  initialDelaySeconds: 10
+
+
+prod:
+  replicas: 2
+  weight: 100
+  tag: 83
+
+
+canary:
+  replicas: 0
+  weight: 0
+  tag: ""
+

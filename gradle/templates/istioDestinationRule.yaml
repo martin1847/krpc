@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.appName  }}
+  labels:
+    app: {{ .Values.appName }}
+spec:
+  host: {{ .Values.appName  }}.{{ .Release.Namespace }}.svc.cluster.local
+  subsets:
+    - name: prod
+      labels:
+        canary: "false"
+    - name: canary
+      labels:
+        canary: "true"
+
+{{- /*
+    revision: {{ .Chart.Version | replace "+" "_" }}
+    #  trafficPolicy:
+    #    tls:
+    #      mode: ISTIO_MUTUAL
+*/}}

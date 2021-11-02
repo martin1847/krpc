@@ -1,12 +1,5 @@
 /.idea/
-/java-grpc/.DS_Store
-/java-grpc/.gradle/
-/java-grpc/.idea/
-/java-grpc/build/
-/java-grpc/example-server/out/
-/java-grpc/grpc-sdk/build/
-/java-grpc/grpc-sdk/out/
-/java-grpc/grpc-sdk-spring/out/
+out/
 
 .DS_Store
 -*.swp
@@ -16,7 +9,8 @@
 nupkg/
 
 target/
-
+wrapper/
+generated/
 # Visual Studio Code
 .vscode
 

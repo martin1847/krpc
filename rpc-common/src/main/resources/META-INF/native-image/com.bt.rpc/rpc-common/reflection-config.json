@@ -49,5 +49,19 @@
     "name" : "com.bt.rpc.common.meta.Property",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
+  },
+
+  {
+    "name" : "com.bt.rpc.model.PagedList",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+
+  {
+    "name" : "com.bt.rpc.model.PagedQuery",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
   }
 ]

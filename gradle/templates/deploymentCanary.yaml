@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.appName }}
+    version: {{ .Chart.Version | replace "+" "_" }}
+    canary: "true"
+  name: {{ .Values.appName  }}-canary
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.appName  }}
+      canary: "true"
+  replicas: {{ .Values.canary.replicas | default 0 }}
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      annotations: 
+        sidecar.istio.io/inject: "{{ .Values.deployment.istioInject | default true }}"
+      labels:
+        app: {{ .Values.appName }}
+        component: java
+        canary: "true"
+        version: {{ .Chart.Version | replace "+" "_" }}
+    spec:
+      containers:
+        - name: {{ .Values.appName  }}
+          image: "{{ .Values.deployment.image.name }}:{{ .Values.canary.tag }}"
+          imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
+          {{- if .Values.deployment.image.command }}
+          command: [ "/bin/bash","-c","{{ .Values.deployment.image.command }}" ]
+          {{- end }}
+          env:
+          - name: CLUSTER_NAME
+            value: {{.Values.cd.cluster}}
+          {{- range $key, $val := .Values.deployment.env }}
+          - name: {{ $key }}
+            value: {{ $val | quote}}
+          {{- end }}
+          {{- if .Values.secret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.appName }}
+          {{- end }}
+          ports:
+          - containerPort: {{ .Values.service.port }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- $http_port := .Values.service.port }}
+          {{- with .Values.deployment.liveness }}
+          livenessProbe:
+            httpGet:
+              path: {{ .path }}
+              port: {{ $http_port }}
+            failureThreshold: {{ .failure_threshold | default 15}}
+            successThreshold: {{ .success_threshold | default 1 }}
+            timeoutSeconds: {{ .timeout_seconds | default 1 }}
+            initialDelaySeconds: {{ .initial_delay_seconds | default 10 }}
+            periodSeconds: {{ .period_seconds | default 5 }}
+          {{- end }}
+          {{- with .Values.deployment.readiness }}
+          readinessProbe:
+            httpGet:
+              path: {{ .path }}
+              port: {{ $http_port }}
+            failureThreshold: {{ .failure_threshold | default 15}}
+            successThreshold: {{ .success_threshold | default 1 }}
+            timeoutSeconds: {{ .timeout_seconds | default 1 }}
+            initialDelaySeconds: {{ .initial_delay_seconds | default 10 }}
+            periodSeconds: {{ .period_seconds | default 5 }}
+          {{- end }}

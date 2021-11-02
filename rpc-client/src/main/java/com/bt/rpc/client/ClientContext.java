@@ -2,6 +2,7 @@ package com.bt.rpc.client;
 
 import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;
+import com.bt.rpc.internal.SerialEnum;
 import io.grpc.CallOptions;
 import lombok.Data;
 
@@ -29,13 +30,18 @@ public class ClientContext extends AbstractContext<ClientResult,Object[],ClientC
     } //;//GlobalFilters.Add(filter);
 
 
+    private SerialEnum serial;
+
     public CallOptions getCallOptions(){
         return CallOptions.DEFAULT;
     }
 
 
-    public ClientContext(Class service, String method, Type resDto, Object[] arg, FilterChain<ClientResult,ClientContext> lastChain) {
+    public ClientContext(Class service, String method, Type resDto, Object[] arg
+            , FilterChain<ClientResult,ClientContext> lastChain
+        ,SerialEnum serialEnum) {
         super(service, method, resDto, arg, lastChain);
+        this.serial = serialEnum;
     }
 
     public static ClientContext current(){

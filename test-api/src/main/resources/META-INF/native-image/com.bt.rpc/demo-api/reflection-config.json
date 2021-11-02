@@ -1,0 +1,34 @@
+[
+
+  {
+    "name" : "com.bt.demo.dto.User",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.bt.demo.dto.TimeReq",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.bt.demo.dto.TimeResult",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+
+
+
+  {
+    "name" : "com.bt.demo.DemoService",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.demo.UserService",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  }
+]

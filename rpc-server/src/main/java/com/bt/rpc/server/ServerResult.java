@@ -1,10 +1,10 @@
 package com.bt.rpc.server;
 
 import com.bt.rpc.common.ResultWrapper;
-import com.bt.rpc.internal.OutputMessage;
+import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
-
-import java.util.function.BiConsumer;
+import com.bt.rpc.serial.Serial;
+import com.bt.rpc.serial.ServerWriter;
 
 /**
  * 2020-04-07 13:41
@@ -13,12 +13,12 @@ import java.util.function.BiConsumer;
  */
 public class ServerResult extends ResultWrapper {
 
-    public <DTO> ServerResult(RpcResult<DTO> result, BiConsumer<Object, OutputMessage.Builder> writeOutput)
+    public <DTO> ServerResult(RpcResult<DTO> result, ServerWriter serverSerial)
     {
         if (null != result)
         {
-            var output = OutputMessage.newBuilder();
-            output.setC(result.getCode().value);
+            var output = OutputProto.newBuilder();
+            output.setC(result.getCode());
             var msg = result.getMessage();
             if (null != msg)
             {
@@ -27,7 +27,7 @@ public class ServerResult extends ResultWrapper {
             var data = result.getData();
             if (null != data)
             {
-                writeOutput.accept(data, output);
+                serverSerial.writeOutput(data, output);
             }
             super.output = output.build();
         }

@@ -8,7 +8,7 @@ dependencies {
 //    api 'javax.validation:validation-api:2.0.1.Final'
     api 'jakarta.validation:jakarta.validation-api:2.0.2'
 
-    api "com.bt:common-model:1.0.0"
+    api "com.bt.common:model:1.0.0"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

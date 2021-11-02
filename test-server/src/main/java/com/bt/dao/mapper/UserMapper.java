@@ -9,17 +9,18 @@ import com.bt.mybatis.DbBounds;
 public interface UserMapper {
 
     //单个用get/多个用list
-    //获取统计值用count* 插入用save/insert；
-    //删除用remove/delete；
+    //获取统计值用count* 插入用save
+    //删除用remove
     //修改用update
     //
 
     User getUser(Integer id);
 
-    Integer createUser(Integer id,String name);
+    // return rows
+    Integer save(Integer id,String name);
 
-    //@Delete("DELETE FROM USER WHERE id = #{id}")
-    Integer removeUser(Integer id);
+    //return rows
+    boolean remove(Integer id);
 
 
     // 分页查询接口

@@ -6,6 +6,7 @@ package com.bt.demo.impl;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 
 import com.bt.convert.UserConvert;
 import com.bt.dao.mapper.UserMapper;
@@ -13,7 +14,6 @@ import com.bt.demo.UserService;
 import com.bt.demo.dto.User;
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
-import com.bt.mybatis.PagedQueryHelper;
 import com.bt.rpc.model.RpcResult;
 import io.quarkus.runtime.Startup;
 
@@ -67,7 +67,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public RpcResult<Integer> createUser(User u) {
-        return null;
+    @Transactional//(REQUIRED) (default):
+    public RpcResult<Integer> saveUser(User u) {
+        var del = userMapper.remove(u.getId());
+        System.out.println("del : " + del);
+        var id = userMapper.save(u.getId(),u.getName());
+        return RpcResult.ok(id);
     }
+
 }

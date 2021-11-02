@@ -22,6 +22,6 @@ public interface UserService {
 
     RpcResult<PagedList<User>> listUser(PagedQuery<User> query);
 
-    RpcResult<Integer> createUser(User u);
+    RpcResult<Integer> saveUser(User u);
 
 }

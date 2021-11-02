@@ -43,6 +43,11 @@ public class TestDemoClient {
             var pl = userService.listUser(new PagedQuery<>(2,3,user)).getData();
             System.out.println(pl.getCount() +" \n " + pl.getData());
 
+            user.setId(8);
+            System.out.println(
+                    userService.saveUser(user)
+            );
+
             //client.test();
 
         }else{

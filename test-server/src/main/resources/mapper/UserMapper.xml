@@ -18,16 +18,22 @@
     <select id="listBy" resultMap="DTO">
         <include refid="base"/>
 <!--        where 1-->
-<!--        <if test="isvId != null">and isv_id = #{isvId}</if>-->
-<!--        <if test="staffId != null">and staff_id = #{staffId}</if>-->
-<!--        <if test="statuses != null">and build_status in-->
+<!--        <if test="statuses != null">and  status in-->
 <!--            <foreach item="it" collection="statuses" open="(" separator="," close=")">-->
 <!--                #{it}-->
 <!--            </foreach>-->
 <!--        </if>-->
-<!--        order by gmt_modified desc,gmt_create desc-->
+<!--        order by gmt_modified desc -->
         limit #{offset},#{limit}
     </select>
+
+    <insert id="save">
+        insert into  users ( id, name) values (#{id}, #{name})
+    </insert>
+
+    <delete id="remove">
+        delete from   users where id = #{_parameter}
+    </delete>
 
 
     <sql id="field">

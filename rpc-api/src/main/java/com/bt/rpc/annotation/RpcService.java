@@ -9,7 +9,7 @@ public @interface RpcService {
 
     /// Default Name Trim the first `I` , for Example : IMyService -> MyService
     /// dot is Not Allowed here
-    String name() default  "";
+    String value() default  "";
 
     /// maybe not use , use a whole nuget version instead ?
     String version()  default  "1.0.0";

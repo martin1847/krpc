@@ -1,4 +1,4 @@
-package com.bt.demo.dto;
+package com.btyx.demo.dto;
 
 
 import lombok.Data;

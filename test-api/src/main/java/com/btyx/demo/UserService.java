@@ -2,9 +2,9 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.demo;
+package com.btyx.demo;
 
-import com.bt.demo.dto.User;
+import com.btyx.demo.dto.User;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;

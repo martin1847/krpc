@@ -3,7 +3,7 @@ package com.bt.convert;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.bt.demo.dto.User;
+import com.btyx.demo.dto.User;
 import com.bt.mybatis.PagedQueryHelper;
 import org.mapstruct.Mapper;
 //import org.mapstruct.Mapper;

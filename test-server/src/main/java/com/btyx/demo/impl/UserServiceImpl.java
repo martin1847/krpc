@@ -2,7 +2,7 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.demo.impl;
+package com.btyx.demo.impl;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -10,8 +10,8 @@ import javax.transaction.Transactional;
 
 import com.bt.convert.UserConvert;
 import com.bt.dao.mapper.UserMapper;
-import com.bt.demo.UserService;
-import com.bt.demo.dto.User;
+import com.btyx.demo.UserService;
+import com.btyx.demo.dto.User;
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.model.RpcResult;

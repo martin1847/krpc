@@ -1,7 +1,6 @@
 package test.btyx;
 
-import com.bt.convert.UserConvert;
-import com.bt.demo.dto.User;
+import com.btyx.demo.dto.User;
 
 public class MainApp {
 

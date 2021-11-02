@@ -2,7 +2,7 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.demo.impl;
+package com.btyx.demo.impl;
 
 import java.io.IOException;
 import java.io.InputStream;

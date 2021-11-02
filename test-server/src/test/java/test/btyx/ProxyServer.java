@@ -1,6 +1,6 @@
 package test.btyx;
 
-import com.bt.demo.impl.DemoServiceImpl;
+import com.btyx.demo.impl.DemoServiceImpl;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.server.RpcServerBuilder;
 import io.grpc.Server;

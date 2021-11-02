@@ -1,8 +1,8 @@
-package com.bt.demo.impl;
+package com.btyx.demo.impl;
 
-import com.bt.demo.dto.TimeReq;
-import com.bt.demo.dto.TimeResult;
-import com.bt.demo.DemoService;
+import com.btyx.demo.dto.TimeReq;
+import com.btyx.demo.dto.TimeResult;
+import com.btyx.demo.DemoService;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.util.EnvUtils;
 import io.quarkus.runtime.Startup;

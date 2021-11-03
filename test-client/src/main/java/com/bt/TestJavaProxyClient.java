@@ -1,7 +1,7 @@
 package com.bt;
 
-import com.bt.demo.dto.TimeReq;
-import com.bt.demo.DemoService;
+import com.btyx.test.dto.TimeReq;
+import com.btyx.test.DemoService;
 import com.bt.rpc.client.CacheManager;
 import com.bt.rpc.client.ClientFilter;
 import com.bt.rpc.client.GeneralizeClient;
@@ -55,7 +55,7 @@ public class TestJavaProxyClient {
     }
 
     /** Say hello to server. */
-    public void greet(DemoService timeService, String name) {
+    public void greet(DemoService demoService, String name) {
         try {
 
 
@@ -65,16 +65,16 @@ public class TestJavaProxyClient {
 //
 //            timeService = timeService2;
 //            System.out.println("time ping" + timeService.ping());
-            System.out.println("time ping 1" + timeService.map());
-            System.out.println("time ping 2" + timeService.str());
+            System.out.println("time ping 1" + demoService.map());
+            System.out.println("time ping 2" + demoService.str());
             Thread.sleep(100L);
-            System.out.println("time ping 2" + timeService.str());
-            System.out.println("time ping 3" + timeService.list());
+            System.out.println("time ping 2" + demoService.str());
+            System.out.println("time ping 3" + demoService.list());
 
 
-            System.out.println("hello1 : " + timeService.hello(new TimeReq("Java",2020)));
+            System.out.println("hello1 : " + demoService.hello(new TimeReq("Java",2020)));
             Thread.sleep(100L);
-            System.out.println("hello2 : " + timeService.hello(new TimeReq("Java",2020)));
+            System.out.println("hello2 : " + demoService.hello(new TimeReq("Java",2020)));
 
 
             //
@@ -90,7 +90,7 @@ public class TestJavaProxyClient {
             //
             //testException(timeService,20000);
             System.out.println("time pingWithRuntimeException 4 : "
-                    + timeService.pingWithRuntimeException());
+                    + demoService.pingWithRuntimeException());
 
 
 
@@ -179,6 +179,11 @@ public class TestJavaProxyClient {
 
 
             var metaService = client.builder.get(RpcMetaService.class);
+
+            System.out.println(
+                   "server supported serials : " + metaService.serials().getData()
+            );
+
             System.out.println(
                     JsonUtils.stringify(
                     metaService.listApis().getData()

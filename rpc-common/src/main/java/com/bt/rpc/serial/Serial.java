@@ -35,6 +35,8 @@ public interface Serial  extends ServerWriter{
 
     class Instance{
         static final   Serial JSON =  new JsonSerial();
+
+        static final SerialEnum[] SUPPORTED = {SerialEnum.JSON};
         //TODO more than json
         public static Serial get(int seValue){
             if(seValue == SerialEnum.JSON_VALUE){
@@ -45,6 +47,11 @@ public interface Serial  extends ServerWriter{
         static Serial get(SerialEnum se){
             return get(se.getNumber());
         }
+
+        public static SerialEnum[] supported(){
+            return SUPPORTED;
+        }
+
     }
 
 }

@@ -1,4 +1,4 @@
-package com.bt.rpc.demo.filter;
+package com.btyx.test.filter;
 
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;

@@ -1,4 +1,4 @@
-package com.bt.demo.dto;
+package com.btyx.test.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

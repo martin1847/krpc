@@ -14,11 +14,8 @@ dependencies {
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
     implementation "io.grpc:grpc-netty:${grpcVersion}"
 
-    // graalvm not support
-//    implementation 'io.netty:netty-transport-native-epoll:4.1.65.Final:linux-x86_64'
 
-//    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
-
+    implementation "com.bt.ext:ext-rpc:1.0.1"
 
 //    implementation 'io.quarkus:quarkus-resteasy'
 //    testImplementation 'io.rest-assured:rest-assured'
@@ -46,6 +43,6 @@ quarkusBuild {
     nativeArgs {
 //        containerBuild = true //--static
 //        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
-        additionalBuildArgs ="" //""--verbose"
+        additionalBuildArgs ="--allow-incomplete-classpath" //""--verbose"
     }
 }

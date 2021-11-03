@@ -6,7 +6,7 @@ targetCompatibility = "11"
 
 dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
-    compileOnly 'jakarta.validation:jakarta.validation-api:2.0.2'
+    api 'jakarta.validation:jakarta.validation-api:2.0.2'
     api "com.bt.common:model:1.0.0"
 
 

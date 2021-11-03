@@ -1,6 +1,6 @@
 
 Latest version : https://jcr.botaoyx.com/ui/artifactSearchResults?name=rpc&type=artifacts
-```xml
+```gradle
 implementation "com.bt.rpc:rpc-server:1.0.0"
 implementation "com.bt.ext:ext-rpc:1.0.1"
 ```
@@ -21,6 +21,8 @@ There is a  [demo-rpc](/example/demo-rpc) project.
 
 
 * Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan.
+* build.gradle file:
+
 
 ```gradle
 
@@ -85,9 +87,9 @@ Then publish this API package to  https://jcr.botaoyx.com  for the client side t
 
 # 2. Setup the Server
 
-* Add the ProjectReference [rpc-server] to your csproj
+* Add the ProjectReference [rpc-server] to your `build.gradle`
 
-```xml
+```gradle
 implementation "com.bt.rpc:rpc-server:1.0.0"
 ```
   

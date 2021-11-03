@@ -39,6 +39,8 @@ for example :
 
 
 ```java
+package com.btyx.course.xxxx;
+
 @RpcService(description = "this is a Java test service")
 public interface DemoService {
 
@@ -56,32 +58,42 @@ public interface DemoService {
     RpcResult<Integer> saveUser(User u);
 }
 
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class TimeReq {
 
-    @Size(max = 10,message = "name's length too long than 10")
-    private String name;
-    private int age;
-}
+  @Doc("姓名")
+  @NotBlank
+  @Size(max = 10,message = "name's length too long than 10")
+  private String name;
 
+  @Doc("年龄")
+  @NotNull
+  @Min(1)@Max(80)
+  private Integer age;
+  
+}
 
 ```
 
 Convention & Limit  about the service define : 
-
-* returnType must be `RpcResult<Data>` .
-    - `Data` can be any object , BUT Abstract/Interface Not Support
+* 字段使用 `javax.validation` 进行验证，默认采用 `hibernate-validator` 实现。
+  * RPC框架自动验证，开发时标准好即可
+* API即文档，请使用`Doc`加以说明字段含义
+  * 使用框架自动生成前端`TypeScript`调用代码
+  * `Doc`更是给前端、测试同学看的，请认真对待
+* returnType must be `RpcResult<DTO>` .
+    - `DTO` can be any object , BUT Abstract/Interface Not Support
     - Do not use Enum as return Field(Input can), maybe not Compatibility when Upgrade. Use string/int instead.
-    - date/time use [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type, language and Timezone  independent)
+    - 不要直接使用`date/time`, use [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
     - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
-    - use List<Item> insteadOf Dictionary
-    - Csharp Side use a `Task` as wrap : `Task<RpcResult>`, Java side no need
-* number of parameters at most 1 
-* Remember add the `RpcService` annotation, then the SDK will recognition it as a Rpc Service.
-* Streaming Method Not Support Current
-  
+    - 除非必要，禁止使用Map做为出入参
+    - 其余参考 [命名规范](https://redmine.botaoyx.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
+* 入参不多于一个 
+* 标记 `RpcService` annotation
+
 Then publish this API package to  https://jcr.botaoyx.com  for the client side to reference.
 
 
@@ -114,11 +126,14 @@ public class DemoServiceImpl implements DemoService {
 
 # 3. Test in the Client Side
 
+## 3.1 生成ts代码，前端调用测试
+
+## 3.2 java项目测试
 
 
 # Exception Handler
 
-## Soft Exception, Most case recommend .
+## 使用错误码/Soft Exception
 * 约定错误码 ： https://redmine.botaoyx.com/projects/bt/wiki/%E5%85%A8%E5%B1%80%E9%94%99%E8%AF%AF%E7%A0%81
 * ServerSide : Just return a RpcResult with non-OK  Code and a error message(left data null)
 * ClientSide : Check IsOk Before Use Data
@@ -134,39 +149,3 @@ public class DemoServiceImpl implements DemoService {
 
 
 
-
-
-# Benefits and Weaknesses
-
-## Benefits 
-
-
-* Loose coupling between clients/server makes changes easy
-* Easy for testing, inspection, and modification
-* Significant Transport performance benefits over HTTP rest
-* Developer Friendly 
-    - Easy to understand, strict specification
-    - deal with interface/poco , easy than http request
-    - Eliminates debate and saves time to the best format of URLs/HTTP verbs/response codes.
-    - Developer performence improve , No need to write client libraries
-* Non Function Requirments  Built-in 
-    - Deadline/timeouts and cancellation for resource usage limits
-    - Distributed tracing( W3C over jager)
-    - Monitor / Metrics Telemetry
-    - Model Validation with DataAnnotations
-    - Extensibility function, for example API Cache etc.
-
-## Weaknesses
-
-* Limited browser support
-* Not human readable
-
-## Recommended scenarios
-
-![decomposing](./decomposing.png)
-
-* Microservices –  especially only internal and when one server needs to talk to the other.
-* decomposing monolithic apps
-* Network constrained environments – Power saving on mobile 
-* Polyglot environments - both java and csharp
-* When you don’t feel to write client libraries.

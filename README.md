@@ -2,7 +2,7 @@
 Latest version : https://jcr.botaoyx.com/ui/artifactSearchResults?name=rpc&type=artifacts
 ```gradle
 implementation "com.bt.rpc:rpc-server:1.0.0"
-implementation "com.bt.ext:ext-rpc:1.0.1"
+implementation "com.bt.ext:ext-rpc:1.0.0"
 ```
 
 ![ARCHITECTURE](./ARCHITECTURE.png)

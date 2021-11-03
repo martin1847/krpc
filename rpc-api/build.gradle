@@ -4,6 +4,7 @@ apply from: "$rootProject.projectDir/gradle/upload.gradle"
 sourceCompatibility = '11'
 targetCompatibility = "11"
 
+
 dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     api 'jakarta.validation:jakarta.validation-api:2.0.2'

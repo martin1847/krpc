@@ -1,24 +1,19 @@
 
 Latest version : https://jcr.botaoyx.com/ui/artifactSearchResults?name=rpc&type=artifacts
+
 ```gradle
-implementation "com.bt.rpc:rpc-server:1.0.0"
-implementation "com.bt.ext:ext-rpc:1.0.0"
+//implementation "com.bt.rpc:rpc-server:1.0.0"
+//implementation "com.bt.rpc:rpc-client:1.0.0"
+//implementation "com.bt.ext:ext-rpc:1.0.0"
 ```
 
 ![ARCHITECTURE](./ARCHITECTURE.png)
 
-# How To RPC  , Code First , Without Proto Contract 
-
-Base on the [offical rpc SDK](https://github.com/rpc/rpc-dotnet):
-
-* The Main Feauter is added that we can write Interface first , Without Proto Contract.
-* This is Just Like a Local Nuget Service Invoke , but the service in effect is remote.
-* The Server side  can be either Csharp or Java , both has  same Behavior.
-
 There is a  [demo-rpc](/example/demo-rpc) project. 
 
-# 1. Declar you Interface  and DTO (Data Transfer objects)
+# 1. 声明接口和DTO (Data Transfer objects)
 
+最重要的一步，API即文档，后续前端TypeScript、Java客户端均使用这一套API声明
 
 * Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan.
 * build.gradle file:
@@ -41,10 +36,9 @@ for example :
 ```java
 package com.btyx.course.xxxx;
 
-@RpcService(description = "this is a Java test service")
+@RpcService
 public interface DemoService {
 
-//    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
 
     RpcResult<byte[]> bytesTime();
@@ -60,8 +54,6 @@ public interface DemoService {
 
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class TimeReq {
 
   @Doc("姓名")
@@ -94,15 +86,35 @@ Convention & Limit  about the service define :
 * 入参不多于一个 
 * 标记 `RpcService` annotation
 
+
+## 发布API到仓库
+
+* 使用 [semver 版本](https://semver.org/lang/zh-CN/), 不要使用`SNAPSHOT`
+* API定义可以使用java版本`11`预留兼容性 ， 其余业务代码可以使用 `java 17`
+ 
+```gradle
+
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
+// gradle clean publish 
+
+    sourceCompatibility = "11"
+    targetCompatibility = "11"
+```
 Then publish this API package to  https://jcr.botaoyx.com  for the client side to reference.
 
 
 # 2. Setup the Server
 
-* Add the ProjectReference [rpc-server] to your `build.gradle`
+* 增加 [rpc-server] to your `build.gradle`
 
 ```gradle
+
+implementation project(':your-api')
+
 implementation "com.bt.rpc:rpc-server:1.0.0"
+implementation "com.bt.ext:ext-rpc:1.0.0"
+
+//implementation "com.bt.ext:ext-mybatis:1.0.0"
 ```
   
 * Implention the service 

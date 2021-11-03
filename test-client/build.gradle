@@ -15,7 +15,7 @@ dependencies {
     implementation "io.grpc:grpc-netty:${grpcVersion}"
 
 
-    implementation "com.bt.ext:ext-rpc:1.0.1"
+    implementation "com.bt.ext:ext-rpc:1.0.0"
 
 //    implementation 'io.quarkus:quarkus-resteasy'
 //    testImplementation 'io.rest-assured:rest-assured'

@@ -2,7 +2,7 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.typehandler;
+package com.btyx.test.typehandler;
 
 import java.util.List;
 

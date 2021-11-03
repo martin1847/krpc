@@ -2,19 +2,19 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.demo.impl;
+package com.btyx.test.impl;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 
-import com.bt.convert.UserConvert;
-import com.bt.dao.mapper.UserMapper;
-import com.btyx.demo.UserService;
-import com.btyx.demo.dto.User;
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.model.RpcResult;
+import com.btyx.test.UserService;
+import com.btyx.test.convert.UserConvert;
+import com.btyx.test.dto.User;
+import com.btyx.test.mapper.UserMapper;
 import io.quarkus.runtime.Startup;
 
 /**
@@ -38,6 +38,7 @@ public class UserServiceImpl implements UserService {
     public RpcResult<User> getUser(Integer id) {
         return RpcResult.ok(userMapper.getUser(id));
     }
+
 
     @Override
     public RpcResult<PagedList<User>> listUser(PagedQuery<User> query) {

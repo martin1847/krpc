@@ -1,7 +1,7 @@
-package com.btyx.demo;
+package com.btyx.test;
 
-import com.btyx.demo.dto.TimeReq;
-import com.btyx.demo.dto.TimeResult;
+import com.btyx.test.dto.TimeReq;
+import com.btyx.test.dto.TimeResult;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
 

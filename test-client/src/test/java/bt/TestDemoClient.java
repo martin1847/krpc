@@ -5,8 +5,8 @@
 package bt;
 
 import com.bt.TestJavaProxyClient;
-import com.bt.demo.UserService;
-import com.bt.demo.dto.User;
+import com.btyx.test.UserService;
+import com.btyx.test.dto.User;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.model.PagedQuery;
 import org.junit.jupiter.api.Test;

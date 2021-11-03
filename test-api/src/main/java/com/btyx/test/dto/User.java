@@ -1,4 +1,4 @@
-package com.btyx.demo.dto;
+package com.btyx.test.dto;
 
 import lombok.Data;
 

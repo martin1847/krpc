@@ -2,15 +2,10 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.demo.impl;
+package com.btyx.test.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Enumeration;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -19,8 +14,6 @@ import javax.validation.Validator;
 
 import io.quarkus.runtime.StartupEvent;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.builder.xml.XMLMapperBuilder;
-import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.SqlSessionFactory;
 
 /**

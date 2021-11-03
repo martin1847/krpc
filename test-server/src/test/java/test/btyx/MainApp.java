@@ -1,6 +1,6 @@
 package test.btyx;
 
-import com.btyx.demo.dto.User;
+import com.btyx.test.dto.User;
 
 public class MainApp {
 

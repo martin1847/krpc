@@ -1,9 +1,9 @@
-package com.bt.convert;
+package com.btyx.test.convert;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.btyx.demo.dto.User;
+import com.btyx.test.dto.User;
 import com.bt.mybatis.PagedQueryHelper;
 import org.mapstruct.Mapper;
 //import org.mapstruct.Mapper;

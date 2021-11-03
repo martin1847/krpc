@@ -1,5 +1,7 @@
 package com.bt.rpc.common;
 
+import java.util.List;
+
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.common.meta.ApiMeta;
 import com.bt.rpc.model.RpcResult;
@@ -16,6 +18,13 @@ public interface RpcMetaService {
 
     RpcResult<ApiMeta> listApis();
 
-
+    /**
+     * 返回GraalVM 构建号
+     */
     RpcResult<String> v();
+
+    /**
+     * 支持的序列化方式
+     */
+    RpcResult<List<String>> serials();
 }

@@ -16,7 +16,9 @@ import com.bt.rpc.common.meta.ApiMeta;
 import com.bt.rpc.common.meta.Dto;
 import com.bt.rpc.common.meta.Method;
 import com.bt.rpc.common.meta.Property;
+import com.bt.rpc.internal.SerialEnum;
 import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.serial.Serial;
 import com.bt.rpc.util.EnvUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -39,6 +41,11 @@ class RpcMetaServiceImpl implements RpcMetaService {
     @Override
     public RpcResult<String> v() {
         return RpcResult.ok(RpcConstants.CI_BUILD_ID+"-"+ EnvUtils.hostName());
+    }
+
+    @Override
+    public RpcResult<List<String>> serials() {
+        return RpcResult.ok(Stream.of(Serial.Instance.supported()).map(SerialEnum::name).collect(Collectors.toList()));
     }
 
     public void init(List<RpcMetaMethod> methods) {

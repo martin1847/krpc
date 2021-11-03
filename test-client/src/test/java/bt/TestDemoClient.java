@@ -48,7 +48,7 @@ public class TestDemoClient {
                     userService.saveUser(user)
             );
 
-            //client.test();
+            client.test();
 
         }else{
             logger.info("Skip Test Server");

@@ -179,6 +179,11 @@ public class TestJavaProxyClient {
 
 
             var metaService = client.builder.get(RpcMetaService.class);
+
+            System.out.println(
+                   "server supported serials : " + metaService.serials().getData()
+            );
+
             System.out.println(
                     JsonUtils.stringify(
                     metaService.listApis().getData()

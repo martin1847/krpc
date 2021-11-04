@@ -12,9 +12,12 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.validation.Validator;
 
+import io.grpc.protobuf.services.ProtoReflectionService;
 import io.quarkus.runtime.StartupEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSessionFactory;
+
+import static com.bt.rpc.server.RpcServerBuilder.Builder.PROTO_SERVICE_LIST;
 
 /**
  *
@@ -34,6 +37,8 @@ public class InitMybatis {
     void onStart(@Observes StartupEvent ev) throws IOException, URISyntaxException {
         log.info("The application is starting  InitMybatis ..." + sqlSessionFactory);
         log.info("The application is starting  validator ..." + validator);
+
+        //PROTO_SERVICE_LIST.add(ProtoReflectionService.newInstance());
 
         //String path ="mapper/*.xml";
         //ClassLoader cl = Thread.currentThread().getContextClassLoader();

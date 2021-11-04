@@ -8,6 +8,7 @@ dependencies {
 
     implementation project(':test-api')
     implementation project(':rpc-server')
+//    implementation "io.grpc:grpc-services:${grpcVersion}"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

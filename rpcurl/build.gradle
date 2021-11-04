@@ -1,59 +1,98 @@
 
 //https://graalvm.github.io/native-build-tools/0.9.7.1/gradle-plugin.html
-plugins {
-    id 'org.graalvm.buildtools.native' version '0.9.7.1'
-}
+//plugins {
+//    id 'org.graalvm.buildtools.native' version '0.9.7.1'
+//}
+//
+//apply plugin: 'java'
+//
 
+apply plugin:  'io.quarkus'
 
 dependencies {
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
 
-    api project(':rpc-client')
 //    api 'com.bt.rpc:rpc-client:1.0.0'
 //    api 'com.bt.rpc:rpc-common:1.0.0'
+////
+//    implementation project(':rpc-client')
+//
+//
+//    implementation project(':rpc-common')
+//    api "io.grpc:grpc-stub:${grpcVersion}"
+//
+//
+//    implementation "io.grpc:grpc-netty:${grpcVersion}"
+//    implementation "io.netty:netty-codec-http2:4.1.68.Final"
+//    implementation "io.netty:netty-handler-proxy:4.1.68.Final"
+
+    //implementation "org.slf4j:slf4j-simple:$slf4jVersion"
+
+    implementation project(':rpc-client')
+
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
     implementation "io.grpc:grpc-netty:${grpcVersion}"
+
+    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+    implementation "io.quarkus:quarkus-arc"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
     implementation 'info.picocli:picocli:4.6.1'
+
     annotationProcessor 'info.picocli:picocli-codegen:4.6.1'
 }
 
 //nativeCompile, which will trigger the generation of a native executable of your application
 //nativeRun
-
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
 /**
  *native-image -J-Djava.util.logging.manager=org.jboss.logmanager.LogManager -J-Dcom.mysql.cj.disableAbandonedConnectionCleanup=true -J-DCoordinatorEnvironmentBean.transactionStatusManagerEnable=false -J-Duser.language=en -J-Duser.country=CN -J-Dfile.encoding=UTF-8 -H:InitialCollectionPolicy=com.oracle.svm.core.genscavenge.CollectionPolicy\$BySpaceAndTime -H:+JNI -H:+AllowFoldMethods -H:FallbackThreshold=0 -H:+ReportExceptionStackTraces -H:+AddAllCharsets -H:EnableURLProtocols=http,https -H:-UseServiceLoaderFeature -H:+StackTrace test-server-1.0.0-runner -jar test-server-1.0.0-runner.jar
+ native-image -J-Djava.util.logging.manager=org.jboss.logmanager.LogManager -J-Duser.language=en -J-Duser.country=CN -J-Dfile.encoding=UTF-8 -H:InitialCollectionPolicy=com.oracle.svm.core.genscavenge.CollectionPolicy\$BySpaceAndTime -H:+JNI -H:+AllowFoldMethods -H:FallbackThreshold=0 -H:+ReportExceptionStackTraces -H:-AddAllCharsets -H:EnableURLProtocols=http -H:-UseServiceLoaderFeature -H:+StackTrace test-client-1.0.0-runner -jar test-client-1.0.0-runner.jar
+
  */
-graalvmNative {
-    testSupport = false
-    binaries {
-        main {
-            // Main options
-//            imageName = 'application' // The name of the native image, defaults to the project name
-            mainClass = 'com.bt.rpc.Main' // The main class to use, defaults to the application.mainClass
-//            debug = true // Determines if debug info should be generated, defaults to false
-//            verbose = true // Add verbose output, defaults to false
+//graalvmNative {
+//    testSupport = false
+//    binaries {
+//        main {
+//            // Main options
+////            imageName = 'application' // The name of the native image, defaults to the project name
+//            mainClass = 'com.bt.rpc.Main' // The main class to use, defaults to the application.mainClass
+////            debug = true // Determines if debug info should be generated, defaults to false
+////            verbose = true // Add verbose output, defaults to false
 //            fallback = true // Sets the fallback mode of native-image, defaults to false
-            sharedLibrary = false // Determines if image is a shared library, defaults to false if `java-library` plugin isn't included
-
-//            systemProperties = [name1: 'value1', name2: 'value2'] // Sets the system properties to use for the native image builder
-//            configurationFileDirectories.from(file('src/my-config')) // Adds a native image configuration file directory, containing files like reflection configuration
-
-            // Advanced options
-            buildArgs.add('-H:+ReportExceptionStackTraces') // Passes '-H:Extra' to the native image builder options. This can be used to pass parameters which are not directly supported by this extension
-            jvmArgs.add('--initialize-at-run-time=io.netty.util.internal.logging.Slf4JLoggerFactory') // Passes 'flag' directly to the JVM running the native image builder
+//            sharedLibrary = false // Determines if image is a shared library, defaults to false if `java-library` plugin isn't included
 //
-//            // Runtime options
-//            runtimeArgs.add('--help') // Passes '--help' to built image, during "nativeRun" task
-
-            // Development options
-//            agent = true // Enables the reflection agent. Can be also set on command line using '-Pagent'
-
-            useFatJar = true // Instead of passing each jar individually, builds a fat jar
-        }
-    }
-}
+////            systemProperties = [name1: 'value1', name2: 'value2'] // Sets the system properties to use for the native image builder
+////            configurationFileDirectories.from(file('src/my-config')) // Adds a native image configuration file directory, containing files like reflection configuration
+//
+//            // Advanced options  -H:Name=rpcurl
+//            buildArgs.add('--allow-incomplete-classpath')
+//            buildArgs.add('-H:+JNI')
+//            buildArgs.add('-H:EnableURLProtocols=http,https')
+//            buildArgs.add('-H:+AllowFoldMethods')
+//            buildArgs.add("-H:FallbackThreshold=0")
+//            buildArgs.add("-H:-UseServiceLoaderFeature")
+//            buildArgs.add('-H:InitialCollectionPolicy=com.oracle.svm.core.genscavenge.CollectionPolicy$BySpaceAndTime')
+//            buildArgs.add('-H:+ReportExceptionStackTraces') // Passes '-H:Extra' to the native image builder options. This can be used to pass parameters which are not directly supported by this extension
+//            buildArgs.add('--initialize-at-run-time=io.netty.channel.AbstractChannel')
+//            buildArgs.add('--initialize-at-run-time=io.netty.util.internal.logging.Slf4JLoggerFactory')
+//            buildArgs.add('--trace-class-initialization=org.slf4j.LoggerFactory,io.grpc.ManagedChannelRegistry,com.google.common.base.Preconditions,com.google.common.collect.RegularImmutableMap')
+////            jvmArgs.add('') // Passes 'flag' directly to the JVM running the native image builder
+////
+////            // Runtime options
+////            runtimeArgs.add('--help') // Passes '--help' to built image, during "nativeRun" task
+//
+//            // Development options
+//            agent = false // Enables the reflection agent. Can be also set on command line using '-Pagent'
+//
+////            useFatJar = true // Instead of passing each jar individually, builds a fat jar
+//        }
+//    }
+//}
 

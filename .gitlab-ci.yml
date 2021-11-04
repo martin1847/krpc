@@ -2,8 +2,8 @@
 image: "jcr.botaoyx.com/img/common/gradle-ubi:7.1103"
 
 variables:
-  APP_NAMES: "demo-java-server demo-java-client"
-  APP_NAMESPACE: example
+  APP_NAMES: "rpcurl"
+  APP_NAMESPACE: common
 
 #
 #cache: &global_cache
@@ -16,7 +16,8 @@ variables:
   variables:
     APP_VERSION: 1.0.$CI_PIPELINE_ID
     DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
-    DOCKER_TAG: $CI_PIPELINE_ID
+    DOCKER_TAG: latest
+#    DOCKER_TAG: $CI_PIPELINE_ID
     #-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA
 
 build:
@@ -42,7 +43,7 @@ build:
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
 
-.docker:
+docker:
   stage: deploy
   extends: .docker-var
 #  cache:
@@ -60,8 +61,9 @@ build:
       do
         imgFullName="$DOCKER_REPO/$APP_NAME:$DOCKER_TAG"
         /kaniko/executor --cleanup --use-new-run  -c $CI_PROJECT_DIR/$APP_NAME -d $imgFullName
-        /kaniko/executor -c $CI_PROJECT_DIR/$APP_NAME -d "${imgFullName}-jvm" -f java.Dockerfile
       done
+#  /kaniko/executor -c $CI_PROJECT_DIR/$APP_NAME -d "${imgFullName}-jvm" -f java.Dockerfile
+
 #  /kaniko/executor --cache
 #        cd $CI_PROJECT_DIR/$APP_NAME && pwd && ls -la ./build
 #  rules:

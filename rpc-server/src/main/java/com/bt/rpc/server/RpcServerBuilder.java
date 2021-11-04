@@ -144,7 +144,7 @@ public class RpcServerBuilder {
 
 					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
-						var methodArgs = stub.method.getParameterTypes();
+						var methodArgs = stub.method.getGenericParameterTypes();
 
 						metaMethods.add(new RpcMetaMethod
 										(
@@ -153,8 +153,7 @@ public class RpcServerBuilder {
 												methodArgs.length == 1 ? methodArgs[0]  : null,
 												stub.returnType
 												,attr.description()
-												, Stream.of(stub.method.getDeclaredAnnotations())
-														.map(Annotation::toString).collect(Collectors.toList())
+												, stub.method.getDeclaredAnnotations()
 										));
 					}
 				}

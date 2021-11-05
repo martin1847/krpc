@@ -43,7 +43,7 @@ public class RpcServerBuilder {
 	public static class Builder {
 		private final int port;
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
-//		private final List<BindableService> protoServiceList = new ArrayList<>();
+		public static final List<BindableService> PROTO_SERVICE_LIST = new ArrayList<>();
 
 		//public final String applicationName;
 
@@ -100,13 +100,13 @@ public class RpcServerBuilder {
 	
 	private RpcServerBuilder(Builder builder) throws Exception {
 		this.port = builder.port;
-		this.server = init(Collections.emptyList(),builder.services);
+		this.server = init(builder.services);
 	}
 	
-	private  Server init(List<BindableService> protoService,Map<Object,List<ServerFilter>> services) throws Exception {
+	private  Server init(Map<Object,List<ServerFilter>> services) throws Exception {
 		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
 
-		protoService.forEach(it->{
+		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);
 			log.info("[ Origin RpcService Expose: ] {}" , it.bindService().getServiceDescriptor());
 		});
@@ -144,7 +144,7 @@ public class RpcServerBuilder {
 
 					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
-						var methodArgs = stub.method.getParameterTypes();
+						var methodArgs = stub.method.getGenericParameterTypes();
 
 						metaMethods.add(new RpcMetaMethod
 										(
@@ -153,8 +153,7 @@ public class RpcServerBuilder {
 												methodArgs.length == 1 ? methodArgs[0]  : null,
 												stub.returnType
 												,attr.description()
-												, Stream.of(stub.method.getDeclaredAnnotations())
-														.map(Annotation::toString).collect(Collectors.toList())
+												, stub.method.getDeclaredAnnotations()
 										));
 					}
 				}

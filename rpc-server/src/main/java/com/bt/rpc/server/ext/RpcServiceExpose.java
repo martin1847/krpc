@@ -12,11 +12,11 @@ import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
+import javax.validation.Validator;
 
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.server.ReflectionHelper;
 import com.bt.rpc.server.RpcServerBuilder;
-import com.bt.rpc.server.ext.RpcConfig;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +34,8 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     Server server;
 
+    Validator validator;
+
     @PostConstruct
     //@BuildStep
     //@Record(ExecutionTime.RUNTIME_INIT)
@@ -41,6 +43,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     public void expose() throws Exception {
         Set<Bean<?>> beans = CDI.current().getBeanManager().getBeans(Object.class, new AnnotationLiteral<Any>() {
         });
+
+        Set<Bean<?>> validators   = CDI.current().getBeanManager().getBeans(Validator.class);
+
 
         var proxyServerBuilder = new RpcServerBuilder.Builder(rpcConfig.name(), rpcConfig.port());
 

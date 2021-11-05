@@ -1,16 +1,23 @@
 package com.bt.rpc.server;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.validation.constraints.Size;
+
+import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
+import com.bt.rpc.common.meta.Anno;
 import com.bt.rpc.common.meta.Api;
 import com.bt.rpc.common.meta.ApiMeta;
 import com.bt.rpc.common.meta.Dto;
@@ -59,7 +66,9 @@ class RpcMetaServiceImpl implements RpcMetaService {
                     List<Method> apiMethods = new ArrayList<>();
                     for (var m : v) {
                         apiMethods.add(new Method(m.getName(), getOrAdd(dtos, m.getArg()),
-                                getOrAdd(dtos, m.getRes()), m.getAnnotations()));
+                                getOrAdd(dtos, m.getRes()),
+                               Stream.of(m.getAnnotations()).map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
+                        ));
                     }
 
                     var api = new Api(k, apiMethods, v.get(0).getDescription());
@@ -107,11 +116,12 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
 
             var fields = Stream.of(clz.getDeclaredFields())
+                    .filter(f-> ! Modifier.isStatic(f.getModifiers()))
                     .map(f ->
                             new Property(f.getName()
                                     , getOrAdd(dic, f.getType())
                                     , Stream.of(f.getDeclaredAnnotations())
-                                    .map(Annotation::toString).collect(Collectors.toList())
+                                    .map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
                             )
                     )
                     .collect(Collectors.toList());
@@ -129,12 +139,26 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
         String servieName;
         String name;
-        Class arg;
+        Type arg;
         Type res;
 
         String description;
 
-        List<String> annotations;
+        Annotation[] annotations;
+    }
+
+    public static Anno toAnno(Annotation annotation){
+        Map<String, Object> params = new HashMap<>();
+        for (var param : annotation.annotationType().getMethods()) {
+            if (param.getDeclaringClass() == annotation.annotationType()) { //this filters out built-in methods, like hashCode etc
+                try {
+                    params.put(param.getName(), param.invoke(annotation));
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return new Anno(annotation.annotationType().getSimpleName(), params);
     }
 
 

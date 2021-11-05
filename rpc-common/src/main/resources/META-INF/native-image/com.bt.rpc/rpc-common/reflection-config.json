@@ -50,18 +50,9 @@
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   },
-
   {
-    "name" : "com.bt.rpc.model.PagedList",
+    "name" : "com.bt.rpc.common.meta.Anno",
     "allPublicConstructors" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true
-  },
-
-  {
-    "name" : "com.bt.rpc.model.PagedQuery",
-    "allPublicConstructors" : true,
-    "allPublicMethods" : true,
-    "allDeclaredFields" : true
+    "allPublicMethods" : true
   }
 ]

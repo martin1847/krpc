@@ -24,7 +24,7 @@ ApiMeta {
     String sdkVersion = RpcConstants.VERSION;
 
     /// >0 if enable
-    int restCallPort;
+    //int restCallPort;
 
     String vendor = RpcConstants.VENDOR;
 

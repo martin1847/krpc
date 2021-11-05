@@ -35,6 +35,8 @@ public class InitMybatis {
         log.info("The application is starting  InitMybatis ..." + sqlSessionFactory);
         log.info("The application is starting  validator ..." + validator);
 
+        //PROTO_SERVICE_LIST.add(ProtoReflectionService.newInstance());
+
         //String path ="mapper/*.xml";
         //ClassLoader cl = Thread.currentThread().getContextClassLoader();
         //Enumeration<URL> resourceUrls = (cl != null ? cl.getResources(path) : ClassLoader.getSystemResources(path));

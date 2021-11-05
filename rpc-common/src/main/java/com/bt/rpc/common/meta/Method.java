@@ -14,5 +14,5 @@ public class Method {
     Dto arg;
     Dto res;
 
-    List<String> annotations;
+    List<Anno> annotations;
 }

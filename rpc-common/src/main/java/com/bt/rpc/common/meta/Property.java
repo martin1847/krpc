@@ -7,15 +7,15 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-public     class Property {
-        /// name
-        String name;
+@AllArgsConstructor
+@NoArgsConstructor
+public class Property {
+    /// name
+    String name;
 
-        /// type
-        Dto type;
+    /// type
+    Dto type;
 
-        /// GetCustomAttributesData
-        List<String> annotations;
-    }
+    /// GetCustomAttributesData
+    List<Anno> annotations;
+}

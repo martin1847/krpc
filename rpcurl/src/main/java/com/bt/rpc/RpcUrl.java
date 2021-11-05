@@ -4,14 +4,68 @@
  */
 package com.bt.rpc;
 
+import java.net.URL;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+
 /**
  *
  * @author Martin.C
  * @version 2021/11/04 4:18 PM
  */
+@Command(name = "rpcurl", mixinStandardHelpOptions = true, version = "1.0.0",
+        description = "测试rpc服务")
 public class RpcUrl implements Runnable{
+
+
+    @Option(names = {"-u", "--url"}, description = "服务地址，如: https://example-api.botaoyx.com")
+    URL url;
+
+    @Option(names = "-L",description = "等于设置host为 http://host.docker.internal:50051")
+    boolean localhost;
+
+    @Option(names = {"-n", "--no-pretty"},description = "NO pretty json")
+    boolean noPretty;
+
+    @Option(names = {"-a", "--application"},required = true,description = "项目名 如 demo-java-server")
+    String app;
+
+    @Option(names = {"-s", "--service"},description = "服务名，如 DemoService",defaultValue = "RpcMetaService")
+    String service;
+
+    @Option(names = {"-m", "--method"},description = "方法名",defaultValue = "listApis")
+    String method;
+
+    @Option(names = {"-d", "--data"},description = "入参json")
+    String input;
+
+
+
     @Override
     public void run() {
 
+
+        try {
+            if(localhost) {
+                url = new URL("http://host.docker.internal:50051");
+            }
+
+            if(null == url){
+                System.err.println("host is required");
+            }
+
+
+            RpcCall.call(this);
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
+
+    public String toFullMethod(){
+        return app+"/"+service+"/"+method;
     }
 }

@@ -149,8 +149,7 @@ Usage: rpcurl [-hLnV] -a=<app> [-d=<input>] [-m=<method>] [-s=<service>]
   -a, --app=<app>           项目名,如 demo-java-server
   -d, --data=<input>        入参json，如 -d '{"name":"rpcurl"}'
   -h, --help                Show this help message and exit.
-  -L                        本机测试，等于设置url为 http://host.docker.internal:
-                              50051
+  -L                        本机测试，等于设置url为 http://host.docker.internal:50051
   -m, --method=<method>     方法名,默认: listApis
   -n, --no-pretty           NO pretty json
   -s, --service=<service>   服务名，默认: RpcMetaService

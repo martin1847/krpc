@@ -138,9 +138,36 @@ public class DemoServiceImpl implements DemoService {
 
 # 3. Test in the Client Side
 
-## 3.1 生成ts代码，前端调用测试
+## 3.1 使用rpcurl
 
-## 3.2 java项目测试
+```bash
+docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl                                                          
+
+Usage: rpcurl [-hLnV] -a=<app> [-d=<input>] [-m=<method>] [-s=<service>]
+              [-u=<url>]
+测试rpc服务
+  -a, --app=<app>           项目名,如 demo-java-server
+  -d, --data=<input>        入参json，如 -d '{"name":"rpcurl"}'
+  -h, --help                Show this help message and exit.
+  -L                        本机测试，等于设置url为 http://host.docker.internal:
+                              50051
+  -m, --method=<method>     方法名,默认: listApis
+  -n, --no-pretty           NO pretty json
+  -s, --service=<service>   服务名，默认: RpcMetaService
+  -u, --url=<url>           服务地址，如: https://example-api.botaoyx.com
+  -V, --version             Print version information and exit.
+
+```
+
+```bash
+docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -u https://example-api.botaoyx.com -a demo-java-server
+```
+
+
+
+## 3.2 生成ts代码，前端调用测试
+
+## 3.3 java项目测试
 
 
 # Exception Handler

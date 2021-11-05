@@ -6,8 +6,15 @@ import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.serial.ServerWriter;
+import com.bt.rpc.server.invoke.DynamicInvoke;
+import com.bt.rpc.server.invoke.GenMethodVal;
+import com.bt.rpc.server.invoke.GenMhVal;
+import com.bt.rpc.server.invoke.MethodVal;
+import com.bt.rpc.server.invoke.MhVal;
+import com.bt.rpc.server.invoke.ValInvoke;
 import com.bt.rpc.util.EnvUtils;
 import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.util.RefUtils;
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
 import io.grpc.Status;
@@ -68,21 +75,40 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 10000 Exception , avgCost :0.3184 ms
 20000 Exception , avgCost :0.3076 ms
          */
+
+        var validator =  ServerContext.validator;
         if (System.getProperty("java.vm.name").contains("Substrate")) {
             if (firstInputType == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
             } else if(byte[].class == firstInputType){
                 log.debug("Found byte[] input  {} " ,stub.method.getName());
 
-                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
-                        sc.getArg().getBs().toByteArray());
+                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, sc.getArg().getBs().toByteArray());
             }else if( firstInputType instanceof Class){
-                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
-                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(Class)firstInputType));
+
+                var type = (Class)firstInputType;
+                var needValidator =  validator !=null && RefUtils.needValidator(type);
+                if(needValidator){
+
+                    log.info("set up validator for method {}({})",methodName,type);
+                    invoke = new MethodVal(validator,type,serviceToInvoke, stub.method);
+                }else {
+                    invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,DynamicInvoke.parseInput(sc,type));
+                }
+
             }else{
+
+                var pt = (ParameterizedType)firstInputType;
                 log.debug("Found ParameterizedType {} " ,firstInputType);
-                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
-                        (Object) Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(ParameterizedType)firstInputType));
+                var raw = (Class)pt.getRawType();
+                var needValidator =  validator !=null && RefUtils.needValidator(raw);
+                if(needValidator){
+
+                    log.info("set up validator for method {}({})",methodName,pt);
+                    invoke = new GenMethodVal(validator,pt,serviceToInvoke, stub.method);
+                }else {
+                    invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, DynamicInvoke.parseInput(sc, pt));
+                }
             }
             return;
         }
@@ -118,14 +144,25 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 // may has method override issue , int / string  both change to Object Param,
                 //                var objInputMh=mh.asType(mh.type().changeParameterType(0, Object.class));
                 //                invoke = sc ->  (RpcResult) objInputMh.invokeExact(sc.readInput.apply(sc.getArg()));
-                invoke = sc -> (RpcResult) mh.invoke(
-                        Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(Class)firstInputType)
-                );
+
+                var type = (Class)firstInputType;
+                var needValidator =  validator !=null && RefUtils.needValidator(type);
+                if(needValidator){
+                    log.info("set up validator for method {}({})",methodName,type);
+                    invoke = new MhVal(validator,type,mh);
+                }else {
+                    invoke = sc -> (RpcResult) mh.invoke( DynamicInvoke.parseInput(sc,type) );
+                }
             }else{
-                log.debug("Found ParameterizedType MH {} " ,firstInputType);
-                invoke = sc -> (RpcResult) mh.invoke(
-                        (Object) Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(ParameterizedType)firstInputType)
-                );
+                var pt = (ParameterizedType)firstInputType;
+                log.debug("Found ParameterizedType {} " ,firstInputType);
+                if(validator !=null && RefUtils.needValidator((Class)pt.getRawType())){
+
+                    log.info("set up validator for method {}({})",methodName,pt);
+                    invoke = new GenMhVal(validator,pt,mh);
+                }else {
+                    invoke = sc -> (RpcResult) mh.invoke(DynamicInvoke.parseInput(sc, pt));
+                }
             }
 
         } catch (Exception e) {
@@ -135,12 +172,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     }
 
-    @FunctionalInterface
-    interface DynamicInvoke<DTO> {
 
-        RpcResult<DTO> invoke(ServerContext req) throws Throwable;
-
-    }
 
     public ServerResult invoke(ServerContext req) throws Throwable {
         var res = invoke.invoke(req);

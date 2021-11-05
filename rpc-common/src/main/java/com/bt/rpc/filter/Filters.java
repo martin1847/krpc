@@ -21,7 +21,7 @@ public @interface Filters {
 
     Class<? extends RpcFilter>[] value();
 
-    boolean autoCreate() default true;
+    //boolean autoCreate() default true;
 
-    boolean ignoreNotFoundWhenDisableCreate() default false;
+    boolean ignoreNotFound() default false;
 }

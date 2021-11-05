@@ -1,5 +1,7 @@
 package com.btyx.test.filter;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
@@ -12,8 +14,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author Martin.C
  */
-//@ApplicationScoped
-//@GlobalFilter
+@ApplicationScoped
 @Unremovable
 @Slf4j
 public class TestFilter2 implements ServerFilter {

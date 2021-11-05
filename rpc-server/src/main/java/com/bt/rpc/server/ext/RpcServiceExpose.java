@@ -62,6 +62,13 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             ServerContext.regGlobalFilter(v);
         });
 
+        var validators =  CDI.current().select(Validator.class);
+        if(validators.isResolvable()){
+            log.info("Reg GlobalValidator :  {}" , validators.get());
+            ServerContext.regValidator(validators.get());
+        }
+
+
         var proxyServerBuilder = new RpcServerBuilder.Builder(rpcConfig.name(), rpcConfig.port());
 
         int i = 0;
@@ -79,10 +86,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
                        var fins =  CDI.current().select(f);
                        if(fins.isResolvable()){
                            filterList.add((ServerFilter) fins.get());
-                       }else if(fa.autoCreate()){
-                           // maybe native need config , todo
-                           filterList.add((ServerFilter) f.newInstance());
-                       }else if(fa.ignoreNotFoundWhenDisableCreate()){
+                       }else if(fa.ignoreNotFound()){
                            log.warn("Filters For Service {} Not Found :  {}" ,bean.getBeanClass(), f);
                        }else{
                            throw new RuntimeException("Filters Not Found :  " + f);

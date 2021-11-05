@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -135,4 +136,15 @@ public abstract class RefUtils {
     //    toRpcMethods("test", RpcMetaService.class
     //    );
     //}
+
+    public static boolean needValidator(Class dto){
+        for(var f : dto.getDeclaredFields()) {
+            for (var anno : f.getAnnotations()) {
+                if(anno.annotationType().getName().startsWith("javax.validation")){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

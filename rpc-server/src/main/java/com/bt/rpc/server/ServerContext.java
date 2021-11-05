@@ -11,6 +11,8 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.validation.Validator;
+
 /**
  * 2020-04-07 13:38
  *
@@ -22,12 +24,17 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     static final List<ServerFilter> GLOBAL_FILTERS = new ArrayList<>();
 
+    static Validator validator;
+
     static String applicationName;
 
     private Metadata headers;
 
     public static void regGlobalFilter(ServerFilter filter) {
         GLOBAL_FILTERS.add(filter);
+    } //;//GlobalFilters.Add(filter);
+    public static void regValidator(Validator validator) {
+        ServerContext.validator = validator;
     } //;//GlobalFilters.Add(filter);
 
 

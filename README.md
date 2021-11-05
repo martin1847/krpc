@@ -141,28 +141,9 @@ public class DemoServiceImpl implements DemoService {
 ## 3.1 使用rpcurl
 
 ```bash
-docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl                                                          
-
-Usage: rpcurl [-hLnV] -a=<app> [-d=<input>] [-m=<method>] [-s=<service>]
-              [-u=<url>]
-测试rpc服务
-  -a, --app=<app>           项目名,如 demo-java-server
-  -d, --data=<input>        入参json，如 -d '{"name":"rpcurl"}'
-  -h, --help                Show this help message and exit.
-  -L                        本机测试，等于设置url为 http://host.docker.internal:50051
-  -m, --method=<method>     方法名,默认: listApis
-  -n, --no-pretty           NO pretty json
-  -s, --service=<service>   服务名，默认: RpcMetaService
-  -u, --url=<url>           服务地址，如: https://example-api.botaoyx.com
-  -V, --version             Print version information and exit.
-
-```
-
-```bash
-docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -u https://example-api.botaoyx.com -a demo-java-server
 docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -L -a demo-java-server -s DemoService -m hello -d '{"name":"rpc","age":123}' 
 ```
-
+[rpcurl用法说明](https://redmine.botaoyx.com/projects/bt/wiki/RPC%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7#%E4%BD%BF%E7%94%A8-rpcurl)
 
 
 ## 3.2 生成ts代码，前端调用测试

@@ -1,7 +1,6 @@
 package com.bt.rpc.server;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,11 +8,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.common.FilterInvokeHelper;
+import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.server.RpcMetaServiceImpl.RpcMetaMethod;
@@ -61,18 +58,7 @@ public class RpcServerBuilder {
 		}
 		
 		public Builder addService(Object service) {
-//			List<Class> effectiveClassAnnotations = ReflectionHelper.getEffectiveClassAnnotations(service.getClass(), GrpcService.class);
-//			if( effectiveClassAnnotations.size() != 1 ) {
-//				String msg = effectiveClassAnnotations.isEmpty() ? "No Interfaces implementing GrpcService annotation" :
-//					"More than one interface implementing GRPC annotation";
-//				throw new IllegalArgumentException(msg);
-//			}
-//			if(service instanceof  BindableService){
-//				protoServiceList.add((BindableService) service);
-//			}else{
 			return  addService(service,Collections.emptyList());
-//			}
-			//return this;
 		}
 
 		public Builder addService(Object service,List<ServerFilter> filters) {

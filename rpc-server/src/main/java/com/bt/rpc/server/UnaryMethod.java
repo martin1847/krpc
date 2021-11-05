@@ -72,7 +72,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             if (firstInputType == null) {
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke);
             } else if(byte[].class == firstInputType){
-                log.info("Found byte[] input  {} " ,stub.method.getName());
+                log.debug("Found byte[] input  {} " ,stub.method.getName());
 
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
                         sc.getArg().getBs().toByteArray());
@@ -80,7 +80,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
                         Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(Class)firstInputType));
             }else{
-                log.info("Found ParameterizedType {} " ,firstInputType);
+                log.debug("Found ParameterizedType {} " ,firstInputType);
                 invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,
                         (Object) Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(ParameterizedType)firstInputType));
             }
@@ -111,7 +111,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 invoke = sc -> (RpcResult) mh.invokeExact();
             } else if(byte[].class == firstInputType){
 
-                log.info("found byte[] input MH {} " ,stub.method.getName());
+                log.debug("found byte[] input MH {} " ,stub.method.getName());
                 invoke = sc -> (RpcResult) mh.invokeExact(sc.getArg().getBs().toByteArray());
             } else if( firstInputType instanceof Class){
 
@@ -122,7 +122,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                         Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(Class)firstInputType)
                 );
             }else{
-                log.info("Found ParameterizedType MH {} " ,firstInputType);
+                log.debug("Found ParameterizedType MH {} " ,firstInputType);
                 invoke = sc -> (RpcResult) mh.invoke(
                         (Object) Serial.Instance.get(sc.getArg().getEValue()).readInput(sc.getArg(),(ParameterizedType)firstInputType)
                 );

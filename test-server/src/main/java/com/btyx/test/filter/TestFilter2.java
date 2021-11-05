@@ -1,9 +1,6 @@
 package com.btyx.test.filter;
 
-import javax.enterprise.context.ApplicationScoped;
-
 import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.filter.GlobalFilter;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
 import com.bt.rpc.server.ServerResult;
@@ -15,17 +12,16 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author Martin.C
  */
-@ApplicationScoped
-@GlobalFilter
+//@ApplicationScoped
+//@GlobalFilter
 @Unremovable
 @Slf4j
-public class ExecServerFilter implements ServerFilter {
+public class TestFilter2 implements ServerFilter {
     @Override
     public ServerResult Invoke(ServerContext serverContext, FilterChain<ServerResult, ServerContext> next) throws Throwable {
 
-        var s = System.currentTimeMillis();
+        log.info("I am " + TestFilter2.class.getName());
         var res = next.invoke(serverContext);
-        log.info(" Call method {} cost {} ms ." , serverContext.getMethod() , (System.currentTimeMillis() - s));
         return res;
     }
 }

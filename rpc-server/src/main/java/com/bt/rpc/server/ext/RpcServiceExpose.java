@@ -1,7 +1,10 @@
 package com.bt.rpc.server.ext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -9,14 +12,20 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import javax.validation.Validator;
 
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.filter.Filters;
+import com.bt.rpc.filter.GlobalFilter;
+import com.bt.rpc.filter.GlobalFilter.Order;
 import com.bt.rpc.server.ReflectionHelper;
 import com.bt.rpc.server.RpcServerBuilder;
+import com.bt.rpc.server.ServerContext;
+import com.bt.rpc.server.ServerFilter;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
 import lombok.extern.slf4j.Slf4j;
@@ -34,18 +43,24 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     Server server;
 
-    Validator validator;
 
     @PostConstruct
-    //@BuildStep
-    //@Record(ExecutionTime.RUNTIME_INIT)
-    // RpcConfig rpcConfig
     public void expose() throws Exception {
-        Set<Bean<?>> beans = CDI.current().getBeanManager().getBeans(Object.class, new AnnotationLiteral<Any>() {
+        var bm = CDI.current().getBeanManager();
+        Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});
+        var sfSet = bm.getBeans(ServerFilter.class);
+        var map = new TreeMap<GlobalFilter.Order,ServerFilter>();
+        sfSet.forEach(bean->{
+            var gf = bean.getBeanClass().getAnnotation(GlobalFilter.class);
+            if(null!=gf){
+                map.put(new Order(gf.value(), bean.getBeanClass().getSimpleName()),
+                        (ServerFilter)CDI.current().select(bean.getBeanClass()).get());
+            }
         });
-
-        Set<Bean<?>> validators   = CDI.current().getBeanManager().getBeans(Validator.class);
-
+        map.forEach((k,v)->{
+            log.info("Reg GlobalFilter :  {}" , k);
+            ServerContext.regGlobalFilter(v);
+        });
 
         var proxyServerBuilder = new RpcServerBuilder.Builder(rpcConfig.name(), rpcConfig.port());
 
@@ -55,10 +70,29 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             List<Class> effectiveClassAnnotations = ReflectionHelper.getEffectiveClassAnnotations(bean.getBeanClass(), RpcService.class);
 
             if (effectiveClassAnnotations != null && effectiveClassAnnotations.size() > 0) {
+
+
+                var fa = bean.getBeanClass().getAnnotation(Filters.class);
+                var filterList = new ArrayList<ServerFilter>();
+                if(null!=fa){
+                   for(var f:   fa.value()){
+                       var fins =  CDI.current().select(f);
+                       if(fins.isResolvable()){
+                           filterList.add((ServerFilter) fins.get());
+                       }else if(fa.autoCreate()){
+                           // maybe native need config , todo
+                           filterList.add((ServerFilter) f.newInstance());
+                       }else if(fa.ignoreNotFoundWhenDisableCreate()){
+                           log.warn("Filters For Service {} Not Found :  {}" ,bean.getBeanClass(), f);
+                       }else{
+                           throw new RuntimeException("Filters Not Found :  " + f);
+                       }
+                   }
+                }
                 Instance<?> instance = CDI.current().select(bean.getBeanClass());
-                proxyServerBuilder.addService(instance.get());
+                proxyServerBuilder.addService(instance.get(),filterList);
                 i++;
-                log.info("Found Rpc Service :=> {}",bean.getBeanClass());
+                log.info("Found Rpc Service :=> {} , with filters {} ",bean.getBeanClass(),filterList);
             }
 
         }

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.common.FilterInvokeHelper;
+import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;

@@ -160,6 +160,7 @@ Usage: rpcurl [-hLnV] -a=<app> [-d=<input>] [-m=<method>] [-s=<service>]
 
 ```bash
 docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -u https://example-api.botaoyx.com -a demo-java-server
+docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -L -a demo-java-server -s DemoService -m hello -d '{"name":"rpc","age":123}' 
 ```
 
 

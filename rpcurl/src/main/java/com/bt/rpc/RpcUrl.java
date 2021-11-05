@@ -22,22 +22,22 @@ public class RpcUrl implements Runnable{
     @Option(names = {"-u", "--url"}, description = "服务地址，如: https://example-api.botaoyx.com")
     URL url;
 
-    @Option(names = "-L",description = "等于设置host为 http://host.docker.internal:50051")
+    @Option(names = "-L",description = "本机测试，等于设置url为 http://host.docker.internal:50051")
     boolean localhost;
 
     @Option(names = {"-n", "--no-pretty"},description = "NO pretty json")
     boolean noPretty;
 
-    @Option(names = {"-a", "--application"},required = true,description = "项目名 如 demo-java-server")
+    @Option(names = {"-a", "--app"},required = true,description = "项目名,如 demo-java-server")
     String app;
 
-    @Option(names = {"-s", "--service"},description = "服务名，如 DemoService",defaultValue = "RpcMetaService")
+    @Option(names = {"-s", "--service"},description = "服务名，默认: RpcMetaService",defaultValue = "RpcMetaService")
     String service;
 
-    @Option(names = {"-m", "--method"},description = "方法名",defaultValue = "listApis")
+    @Option(names = {"-m", "--method"},description = "方法名,默认: listApis",defaultValue = "listApis")
     String method;
 
-    @Option(names = {"-d", "--data"},description = "入参json")
+    @Option(names = {"-d", "--data"},description = "入参json，如 -d '{\"name\":\"rpcurl\"}'")
     String input;
 
 
@@ -61,7 +61,6 @@ public class RpcUrl implements Runnable{
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
         }
     }
 

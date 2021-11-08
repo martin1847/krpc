@@ -2,7 +2,7 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.rpc.filter;
+package com.bt.rpc.server;
 
 /**
  *
@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Filters {
 
-    Class<? extends RpcFilter>[] value();
+    Class<? extends ServerFilter>[] value();
 
     //boolean autoCreate() default true;
 

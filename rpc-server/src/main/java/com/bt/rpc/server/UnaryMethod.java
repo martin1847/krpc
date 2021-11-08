@@ -1,19 +1,21 @@
 package com.bt.rpc.server;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+
 import com.bt.rpc.common.FilterChain;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.serial.ServerWriter;
 import com.bt.rpc.server.invoke.DynamicInvoke;
-import com.bt.rpc.server.invoke.GenMethodVal;
-import com.bt.rpc.server.invoke.GenMhVal;
-import com.bt.rpc.server.invoke.MethodVal;
-import com.bt.rpc.server.invoke.MhVal;
-import com.bt.rpc.server.invoke.ValInvoke;
+import com.bt.rpc.server.invoke.GenericValidator;
+import com.bt.rpc.server.invoke.NormalValidator;
 import com.bt.rpc.util.EnvUtils;
-import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
@@ -22,12 +24,6 @@ import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Arrays;
 
 @Slf4j
 public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto> {
@@ -89,9 +85,8 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 var type = (Class)firstInputType;
                 var needValidator =  validator !=null && RefUtils.needValidator(type);
                 if(needValidator){
-
                     log.info("set up validator for method {}({})",methodName,type);
-                    invoke = new MethodVal(validator,type,serviceToInvoke, stub.method);
+                    invoke = new NormalValidator(validator, in -> (RpcResult) stub.method.invoke(serviceToInvoke,in),type );
                 }else {
                     invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,DynamicInvoke.parseInput(sc,type));
                 }
@@ -103,9 +98,8 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 var raw = (Class)pt.getRawType();
                 var needValidator =  validator !=null && RefUtils.needValidator(raw);
                 if(needValidator){
-
                     log.info("set up validator for method {}({})",methodName,pt);
-                    invoke = new GenMethodVal(validator,pt,serviceToInvoke, stub.method);
+                    invoke = new GenericValidator(validator, in -> (RpcResult) stub.method.invoke(serviceToInvoke,in),pt);
                 }else {
                     invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, DynamicInvoke.parseInput(sc, pt));
                 }
@@ -149,7 +143,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 var needValidator =  validator !=null && RefUtils.needValidator(type);
                 if(needValidator){
                     log.info("set up validator for method {}({})",methodName,type);
-                    invoke = new MhVal(validator,type,mh);
+                    invoke = new NormalValidator(validator, in->(RpcResult) mh.invoke(in),type);
                 }else {
                     invoke = sc -> (RpcResult) mh.invoke( DynamicInvoke.parseInput(sc,type) );
                 }
@@ -159,7 +153,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 if(validator !=null && RefUtils.needValidator((Class)pt.getRawType())){
 
                     log.info("set up validator for method {}({})",methodName,pt);
-                    invoke = new GenMhVal(validator,pt,mh);
+                    invoke = new GenericValidator(validator, in->(RpcResult) mh.invoke(in),pt);
                 }else {
                     invoke = sc -> (RpcResult) mh.invoke(DynamicInvoke.parseInput(sc, pt));
                 }
@@ -188,7 +182,6 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     //static final String      HOST_NAME = ;
     // https://quarkus.io/guides/logging
-    // TODO json MDC
     // [%X{traceId}/%X{spanId}]
     @Override
     public void invoke(InputProto im, StreamObserver<OutputProto> responseObserver) {

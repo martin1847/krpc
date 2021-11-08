@@ -10,7 +10,7 @@ import javax.transaction.Transactional;
 
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
-import com.bt.rpc.filter.Filters;
+import com.bt.rpc.server.Filters;
 import com.bt.rpc.model.RpcResult;
 import com.btyx.test.UserService;
 import com.btyx.test.convert.UserConvert;

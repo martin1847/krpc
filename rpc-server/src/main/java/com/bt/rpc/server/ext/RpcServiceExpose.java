@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -12,14 +11,13 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import javax.validation.Validator;
 
 import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.filter.Filters;
+import com.bt.rpc.server.Filters;
 import com.bt.rpc.filter.GlobalFilter;
 import com.bt.rpc.filter.GlobalFilter.Order;
 import com.bt.rpc.server.ReflectionHelper;

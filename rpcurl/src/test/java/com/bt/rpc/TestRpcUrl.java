@@ -4,7 +4,6 @@
  */
 package com.bt.rpc;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,7 @@ public class TestRpcUrl {
         url.url = new URL("example-api.botaoyx.com");
 
         url.app = "demo-java-server";
-        url.service = RpcUrl.META_SERVIE;
+        url.service = RpcUrl.META_SERVICE;
         url.method = "listApis";
 
 

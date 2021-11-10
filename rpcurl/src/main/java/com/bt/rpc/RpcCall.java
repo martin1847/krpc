@@ -30,7 +30,7 @@ public class RpcCall {
         System.out.println(url.toExternalForm()+"/"+rpc.toFullMethod());
         var res = GeneralizeClient.call(channel, rpc.toFullMethod(), input);
         var json = GeneralizeClient.toJson(res);
-        if("listApis".equals(rpc.method)){
+        if(RpcUrl.DEFAULT_METHOD.equals(rpc.method)){
             var type = mapper.getTypeFactory().constructParametricType(
                     RpcResult.class, ApiMeta.class
             );

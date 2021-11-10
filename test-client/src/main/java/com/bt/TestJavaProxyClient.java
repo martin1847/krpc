@@ -1,5 +1,6 @@
 package com.bt;
 
+import com.bt.rpc.util.RefUtils;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.DemoService;
 import com.bt.rpc.client.CacheManager;
@@ -137,9 +138,9 @@ public class TestJavaProxyClient {
             /* Access a service running on the local machine on port 50051 */
 
 
-            var inputJson="{\"name\":\"JavaGener\",\"age\":2020}";
+            var inputJson="{\"name\":\"JavaGener\",\"age\":20}";
 
-            var fullHelloName = SERVER_APP+"/"+ DemoService.class.getSimpleName()+"/hello";
+            var fullHelloName = RefUtils.rpcServiceName(SERVER_APP,DemoService.class)+"/hello";
 
             var msg = GeneralizeClient.call(client.channel, fullHelloName,inputJson);
 
@@ -167,7 +168,7 @@ public class TestJavaProxyClient {
 
 
 
-            var rpcObj = timeService.hello(new TimeReq("Java",2020));
+            var rpcObj = timeService.hello(new TimeReq("Java",20));
             System.out.println(
                     JsonUtils.stringify(
                             rpcObj.getData()

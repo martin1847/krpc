@@ -1,5 +1,6 @@
 package com.btyx.test;
 
+import com.bt.rpc.annotation.UnsafeWeb;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.dto.TimeResult;
 import com.bt.rpc.annotation.RpcService;
@@ -13,6 +14,7 @@ import java.util.Map;
  *
  * @author Martin.C
  */
+@UnsafeWeb
 @RpcService(description = "this is a Java test service")
 public interface DemoService {
 

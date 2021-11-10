@@ -2,6 +2,7 @@ package com.bt.rpc.util;
 
 //import com.alibaba.fastjson.util.ParameterizedTypeImpl;
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.model.RpcResult;
@@ -110,8 +111,9 @@ public abstract class RefUtils {
     }
 
     public static List<MethodStub> toRpcMethods(String appName,Class clz) {
-        String rpcServiceName = rpcServiceName(appName,clz);
+
         RpcService grpcServive = (RpcService) clz.getDeclaredAnnotation(RpcService.class);
+        String rpcServiceName = rpcServiceName(appName,clz);
 
         return Stream.of(clz.getMethods())
                 .filter(m -> m.getReturnType() == RpcResult.class && m.getParameterCount() <= 1)
@@ -121,15 +123,27 @@ public abstract class RefUtils {
     }
 
     public static String rpcServiceName(String appName,Class clz) {
+
         //var pac =  clz.getPackageName();
         //if(TRIM_SERVICE_NAME && pac.startsWith("com.")){
         //    pac = pac.substring(4);
         //}
         var name = clz.getSimpleName();
+        int begin = 0 , end = name.length();
         if(name.startsWith("I")){
-            name = name.substring(1);
+            begin = 1;
         }
-        return appName + "/" + name;
+        if(name.endsWith("Service")){
+            end -= "Service".length();
+        }
+        name = name.substring(begin,end);
+
+        var fullName = appName + "/" + name;
+        if(! clz.isAnnotationPresent(UnsafeWeb.class) ){
+            // use - prefix to hidden the service
+            fullName = "-" + fullName;
+        }
+        return fullName ;
     }
     //
     //public static void main(String[] args) {

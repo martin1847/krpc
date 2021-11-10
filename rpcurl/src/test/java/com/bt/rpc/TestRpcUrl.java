@@ -4,6 +4,11 @@
  */
 package com.bt.rpc;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import org.junit.jupiter.api.Test;
+
 /**
  *
  * @author Martin.C
@@ -11,10 +16,12 @@ package com.bt.rpc;
  */
 public class TestRpcUrl {
 
-    public static void main(String[] args) {
+    @Test
+    public void testUrl() throws Exception {
         RpcUrl url = new RpcUrl();
-        url.localhost = true;
+        //url.localhost = true;
 
+        url.url = new URL("example-api.botaoyx.com");
 
         url.app = "demo-java-server";
         url.service = RpcUrl.META_SERVIE;

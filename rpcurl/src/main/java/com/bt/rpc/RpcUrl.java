@@ -18,20 +18,24 @@ import picocli.CommandLine.Option;
         description = "测试rpc服务")
 public class RpcUrl implements Runnable{
 
+    static final String META_SERVIE = "RpcMeta";
 
     @Option(names = {"-u", "--url"}, description = "服务地址，如: https://example-api.botaoyx.com")
     URL url;
 
-    @Option(names = "-L",description = "本机测试，等于设置url为 http://host.docker.internal:50051")
+    @Option(names ={"-L", "--no-url"},description = "本机测试，等于设置url为 http://host.docker.internal:50051")
     boolean localhost;
 
-    @Option(names = {"-n", "--no-pretty"},description = "NO pretty json")
+    @Option(names =  {"-W", "--no-web"},description = "测试非 UnsafeWeb 服务")
+    boolean noWeb;
+
+    @Option(names = {"-P", "--no-pretty"},description = "NO pretty json")
     boolean noPretty;
 
     @Option(names = {"-a", "--app"},required = true,description = "项目名,如 demo-java-server")
     String app;
 
-    @Option(names = {"-s", "--service"},description = "服务名，默认: RpcMetaService",defaultValue = "RpcMetaService")
+    @Option(names = {"-s", "--service"},description = "服务名，默认: RpcMetaService",defaultValue = META_SERVIE)
     String service;
 
     @Option(names = {"-m", "--method"},description = "方法名,默认: listApis",defaultValue = "listApis")
@@ -52,7 +56,15 @@ public class RpcUrl implements Runnable{
             }
 
             if(null == url){
-                System.err.println("host is required");
+                System.err.println("host is required or use -L ");
+            }
+
+            if(META_SERVIE.equals(service)){
+                noWeb = true;
+            }
+
+            if(noWeb && '-' != app.charAt(0)){
+                app = "-"+app;
             }
 
 

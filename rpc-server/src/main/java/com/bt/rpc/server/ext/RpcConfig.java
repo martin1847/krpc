@@ -8,30 +8,14 @@ import java.util.Optional;
 public interface RpcConfig {
     /**
      */
-    Optional<String> globalFilter();
+    //Optional<String> globalFilter();
 
 
-    int port();
+    Optional<Integer> port();
 
     /**
      * app name
      */
-    String name() ;
+    Optional<String> app() ;
 
-    /**
-//     */
-//    @ConfigItem
-//    public Optional<String> registrAddr;
-//
-//    Protocol protocol();
-//
-//    interface Protocol {
-//
-//        /**
-//         * 端口
-//         */
-//        Optional<Integer> port();
-//
-//
-//    }
 }

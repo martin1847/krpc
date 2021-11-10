@@ -17,6 +17,7 @@ import javax.inject.Inject;
 import javax.validation.Validator;
 
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.server.Filters;
 import com.bt.rpc.filter.GlobalFilter;
 import com.bt.rpc.filter.GlobalFilter.Order;
@@ -38,6 +39,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     @Inject
     RpcConfig rpcConfig;
+    // ISTIO_META_APP_CONTAINERS: demo-java-server
 
     Server server;
 
@@ -66,8 +68,25 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             ServerContext.regValidator(validators.get());
         }
 
+        var app =  rpcConfig.app().orElseGet(()->{
+            //HOSTNAME=demo-java-server-ddc6cc976-sm6pn
+            var podName = System.getenv("HOSTNAME");
+            int split;
+            if(null != podName && (split= podName.lastIndexOf('-')) > 0){
+                if((split= podName.lastIndexOf('-',split - 1)) > 0 ){
+                    return podName.substring(0,split);
+                }
+            }
+            //sun.java.command   = /Users/garden/bt-rpc/test-server/build/test-server-dev.jar
+            var path = System.getProperty("sun.java.command");
+            if((split = path.indexOf("/build")) > 0){
+                return path.substring(path.lastIndexOf('/',split-1) +1,split);
+            }
 
-        var proxyServerBuilder = new RpcServerBuilder.Builder(rpcConfig.name(), rpcConfig.port());
+            throw new RuntimeException("pls SET the rpc.server.app in application.properties");
+        });
+
+        var proxyServerBuilder = new RpcServerBuilder.Builder(app, rpcConfig.port().orElse(RpcConstants.DEFAULT_PORT));
 
         int i = 0;
         for (Bean<?> bean : beans) {
@@ -109,4 +128,5 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         }
         log.info("*** RpcServer shutting down , since JVM is shutting down");
     }
+
 }

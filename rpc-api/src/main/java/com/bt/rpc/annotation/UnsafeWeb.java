@@ -15,4 +15,21 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface UnsafeWeb {
 
+    /**
+     * 自动处理header中的 Authorization: Bearer <token.jwt.data>
+     */
+    boolean requireCredential() default false;
+
+    /**
+     * 制定单个方法需要Credential
+     */
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    @interface RequireCredential{}
+
+    //@Documented
+    //@Retention(RetentionPolicy.RUNTIME)
+    //@Target(ElementType.METHOD)
+    //@interface SkipCredential{}
 }

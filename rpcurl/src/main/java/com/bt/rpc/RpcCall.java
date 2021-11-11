@@ -30,18 +30,26 @@ public class RpcCall {
         System.out.println(url.toExternalForm()+"/"+rpc.toFullMethod());
         var res = GeneralizeClient.call(channel, rpc.toFullMethod(), input);
         var json = GeneralizeClient.toJson(res);
+
+        if(rpc.noPretty){
+            System.out.println(json);
+        }else {
+            formatJsonString(mapper,json);
+        }
+
         if(RpcUrl.DEFAULT_METHOD.equals(rpc.method)){
             var type = mapper.getTypeFactory().constructParametricType(
                     RpcResult.class, ApiMeta.class
             );
             RpcResult<ApiMeta> metaRpcResult = mapper.readValue(json,type);
-            //TODO gen Typescript
-            //System.out.println(metaRpcResult.getData());
-        }
-        if(rpc.noPretty){
-            System.out.println(json);
-        }else {
-            formatJsonString(mapper,json);
+
+            TsClientBulider.buildTsFile(metaRpcResult.getData()).forEach((k, v) -> {
+                System.out.println("-------------[  "+k+".ts  ]------------------" );
+                System.out.println( k + ".ts");
+                System.out.println();
+                System.out.println(v);
+                System.out.println();
+            });
         }
     }
 

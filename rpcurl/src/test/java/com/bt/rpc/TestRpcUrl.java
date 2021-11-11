@@ -4,8 +4,6 @@
  */
 package com.bt.rpc;
 
-import java.net.URL;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,17 +15,18 @@ public class TestRpcUrl {
 
     @Test
     public void testUrl() throws Exception {
-        RpcUrl url = new RpcUrl();
-        //url.localhost = true;
+        if("yyc".equals(System.getenv("LOGNAME"))) {
+            RpcUrl url = new RpcUrl();
+            url.localhost = true;
 
-        url.url = new URL("example-api.botaoyx.com");
+            //url.url = new URL("https://example-api.botaoyx.com");
 
-        url.app = "demo-java-server";
-        url.service = RpcUrl.META_SERVICE;
-        url.method = "listApis";
+            url.app = "admin-auth";
+            url.service = RpcUrl.META_SERVICE;
+            url.method = "listApis";
 
-
-        url.run();
+            url.run();
+        }
 
     }
 }

@@ -1,5 +1,6 @@
 package com.bt.rpc.server.ext;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +40,6 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     @Inject
     RpcConfig rpcConfig;
-    // ISTIO_META_APP_CONTAINERS: demo-java-server
 
     Server server;
 
@@ -79,14 +79,16 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             }
             //sun.java.command   = /Users/garden/bt-rpc/test-server/build/test-server-dev.jar
             var path = System.getProperty("sun.java.command");
-            if((split = path.indexOf("/build")) > 0){
-                return path.substring(path.lastIndexOf('/',split-1) +1,split);
+            var fileSplit = File.separatorChar;
+            if((split = path.indexOf(fileSplit+"build"+fileSplit)) > 0){
+                return path.substring(path.lastIndexOf(fileSplit,split-1) +1,split);
             }
 
             throw new RuntimeException("pls SET the rpc.server.app in application.properties");
         });
 
-        var proxyServerBuilder = new RpcServerBuilder.Builder(app, rpcConfig.port().orElse(RpcConstants.DEFAULT_PORT));
+        var port = rpcConfig.port().orElse(RpcConstants.DEFAULT_PORT);
+        var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
         int i = 0;
         for (Bean<?> bean : beans) {
@@ -118,7 +120,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
         }
         server = proxyServerBuilder.build().startServer();
-        log.info("*** RpcServer started with {} services, listening on {}" ,i, rpcConfig.port());
+        log.info("***** RpcServer started with {} services, listening on {}." ,i, port);
     }
 
     @PreDestroy
@@ -126,7 +128,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         if (null != server) {
             server.shutdownNow();
         }
-        log.info("*** RpcServer shutting down , since JVM is shutting down");
+        log.info("***** RpcServer shutting down , since JVM is shutting down.");
     }
 
 }

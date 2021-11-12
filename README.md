@@ -158,7 +158,7 @@ docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -L -a demo-java-server -s 
 * ServerSide : Just return a RpcResult with non-OK  Code and a error message(left data null)
 * ClientSide : Check IsOk Before Use Data
 
-## 禁止使用 Hard Exception ,通常捕获为系统错误
+## 禁止使用 Hard Exception。业务无关的除外，比如安全认证，参数校验，通常捕获为系统错误
 * ServerSide : Throw a RpcException (Status/Runtime/Exception in Java Side) with your StatusCode or Other Exception(mapping to `Unknown` code)
 * ClientSide : Get a RpcException (StatusRuntimeException Java side, catch it or not )
 

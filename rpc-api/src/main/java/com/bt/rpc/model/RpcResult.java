@@ -1,5 +1,6 @@
 package com.bt.rpc.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -26,6 +27,7 @@ public class RpcResult<DTO> implements Serializable {
     DTO data;
 
 
+    @JsonIgnore
     public boolean isOk(){
         return OK == code;
     }

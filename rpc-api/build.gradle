@@ -10,6 +10,6 @@ dependencies {
     api 'jakarta.validation:jakarta.validation-api:2.0.2'
     api "com.bt.common:model:1.0.0"
 
-
+    compileOnly "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 }

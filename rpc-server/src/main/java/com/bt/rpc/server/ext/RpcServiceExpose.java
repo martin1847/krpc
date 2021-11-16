@@ -68,6 +68,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             ServerContext.regValidator(validators.get());
         }
 
+        //System.getProperties().forEach((k,v)->{
+        //    System.out.println( k + "$$$$$$$$$$$$" + v);
+        //});
         var app =  rpcConfig.app().orElseGet(()->{
             //HOSTNAME=demo-java-server-ddc6cc976-sm6pn
             var podName = System.getenv("HOSTNAME");
@@ -77,10 +80,17 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
                     return podName.substring(0,split);
                 }
             }
-            //sun.java.command   = /Users/garden/bt-rpc/test-server/build/test-server-dev.jar
-            var path = System.getProperty("sun.java.command");
+            //java.class.path   = /Users/garden/bt-rpc/test-server/build/test-server-dev.jar
+            var path = System.getProperty("java.class.path");
             var fileSplit = File.separatorChar;
-            if((split = path.indexOf(fileSplit+"build"+fileSplit)) > 0){
+            var buildFLag = fileSplit+"build"+fileSplit;
+
+            if((split = path.indexOf(buildFLag)) <= 0){
+                path =  System.getProperty("native.image.path");
+                split = path.indexOf(buildFLag);
+            }
+
+            if(split > 0){
                 return path.substring(path.lastIndexOf(fileSplit,split-1) +1,split);
             }
 

@@ -39,7 +39,7 @@ build:
     - export TZ=Asia/Shanghai
   script:
     - gradle build -Dquarkus.package.type=native -x test
-#    - gradle publish
+    - gradle publish
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
 

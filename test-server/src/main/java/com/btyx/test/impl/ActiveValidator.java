@@ -5,6 +5,8 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.validation.Validator;
 
+import com.bt.rpc.model.RpcResult;
+import com.bt.rpc.util.JsonUtils;
 import io.quarkus.runtime.StartupEvent;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +23,10 @@ public class ActiveValidator {
     Validator validator;
 
     void onStart(@Observes StartupEvent ev) {
+
+
+        var res = RpcResult.ok(1);
+        log.info("test json {}",JsonUtils.stringify(res));
         log.info("Enable validator {}" , validator);
     }
 

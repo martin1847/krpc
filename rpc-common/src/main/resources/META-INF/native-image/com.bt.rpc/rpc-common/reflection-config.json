@@ -54,5 +54,10 @@
     "name" : "com.bt.rpc.common.meta.Anno",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.model.RpcResult",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
   }
 ]

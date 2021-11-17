@@ -78,7 +78,16 @@ public class JwksVerify implements CredentialVerify {
         }
     }
 
-
+    /**
+     *     //    private final String audience;
+     *     //
+     *     //    AudienceValidator(String audience) {
+     *     //        this.audience = audience;
+     *     //    }
+     *         //        if (jwt.getAudience().contains(audience)) {
+     *     //            return OAuth2TokenValidatorResult.success();
+     *     //        }
+     */
 
     public UserCredential verify(String token,String cid) throws StatusException{
 

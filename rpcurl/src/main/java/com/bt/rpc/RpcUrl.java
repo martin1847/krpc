@@ -6,6 +6,8 @@ package com.bt.rpc;
 
 import java.net.URL;
 
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -45,6 +47,31 @@ public class RpcUrl implements Runnable{
     @Option(names = {"-d", "--data"},description = "入参json，如 -d '{\"name\":\"rpcurl\"}'")
     String input;
 
+    @Option(names = {"-c", "--cookie"},description = "set cookie: <a=b; c=d>")
+    String cookie;
+
+    @Option(names = {"-t", "--token"},description = "set authorization: Bearer <token>")
+    String token;
+
+    @Option(names = {"-H", "--header"},description = "curl like add headers <key:value>")
+    String header;
+
+    public void customerHeader(Metadata headers){
+        if(null !=cookie && !cookie.isBlank()){
+            headers.put( Metadata.Key.of("cookie", Metadata.ASCII_STRING_MARSHALLER),cookie);
+        }
+
+        if(null !=token && !token.isBlank()){
+            headers.put( Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER),"Bearer "+token);
+        }
+
+        if(null !=header && !header.isBlank()){
+            int split;
+            var key = header.substring(0,(split = header.indexOf(':')));
+            var value = header.substring(++split).trim();
+            headers.put( Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER),value);
+        }
+    }
 
 
     @Override

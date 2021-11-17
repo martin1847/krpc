@@ -28,7 +28,7 @@ public class RpcCall {
             mapper.readValue(input, Object.class);
         }
         System.out.println(url.toExternalForm()+"/"+rpc.toFullMethod());
-        var res = GeneralizeClient.call(channel, rpc.toFullMethod(), input);
+        var res = GeneralizeClient.call(channel, rpc.toFullMethod(), input,rpc::customerHeader);
         var json = GeneralizeClient.toJson(res);
 
         if(rpc.noPretty){

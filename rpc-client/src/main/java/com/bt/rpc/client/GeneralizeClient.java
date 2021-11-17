@@ -1,14 +1,18 @@
 package com.bt.rpc.client;
 
 import java.util.Base64;
+import java.util.function.Consumer;
 
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.util.JsonUtils;
-import com.bt.rpc.common.MethodStub;
 import com.google.protobuf.ByteString;
 import io.grpc.CallOptions;
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
 import io.grpc.ManagedChannel;
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.stub.ClientCalls;
 
 /**
@@ -19,13 +23,14 @@ import io.grpc.stub.ClientCalls;
  */
 public class GeneralizeClient {
 
-    // TODO  ManagedChannel may use a simple time-based cache in admin, for example 5 mitunes
-    // ConcurrentMap<Key, Graph>  GuavaMap = new  MapMaker()
-    //   .softKeys()
-    //   .weakValues()
-    //   .maximumSize(10000)
-    //   .expiration(10, TimeUnit.MINUTES)
+
+    static final Consumer<Metadata> EMPTY = metadata -> {};
+
     public static OutputProto call(ManagedChannel channel, String fullRpcMethodName, String inputJson) {
+        return call(channel,fullRpcMethodName,inputJson,EMPTY);
+    }
+
+    public static OutputProto call(ManagedChannel channel, String fullRpcMethodName, String inputJson, Consumer<Metadata> cutomerHeaders) {
 
         assert fullRpcMethodName != null;
         // may use lru cache
@@ -37,7 +42,15 @@ public class GeneralizeClient {
         }
         var call = channel.newCall(md, CallOptions.DEFAULT);
 
-        return ClientCalls.blockingUnaryCall(call, input.build());
+        var headerForwardCall = new SimpleForwardingClientCall<>(call){
+            @Override
+            public void start(Listener responseListener, Metadata headers) {
+                //headers.put(AUTHORIZATION, "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMDAxIiwiYWRtIjoxLCJleHAiOjE2MzcxNDY2MjN9.GiXQqoNckNAn8UiXDW9BSoaPQPuS4SNJFTz1pQzmeP0PSkdo05zoYRYE2KDW6rm-eEleVEy49LK9U4g7DH5ghQ");
+                cutomerHeaders.accept(headers);
+                super.start(responseListener, headers);
+            }
+        };
+        return ClientCalls.blockingUnaryCall(headerForwardCall, input.build());
     }
 
     public static String toJson(OutputProto outout) {

@@ -33,9 +33,9 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     static final List<ServerFilter> GLOBAL_FILTERS = new ArrayList<>();
 
-    static final Key<String> CLIENT_ID = Metadata.Key.of(HttpConst.CLIENT_ID_HEADER, Metadata.ASCII_STRING_MARSHALLER);
-    static final Key<String> COOKIE = Metadata.Key.of(HttpConst.COOKIE_HEADER, Metadata.ASCII_STRING_MARSHALLER);
-    static final Key<String> AUTHORIZATION = Metadata.Key.of(HttpConst.AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
+    public static final Key<String> CLIENT_ID = Metadata.Key.of(HttpConst.CLIENT_ID_HEADER, Metadata.ASCII_STRING_MARSHALLER);
+    public static final Key<String> COOKIE = Metadata.Key.of(HttpConst.COOKIE_HEADER, Metadata.ASCII_STRING_MARSHALLER);
+    public static final Key<String> AUTHORIZATION = Metadata.Key.of(HttpConst.AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
 
 
 
@@ -46,9 +46,11 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     static String applicationName;
 
-    private Metadata headers;
+    private Metadata headers,responseHeaders;
 
     private UserCredential credential;
+
+
 
     public static void regGlobalFilter(ServerFilter filter) {
         GLOBAL_FILTERS.add(filter);
@@ -73,11 +75,13 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
         return headers;
     }
 
+    public String clientId(){
+        return  headers.get(CLIENT_ID);
+    }
+
 
     void checkCredential() throws StatusException {
         if (credentialVerify != null) {
-            var clientId = headers.get(CLIENT_ID);
-
             var tokenPlace = headers.get(AUTHORIZATION);
             String token = null;
             if (null != tokenPlace && tokenPlace.startsWith(BEARER_FLAG)) {
@@ -91,7 +95,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
                 }
             }
 
-            credential = credentialVerify.verify(token,clientId);
+            credential = credentialVerify.verify(token,clientId());
         }
     }
 

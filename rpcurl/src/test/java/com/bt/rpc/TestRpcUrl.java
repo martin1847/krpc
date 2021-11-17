@@ -4,6 +4,8 @@
  */
 package com.bt.rpc;
 
+import java.net.URL;
+
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,13 +19,15 @@ public class TestRpcUrl {
     public void testUrl() throws Exception {
         if("yyc".equals(System.getenv("LOGNAME"))) {
             RpcUrl url = new RpcUrl();
-            url.localhost = true;
+            //url.localhost = true;
 
-            //url.url = new URL("https://example-api.botaoyx.com");
+            url.url = new URL("https://backoffice-api.botaoyx.com");
 
             url.app = "admin-auth";
-            url.service = RpcUrl.META_SERVICE;
-            url.method = "listApis";
+            url.service = "Oauth";
+            url.method = "user";
+
+            url.cookie = "c-token=eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMDAxIiwiYWRtIjoxLCJleHAiOjE2MzcxNDY2MjN9.GiXQqoNckNAn8UiXDW9BSoaPQPuS4SNJFTz1pQzmeP0PSkdo05zoYRYE2KDW6rm-eEleVEy49LK9U4g7DH5ghQ";
 
             url.run();
         }

@@ -26,6 +26,7 @@ import com.bt.rpc.server.ReflectionHelper;
 import com.bt.rpc.server.RpcServerBuilder;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
+import com.bt.rpc.server.jws.JwksVerify;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +68,11 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             log.info("Reg GlobalValidator :  {}" , validators.get());
             ServerContext.regValidator(validators.get());
         }
+
+        rpcConfig.jwks().ifPresent(url->{
+            log.info("Reg CredentialVerify :  {}" , url);
+            ServerContext.regCredentialVerify(new JwksVerify(url));
+        });
 
         //System.getProperties().forEach((k,v)->{
         //    System.out.println( k + "$$$$$$$$$$$$" + v);

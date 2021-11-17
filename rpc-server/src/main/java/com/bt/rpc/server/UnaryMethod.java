@@ -5,6 +5,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
+import com.bt.rpc.annotation.UnsafeWeb;
+import com.bt.rpc.annotation.UnsafeWeb.RequireCredential;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
@@ -46,12 +48,23 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     private final boolean bytesWrite;
 
+    private final boolean requireCredential;
+
     public UnaryMethod(Class service, Object serviceToInvoke, MethodStub stub, FilterChain<ServerResult, ServerContext> filterChain) {
         //this.serviceToInvoke = serviceToInvoke;
         this.stub = stub;
         this.filterChain = filterChain;
         this.service = service;
         methodName = stub.method.getName();
+
+        if(stub.method.isAnnotationPresent(RequireCredential.class)){
+            requireCredential = true;
+        }else  if(service.isAnnotationPresent(UnsafeWeb.class) ){
+            requireCredential = ((UnsafeWeb)service.getAnnotation(UnsafeWeb.class)).requireCredential();
+        }else {
+            requireCredential = false;
+        }
+
 
         bytesWrite = stub.returnType == byte[].class;
 
@@ -188,7 +201,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
         var ctx = new ServerContext(service, methodName, stub.returnType,
                 im, this::invoke, ((UnaryCallObserver) responseObserver).getHeaders());
-        ServerContext.LOCAL.set(ctx);
+
 
         //1.  https://github.com/perfmark/perfmark
         //try (TaskCloseable task = PerfMark.traceTask("Parse HTTP headers")) {
@@ -196,6 +209,12 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         //2. https://github.com/grpc/grpc-java/issues/7381
         // https://github.com/LesnyRumcajs/grpc_bench/wiki/2021-05-20-bench-results
         try {
+
+            if(requireCredential){
+                ctx.checkCredential();
+            }
+
+            ServerContext.LOCAL.set(ctx);
             var res = filterChain.invoke(ctx);
             responseObserver.onNext(res.output);
             responseObserver.onCompleted();

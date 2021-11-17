@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.bt.rpc.annotation.Cached;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.common.MethodStub;
@@ -133,9 +134,10 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     private void initStub() {
         for (MethodStub stub : RefUtils.toRpcMethods(serverName,clz)) {
 
-            if (cacheManager != null && stub.cached != null) {
+            if (cacheManager != null && stub.method.isAnnotationPresent(Cached.class)) {
 
-                var expireSeconds = stub.cached.value();
+                var expireSeconds = stub.method.getAnnotation(Cached.class).value();
+
                 if (expireSeconds <= 0) {
                     expireSeconds = stub.rpcService.expireSeconds();
                 }

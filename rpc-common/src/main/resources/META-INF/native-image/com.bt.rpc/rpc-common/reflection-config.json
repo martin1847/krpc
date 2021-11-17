@@ -1,11 +1,21 @@
 [
   {
+    "name": "java.lang.Long",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
     "name" : "java.lang.Integer",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   },
   {
     "name" : "java.lang.String",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.HashMap",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   },

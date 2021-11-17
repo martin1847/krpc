@@ -18,4 +18,7 @@ public interface RpcConfig {
      */
     Optional<String> app() ;
 
+
+    Optional<String> jwks() ;
+
 }

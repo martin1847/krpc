@@ -21,18 +21,18 @@ public interface CacheManager {
     int KEY_MAX_SIZE_UNDIGEST = 64;
 
 
-    String get(String cacheKey);
+    byte[] get(String cacheKey);
 
-    void set(String cacheKey, String bytesStr, int expireSeconds);
+    void set(String cacheKey, byte[] bytesStr, int expireSeconds);
 
 
 
     default void set(MethodStub stub, String cacheKey, OutputProto message){
-        String value;
+        byte[] value;
         if(stub.returnType != byte[].class){
-            value = message.getUtf8();
+            value = message.getUtf8().getBytes(StandardCharsets.UTF_8);
         }else {
-            value = message.getBs().toStringUtf8();
+            value = message.getBs().toByteArray();
         }
         set(cacheKey,value,stub.getExpireSeconds());
     }
@@ -47,9 +47,9 @@ public interface CacheManager {
         }
         OutputProto.Builder bd = OutputProto.newBuilder();
         if(stub.returnType != byte[].class){
-            bd.setUtf8(bs);
+            bd.setUtf8(new String(bs,StandardCharsets.UTF_8));
         }else{
-            bd.setBs(ByteString.copyFromUtf8(bs));
+            bd.setBs(ByteString.copyFrom(bs));
         }
         return bd.build();
     }

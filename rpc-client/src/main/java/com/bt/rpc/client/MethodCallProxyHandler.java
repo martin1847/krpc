@@ -165,9 +165,10 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         var cm = stubMap.get(method);
 
-        //        if(null == cm){
-        //            return  "UnSupported Method : " + method;
-        //        }
+        //maybe call toString
+        if(null == cm){
+            return  "UnSupported Method : " + clz + "." + method;
+        }
 
         var reqContext = new ClientContext(clz, method.getName(), cm.stub.returnType
                 , args, cm, serialEnum);

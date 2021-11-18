@@ -46,7 +46,8 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     static String applicationName;
 
-    private Metadata headers,responseHeaders;
+    private Metadata headers;
+    final Metadata   responseHeaders = new Metadata();
 
     private UserCredential credential;
 
@@ -73,6 +74,10 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     public Metadata getHeaders(){
         return headers;
+    }
+
+    public Metadata getResponseHeaders() {
+        return responseHeaders;
     }
 
     public String clientId(){

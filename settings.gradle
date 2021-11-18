@@ -18,7 +18,7 @@ pluginManagement {
     }
 }
 
-include 'test-api','test-server','test-client'
+include 'test-api','test-server'
 
 include 'rpc-api','rpc-common','rpc-client','rpc-server','rpcurl'
 

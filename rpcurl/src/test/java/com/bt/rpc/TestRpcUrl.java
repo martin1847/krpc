@@ -27,7 +27,7 @@ public class TestRpcUrl {
             url.service = "Oauth";
             url.method = "user";
 
-            url.cookie = "c-token=eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMDAxIiwiYWRtIjoxLCJleHAiOjE2MzcxNDY2MjN9.GiXQqoNckNAn8UiXDW9BSoaPQPuS4SNJFTz1pQzmeP0PSkdo05zoYRYE2KDW6rm-eEleVEy49LK9U4g7DH5ghQ";
+            url.cookie = "c-token=eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMDAxIiwiYWRtIjoxLCJleHAiOjE2MzcyMDExNTh9.xBtc8IcAp7rQcIkAVlhLz5u6dbN2WRnANQOyam6qKWBy0YvyDU0WcvnaEA5k2KzVhnLylqIQY4F5GJSy3aTaRQ";
 
             url.run();
         }

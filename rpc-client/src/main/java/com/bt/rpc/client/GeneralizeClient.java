@@ -10,12 +10,17 @@ import com.bt.rpc.util.JsonUtils;
 import com.google.protobuf.ByteString;
 import io.grpc.CallOptions;
 import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
-import io.grpc.Metadata.Key;
 import io.grpc.stub.ClientCalls;
 
+import static io.grpc.Metadata.BINARY_HEADER_SUFFIX;
+
 /**
+ *
+ * https://github.com/grpc/grpc-java/blob/master/examples/src/main/java/io/grpc/examples/header/HeaderClientInterceptor.java
+ *
  * generalize rpc call
  * 2020-04-28 16:07
  *
@@ -45,9 +50,29 @@ public class GeneralizeClient {
         var headerForwardCall = new SimpleForwardingClientCall<>(call){
             @Override
             public void start(Listener responseListener, Metadata headers) {
-                //headers.put(AUTHORIZATION, "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMDAxIiwiYWRtIjoxLCJleHAiOjE2MzcxNDY2MjN9.GiXQqoNckNAn8UiXDW9BSoaPQPuS4SNJFTz1pQzmeP0PSkdo05zoYRYE2KDW6rm-eEleVEy49LK9U4g7DH5ghQ");
                 cutomerHeaders.accept(headers);
-                super.start(responseListener, headers);
+                //super.start(responseListener, headers);
+                super.start(new SimpleForwardingClientCallListener(responseListener) {
+                    @Override
+                    public void onHeaders(Metadata resHeader) {
+                        System.out.println();
+                        System.out.println("* header received from server");
+                        for(var key : resHeader.keys()){
+                            System.out.print("< "+key+": ");
+                            String value;
+                            if (key.endsWith(BINARY_HEADER_SUFFIX)) {
+                                value = Base64.getEncoder().encodeToString(
+                                        resHeader.get(Metadata.Key.of(key, Metadata.BINARY_BYTE_MARSHALLER))
+                                );
+                            }else {
+                                value = resHeader.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
+                            }
+                            System.out.println(value);
+                        }
+                        System.out.println();
+                        super.onHeaders(resHeader);
+                    }
+                }, headers);
             }
         };
         return ClientCalls.blockingUnaryCall(headerForwardCall, input.build());

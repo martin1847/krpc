@@ -71,7 +71,17 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
         rpcConfig.jwks().ifPresent(url->{
             log.info("Reg CredentialVerify :  {}" , url);
-            ServerContext.regCredentialVerify(new JwksVerify(url));
+            var jwks = new JwksVerify(url);
+            try {
+                jwks.loadJwks();
+            }catch (RuntimeException e){
+                if (Boolean.TRUE.equals(rpcConfig.exitOnJwksError().orElse(Boolean.FALSE))){
+                    throw e;
+                }else {
+                    log.warn("error load jwks {} , {}",jwks.getUrl(),e.getMessage());
+                }
+            }
+            ServerContext.regCredentialVerify(jwks);
         });
 
         //System.getProperties().forEach((k,v)->{

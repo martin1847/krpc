@@ -4,7 +4,6 @@
  */
 package com.bt.rpc.server.jws;
 
-import java.util.Date;
 import java.util.List;
 
 /**

@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JwksVerify implements CredentialVerify {
 
-    static final String WELL_KNOWN_JWKS_PATH = ".well-known/jwks.json";
+    public static final String WELL_KNOWN_JWKS_PATH = ".well-known/jwks.json";
 
     static final long GAP_MILL = 5*60*1000L;
 
@@ -36,27 +36,32 @@ public class JwksVerify implements CredentialVerify {
 
     long lastAccess;
 
-    String url;
+    final String url;
 
     public JwksVerify(String url) {
         if(!url.endsWith(".json")){
             url += url.endsWith("/")? WELL_KNOWN_JWKS_PATH : "/"+WELL_KNOWN_JWKS_PATH;
         }
         this.url = url;
-
-        initJwks();
     }
+
 
     ECPublicKey useKey(String kid)  {
         var key = jwksCache.get(kid);
         if(null != key){
             return key;
         }
-        initJwks();
+        loadJwks();
         return jwksCache.get(kid);
     }
 
-    void initJwks() {
+    public String getUrl() {
+        return url;
+    }
+
+
+
+    public void loadJwks() {
         if(System.currentTimeMillis() - lastAccess >= GAP_MILL){
             try{
                 lastAccess = System.currentTimeMillis();

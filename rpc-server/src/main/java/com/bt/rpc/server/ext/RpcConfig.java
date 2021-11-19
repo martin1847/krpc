@@ -21,4 +21,6 @@ public interface RpcConfig {
 
     Optional<String> jwks() ;
 
+
+    Optional<Boolean> exitOnJwksError() ;
 }

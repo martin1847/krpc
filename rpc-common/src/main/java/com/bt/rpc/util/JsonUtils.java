@@ -58,15 +58,17 @@ public abstract class JsonUtils {
         }
     }
 
-    public static <T> List<T> parseArray(String json, Class<T> type) {
-        //var typeFactory = MAPPER.getTypeFactory();
-        //var listType = typeFactory.constructCollectionType(List.class, type));
-        try {
-            return MAPPER.readValue(json, new TypeReference<List<T>>() {});
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
+
+    //@Deprecated
+    //public static <T> T parse(String json, TypeReference<T> type) {
+    //    //var typeFactory = MAPPER.getTypeFactory();
+    //    //var listType = typeFactory.constructCollectionType(List.class, type));
+    //    try {
+    //        return MAPPER.readValue(json, type);
+    //    } catch (JsonProcessingException e) {
+    //        throw new RuntimeException(e);
+    //    }
+    //}
 
     public static <T> T parse(String json, ParameterizedType type) {
         JavaType genc = TYPES_MAP.computeIfAbsent(type, t -> {

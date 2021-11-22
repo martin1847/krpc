@@ -28,6 +28,11 @@ public @interface Doc {
 
     String since() default "";
 
+    /**
+     * 隐藏，不显示到客户端
+     */
+    boolean hidden() default false;
+
 
     @Target(ElementType.METHOD)
     @interface ErrorCodes {

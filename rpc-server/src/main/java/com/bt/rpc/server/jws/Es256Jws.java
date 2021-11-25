@@ -43,11 +43,11 @@ public class Es256Jws {
         //        true, Instant.now().getEpochSecond() + 3600));
     }
 
-    public String jws(String subject, int epochSecond){
+    public String jws(String subject, long epochSecond){
         return jws(subject,epochSecond,EMPTY);
     }
 
-    public String jws(String subject, int epochSecond, Consumer<Map<String, Object>> bodyHanlder) {
+    public String jws(String subject, long epochSecond, Consumer<Map<String, Object>> bodyHanlder) {
 
         var payloadClaims = new HashMap<String, Object>();
         payloadClaims.put(PublicClaims.SUBJECT, subject);

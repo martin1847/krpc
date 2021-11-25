@@ -34,9 +34,14 @@ build:
       - ./*/build/
 #      - ./*/build/*-runner
 #      - ./*/build/quarkus-app
+  variables:
+    TZ: Asia/Shanghai
+    QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: "true"
+    QUARKUS_BANNER_ENABLED: "false"
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
-    - export TZ=Asia/Shanghai
+  after_script:
+    - rm -rf .gradle/caches/modules-2/files-2.1/com.bt*
   script:
     - gradle build -Dquarkus.package.type=native -x test
     - gradle publish

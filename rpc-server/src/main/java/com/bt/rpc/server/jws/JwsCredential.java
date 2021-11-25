@@ -47,7 +47,7 @@ public class JwsCredential implements UserCredential{
         return sign64;
     }
 
-    void markValid(){
+    void markSignValid(){
         payload = JsonUtils.parse(decode(payload64), HashMap.class);
     }
 

@@ -7,7 +7,7 @@ dependencies {
 
 
     implementation project(':test-api')
-    implementation project(':rpc-server')
+    implementation project(':rpc-server-native')
 //    implementation "io.grpc:grpc-services:${grpcVersion}"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"

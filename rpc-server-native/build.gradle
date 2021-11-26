@@ -1,0 +1,33 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version '0.11.0'
+}
+
+dependencies {
+//    compileOnly "javax.annotation:javax.annotation-api:1.2"
+
+
+    api project(':rpc-server')
+//    implementation "io.grpc:grpc-services:${grpcVersion}"
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+
+    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+    implementation "io.quarkus:quarkus-arc"
+//    implementation 'io.quarkus:quarkus-config-yaml'
+//    implementation 'io.quarkus:quarkus-grpc-common-deployment'
+
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+    api "com.bt.ext:ext-rpc:1.0.0"
+
+    runtimeOnly "io.quarkus:quarkus-hibernate-validator"
+
+
+
+    //1.4.2.Final  1.5.0.Beta1
+//    implementation 'org.mapstruct:mapstruct:1.5.0.Beta1'
+//    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.0.Beta1'
+}
+
+

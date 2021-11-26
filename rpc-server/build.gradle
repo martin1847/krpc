@@ -13,13 +13,13 @@ dependencies {
 //    implementation "io.grpc:grpc-netty:${grpcVersion}"
 //    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
 
-    implementation "io.quarkus:quarkus-core:$quarkusPlatformVersion"
+//    implementation "io.quarkus:quarkus-core:$quarkusPlatformVersion"
 //    implementation "io.quarkus:quarkus-builder:$quarkusPlatformVersion"
 //
 //    implementation "io.quarkus:quarkus-core-deployment:$quarkusPlatformVersion"
 
 
-    implementation "io.smallrye.config:smallrye-config-core:2.4.4"
+//    implementation "io.smallrye.config:smallrye-config-core:2.4.4"
 
     /// TEST
     compileOnly "org.projectlombok:lombok:${lombokVersion}"

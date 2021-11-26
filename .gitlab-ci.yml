@@ -1,5 +1,5 @@
 #image: "jcr.botaoyx.com/img/common/graalvm-gradle:7.2.21"
-image: "jcr.botaoyx.com/img/common/gradle-ubi:7.1103"
+image: "jcr.botaoyx.com/img/common/gradle-ubi:7.3"
 
 variables:
   APP_NAMES: "rpcurl"
@@ -37,7 +37,6 @@ build:
   variables:
     TZ: Asia/Shanghai
     QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: "true"
-    QUARKUS_BANNER_ENABLED: "false"
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
   after_script:
@@ -48,7 +47,7 @@ build:
 
 # https://docs.gitlab.com/ee/ci/yaml/index.html#includeremote
 
-docker:
+.docker:
   stage: deploy
   extends: .docker-var
 #  cache:

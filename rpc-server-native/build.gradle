@@ -2,6 +2,8 @@ plugins {
     id 'org.kordamp.gradle.jandex' version '0.11.0'
 }
 
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
+
 dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"
 

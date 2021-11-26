@@ -18,7 +18,7 @@ dependencies {
     implementation "io.quarkus:quarkus-arc"
 //    implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
-    implementation "io.grpc:grpc-netty:${grpcVersion}"
+//    implementation "io.grpc:grpc-netty:${grpcVersion}"
 
     // graalvm not support
 //    implementation 'io.netty:netty-transport-native-epoll:4.1.68.Final:linux-x86_64'
@@ -30,7 +30,7 @@ dependencies {
 //    AgroalDataSource defaultDataSource;
     implementation "io.quarkus:quarkus-agroal"
     implementation "io.quarkus:quarkus-jdbc-mysql"
-    implementation "io.quarkus:quarkus-hibernate-validator"
+//    implementation "io.quarkus:quarkus-hibernate-validator"
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis-deployment:0.0.10'
@@ -40,7 +40,7 @@ dependencies {
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
     implementation "com.bt.ext:ext-mybatis:1.0.0"
     implementation "com.bt.common:mybatis:1.0.0"
-    implementation "com.bt.ext:ext-rpc:1.0.0"
+//    implementation "com.bt.ext:ext-rpc:1.0.0"
 
     //1.4.2.Final  1.5.0.Beta1
     implementation 'org.mapstruct:mapstruct:1.5.0.Beta1'

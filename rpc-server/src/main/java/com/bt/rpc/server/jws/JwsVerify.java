@@ -45,9 +45,10 @@ public class JwsVerify implements CredentialVerify {
     @Getter
     final String cookieName;
 
-    //public JwsVerify(String url){
-    //    this(url,DEFAULT_COOKIE_NAME);
-    //}
+    public JwsVerify(String url){
+        this(url,DEFAULT_COOKIE_NAME);
+    }
+
     public JwsVerify(String url,String cookieName) {
         this(url,cookieName,ExtVerify.EMPTY);
     }

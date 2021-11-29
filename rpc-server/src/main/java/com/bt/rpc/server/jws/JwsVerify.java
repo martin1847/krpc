@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.bt.rpc.util.JsonUtils;
 import io.grpc.Status;
 import io.grpc.StatusException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -29,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 public class JwsVerify implements CredentialVerify {
 
     public static final String WELL_KNOWN_JWKS_PATH = ".well-known/jwks.json";
+    public static final String DEFAULT_COOKIE_NAME = "access-token";
 
     static final long GAP_MILL = 5 * 60 * 1000L;
 
@@ -40,15 +42,22 @@ public class JwsVerify implements CredentialVerify {
 
     final ExtVerify extVerify ;
 
-    public JwsVerify(String url) {
-        this(url,ExtVerify.EMPTY);
+    @Getter
+    final String cookieName;
+
+    //public JwsVerify(String url){
+    //    this(url,DEFAULT_COOKIE_NAME);
+    //}
+    public JwsVerify(String url,String cookieName) {
+        this(url,cookieName,ExtVerify.EMPTY);
     }
 
-    public JwsVerify(String url,ExtVerify extVerify) {
+    public JwsVerify(String url,String cookieName,ExtVerify extVerify) {
         if (!url.endsWith(".json")) {
             url += url.endsWith("/") ? WELL_KNOWN_JWKS_PATH : "/" + WELL_KNOWN_JWKS_PATH;
         }
         this.url = url;
+        this.cookieName = cookieName;
         this.extVerify = extVerify;
     }
 

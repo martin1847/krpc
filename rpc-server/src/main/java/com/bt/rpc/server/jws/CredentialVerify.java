@@ -11,9 +11,11 @@ import io.grpc.StatusException;
  * @author Martin.C
  * @version 2021/11/17 1:52 PM
  */
-@FunctionalInterface
+//@FunctionalInterface
 public interface CredentialVerify {
 
     UserCredential verify(String token,String cid) throws StatusException;
+
+    String getCookieName();
 
 }

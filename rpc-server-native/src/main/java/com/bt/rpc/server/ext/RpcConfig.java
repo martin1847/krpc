@@ -21,6 +21,7 @@ public interface RpcConfig {
 
     Optional<String> jwks() ;
 
+    Optional<String> jwtCookie() ;
 
     Optional<Boolean> exitOnJwksError() ;
 }

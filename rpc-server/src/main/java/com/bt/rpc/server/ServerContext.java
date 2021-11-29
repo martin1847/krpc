@@ -1,24 +1,21 @@
 package com.bt.rpc.server;
 
-import com.bt.rpc.common.AbstractContext;
-import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.internal.InputProto;
-import com.bt.rpc.serial.Serial;
-import com.bt.rpc.server.jws.CredentialVerify;
-import com.bt.rpc.server.jws.HttpConst;
-import com.bt.rpc.server.jws.JwsCredential;
-import com.bt.rpc.server.jws.UserCredential;
-import com.bt.rpc.util.EnvUtils;
-import io.grpc.Context;
-import io.grpc.Metadata;
-import io.grpc.Metadata.Key;
-import io.grpc.StatusException;
-
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.validation.Validator;
+
+import com.bt.rpc.common.AbstractContext;
+import com.bt.rpc.common.FilterChain;
+import com.bt.rpc.internal.InputProto;
+import com.bt.rpc.server.jws.CredentialVerify;
+import com.bt.rpc.server.jws.HttpConst;
+import com.bt.rpc.server.jws.UserCredential;
+import io.grpc.Context;
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
+import io.grpc.StatusException;
 
 import static com.bt.rpc.server.jws.HttpConst.BEARER_FLAG;
 
@@ -36,7 +33,6 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
     public static final Key<String> CLIENT_ID = Metadata.Key.of(HttpConst.CLIENT_ID_HEADER, Metadata.ASCII_STRING_MARSHALLER);
     public static final Key<String> COOKIE = Metadata.Key.of(HttpConst.COOKIE_HEADER, Metadata.ASCII_STRING_MARSHALLER);
     public static final Key<String> AUTHORIZATION = Metadata.Key.of(HttpConst.AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
-
 
 
 
@@ -93,9 +89,11 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
                 token = tokenPlace.substring(BEARER_FLAG.length() + 1);
             } else if ((tokenPlace = headers.get(COOKIE)) != null) {
                 var cookies = tokenPlace.split(";\\s*");
+                final String cookiePrefix = credentialVerify.getCookieName()+ '=';
                 for (var ck : cookies) {
-                    if (ck.startsWith(HttpConst.COOKIE_TOKEN + '=')) {
-                        token = ck.substring(HttpConst.COOKIE_TOKEN.length() + 1);
+                    if (ck.startsWith(cookiePrefix)) {
+                        token = ck.substring(cookiePrefix.length());
+                        break;
                     }
                 }
             }

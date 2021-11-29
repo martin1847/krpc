@@ -18,7 +18,7 @@ public interface HttpConst {
 
     String AUTHORIZATION_HEADER = "authorization";
 
-    String COOKIE_TOKEN = "c-token";
+    //String COOKIE_TOKEN = "c-token";
 
     //Authorization: Bearer <token.jwt.data>
     String BEARER_FLAG = "Bearer";

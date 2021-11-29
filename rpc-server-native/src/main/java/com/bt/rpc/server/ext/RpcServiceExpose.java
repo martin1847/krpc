@@ -76,16 +76,19 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             if (extVerifies.isResolvable()) {
                 ext = extVerifies.get();
             }
-            log.info("Reg CredentialVerify :  {} , {}", url, ext);
-            var jwks = new JwsVerify(url, ext);
-
+            var cookieName = rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
+            log.info("Reg CredentialVerify: {} ,cookieName: {}", url,cookieName);
+            if(ext != ExtVerify.EMPTY){
+                log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
+            }
+            var jwks = new JwsVerify(url,cookieName, ext);
             try {
                 jwks.loadJwks();
             } catch (RuntimeException e) {
                 if (Boolean.TRUE.equals(rpcConfig.exitOnJwksError().orElse(Boolean.FALSE))) {
                     throw e;
                 } else {
-                    log.warn("error load jwks {} , {}", jwks.getUrl(), e.getMessage());
+                    log.warn("Error load jwks {} , {}", jwks.getUrl(), e.getMessage());
                 }
             }
             ServerContext.regCredentialVerify(jwks);

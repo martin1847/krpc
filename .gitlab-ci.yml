@@ -3,6 +3,34 @@ variables:
   APP_NAMES: "rpcurl"
   APP_NAMESPACE: common
 
+include:
+  - project: 'it-devops/ci'
+    #    ref: v1.0.211130
+    file:
+      - '.docker-helm-var.yml'
+      - '.gradle.yml'
+      - '.docker-java.yml'
+      - '.junit.yml'
+      - '.helm-java.yml'
+      - '.changes-java.yml'
+
+
+#.changes-java:
+#  only:
+#    changes:
+#      - "./*/src/**/*"
+#      - "./*/*.properties"
+#      - "./*/*.xml"
+#      - "./*/*.gradle"
+#      - "./*/*.yaml"
+
+
+build:
+  extends: .gradle
+  script:
+    - gradle build -Dquarkus.package.type=native -x test
+    - gradle publish
+
 
 .docker-helm-var:
   variables:
@@ -10,41 +38,17 @@ variables:
     DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
     DOCKER_TAG: latest
 
-include:
-  - project: 'it-devops/ci'
-    ref: v1.0.211130
-    file:
-      - '.gradle.yml'
-      - '.docker-java.yml'
-      - '.junit.yml'
-      - '.helm-java.yml'
-      - '.only-changes.yml'
-
-
-#.only-changes:
-#  only:
-#    variables:
-#      - $CI_COMMIT_REF_PROTECTED
-#    changes:
-#      - "./*/src/**/*"
-
-build:
-  extends:
-    - .gradle
-    - .only-changes
-  script:
-    - gradle build -Dquarkus.package.type=native -x test
-    - gradle publish
 
 .docker:
-  extends:
-    - .docker-java
-    - .only-changes
+  extends: .docker-java
 
 .helm:
-  extends:
-    - .helm-java
-    - .only-changes
+  extends: .helm-java
+
+#.helm:
+#  extends:
+#    - .helm-java
+#    - .only-changes
 
 
 # deploy

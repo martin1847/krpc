@@ -30,10 +30,11 @@ allprojects {
 }
 
 subprojects {
+
     apply plugin: 'java-library'
-    
-    group = "com.bt.rpc"
-    version = '1.0.0'//-SNAPSHOT'
+
+    group = "$group"
+    version = "$version"
     
     sourceCompatibility = "11"
     targetCompatibility = "11"

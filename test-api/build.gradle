@@ -2,13 +2,9 @@
 plugins {
     id 'org.kordamp.gradle.jandex' version '0.11.0'
 }
-//apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
-
-//artifactoryPublish.skip = true
 
 group = "com.btyx.test.rpc"
-
 
 
 dependencies {

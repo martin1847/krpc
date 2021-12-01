@@ -1,5 +1,5 @@
 
-apply from: "$rootProject.projectDir/gradle/upload.gradle"
+apply from: "$rootProject.projectDir/upload.gradle"
 
 
 dependencies {

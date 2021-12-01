@@ -23,19 +23,8 @@ dependencies {
     // graalvm not support
 //    implementation 'io.netty:netty-transport-native-epoll:4.1.68.Final:linux-x86_64'
 
-//    runtimeOnly "io.grpc:grpc-stub:${grpcVersion}"
-
-    //JDBC
-//    @Inject
-//    AgroalDataSource defaultDataSource;
     implementation "io.quarkus:quarkus-agroal"
     implementation "io.quarkus:quarkus-jdbc-mysql"
-//    implementation "io.quarkus:quarkus-hibernate-validator"
-
-
-//    implementation 'io.quarkiverse.mybatis:quarkus-mybatis-deployment:0.0.10'
-//    implementation "com.bt:quarkus-mybatis-deployment:1.0.1"
-
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
     implementation "com.bt.ext:ext-mybatis:1.0.0"

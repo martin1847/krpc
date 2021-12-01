@@ -1,6 +1,7 @@
 
 variables:
-  APP_NAMES: "rpcurl"
+  # 多个空格分割
+  APP_NAME: "rpcurl"
   APP_NAMESPACE: common
 
 include:

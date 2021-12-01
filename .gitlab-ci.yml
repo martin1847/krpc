@@ -12,18 +12,6 @@ include:
       - '.docker-java.yml'
       - '.junit.yml'
       - '.helm-java.yml'
-      - '.changes-java.yml'
-
-
-#.changes-java:
-#  only:
-#    changes:
-#      - "./*/src/**/*"
-#      - "./*/*.properties"
-#      - "./*/*.xml"
-#      - "./*/*.gradle"
-#      - "./*/*.yaml"
-
 
 build:
   extends: .gradle
@@ -34,16 +22,23 @@ build:
 
 .docker-helm-var:
   variables:
-    APP_VERSION: 1.0.$CI_PIPELINE_ID
-    DOCKER_REPO: $CI_JCR/img/$APP_NAMESPACE
     DOCKER_TAG: latest
 
 
-.docker:
+docker:
   extends: .docker-java
 
 .helm:
   extends: .helm-java
+
+
+# anchors
+# reference-tags
+# extend
+
+# https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#reference-tags
+# https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#anchors
+
 
 #.helm:
 #  extends:

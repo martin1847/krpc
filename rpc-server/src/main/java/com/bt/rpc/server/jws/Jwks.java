@@ -19,5 +19,6 @@ public class Jwks {
 
     public static final String KEY_TYPE = "kty";
 
-    List<Map<String,Object>> keys;
+    // https://tools.ietf.org/id/draft-ietf-jose-json-web-key-01.html
+    List<Map<String,String>> keys;
 }

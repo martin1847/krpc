@@ -54,12 +54,12 @@ public class Es256Jwk {
      *       "y": "6s9ECrJurlHCkSx8CTnqhS5HN7h9-dblFgLfpRPcPeg"
      *     }
      */
-    public Es256Jwk(Map<String,Object> key) {
+    public Es256Jwk(Map<String,String> key) {
         this(
-                key.get(PublicClaims.KEY_ID).toString(),
-                key.get("x").toString(),
-                key.get("y").toString(),
-                key.get("crv").toString()
+                key.get(PublicClaims.KEY_ID),
+                key.get("x"),
+                key.get("y"),
+                key.get("crv")
         );
     }
 

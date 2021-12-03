@@ -38,6 +38,9 @@ public class JwsVerify implements CredentialVerify {
 
     long lastAccess;
 
+
+    volatile Jwks lastJwks;
+
     final String url;
 
     final ExtVerify extVerify ;
@@ -75,26 +78,26 @@ public class JwsVerify implements CredentialVerify {
         return url;
     }
 
-    public void loadJwks() {
+    public Jwks loadJwks() {
         if (System.currentTimeMillis() - lastAccess >= GAP_MILL) {
-            try {
-                lastAccess = System.currentTimeMillis();
-                try (InputStream in = new URL(url).openStream()) {
-                    var json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                    var jwks = JsonUtils.parse(json, Jwks.class);
-                    for (var jwk : jwks.keys) {
-                        if (Es256Jwk.ELLIPTIC_CURVE.equals(jwk.get(Jwks.KEY_TYPE))) {
-                            var ecKey = new Es256Jwk(jwk);
-                            jwksCache.put(ecKey.kid, ecKey.toECPublicKey());
-                        }
+            lastAccess = System.currentTimeMillis();
+            try (InputStream in = new URL(url).openStream()) {
+                var json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                var jwks = JsonUtils.parse(json, Jwks.class);
+                for (var jwk : jwks.keys) {
+                    if (Es256Jwk.ELLIPTIC_CURVE.equals(jwk.get(Jwks.KEY_TYPE))) {
+                        var ecKey = new Es256Jwk(jwk);
+                        jwksCache.put(ecKey.kid, ecKey.toECPublicKey());
                     }
                 }
                 log.info("success fetch jwks :  {} ", jwksCache.keySet());
+                lastJwks = jwks;
             } catch (Exception e) {
                 log.error("error fetch jwks :  " + url, e);
                 throw new RuntimeException(e);
             }
         }
+        return lastJwks;
     }
 
     /**

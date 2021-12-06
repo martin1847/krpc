@@ -19,7 +19,10 @@ docker:
     APP_NAME: "rpcurl"
     APP_NAMESPACE: common
   extends: .docker-java
-  when: manual
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "dev"'
+    when: manual
+
 
 #
 #.helm:

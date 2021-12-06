@@ -155,7 +155,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
         }
         server = proxyServerBuilder.build().startServer();
-        log.info("***** RpcServer started with {} services, listening on {}.", i, port);
+        log.info("***** RpcServer expose {} services on {}, {}.", i, port,RpcConstants.CI_BUILD_ID);
     }
 
     @PreDestroy

@@ -1,18 +1,10 @@
-
-variables:
-  # 多个空格分割
-  APP_NAME: "rpcurl"
-  APP_NAMESPACE: common
-
 include:
   - project: 'it-devops/ci'
     #    ref: v1.0.211130
     file:
-      - '.docker-helm-var.yml'
       - '.gradle.yml'
-      - '.docker-java.yml'
       - '.junit.yml'
-      - '.helm-java.yml'
+      - '.docker-java.yml'
 
 build:
   extends: .gradle
@@ -21,16 +13,17 @@ build:
     - gradle publish
 
 
-.docker-helm-var:
+docker:
   variables:
     DOCKER_TAG: latest
-
-
-docker:
+    APP_NAME: "rpcurl"
+    APP_NAMESPACE: common
   extends: .docker-java
+  when: manual
 
-.helm:
-  extends: .helm-java
+#
+#.helm:
+#  extends: .helm-java
 
 
 # anchors

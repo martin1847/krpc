@@ -2,6 +2,7 @@ package com.bt.rpc.client;
 
 import java.nio.charset.StandardCharsets;
 
+import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 //import com.bt.rpc.internal.SerEnum;
@@ -13,6 +14,7 @@ import com.bt.rpc.common.MethodStub;
  *
  * @author Martin.C
  */
+@Doc("客户端缓存")
 public interface CacheManager {
 
 

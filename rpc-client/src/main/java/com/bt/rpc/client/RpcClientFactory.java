@@ -40,6 +40,7 @@ public class RpcClientFactory {
 
     public void setCacheManager(CacheManager cacheManager) {
         this.cacheManager = cacheManager;
+        log.info("{} use CacheManager {}",serverName,cacheManager);
     }
 
     public void setDefaultSerial(SerialEnum defaultSerial) {
@@ -53,6 +54,14 @@ public class RpcClientFactory {
         return defaultSerial;
     }
 
+
+    public void setDefaultCacheManager(Object cacheManager) {
+        if(cacheManager instanceof CacheManager){
+            setCacheManager((CacheManager) cacheManager);
+        }else {
+            setCacheManager(new SimpleLRUCache());
+        }
+    }
 
 
     public void close(){

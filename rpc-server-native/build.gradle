@@ -4,6 +4,9 @@ plugins {
 
 apply from: "$rootProject.projectDir/upload.gradle"
 
+
+version = "1.0.25"
+
 dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"
 
@@ -21,7 +24,7 @@ dependencies {
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
 
     runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
-    api "com.bt.ext:ext-rpc:1.0.0"
+    api "com.bt.ext:ext-rpc:$version"
 
     runtimeOnly "io.quarkus:quarkus-hibernate-validator"
 

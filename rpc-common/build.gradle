@@ -14,8 +14,8 @@ dependencies {
 
 
     api("io.grpc:grpc-protobuf-lite:${grpcVersion}")
-    api 'com.google.protobuf:protobuf-java:3.17.3'
-    api 'com.google.protobuf:protobuf-javalite:3.17.3'
+    api "com.google.protobuf:protobuf-java:$protobufVersion"
+    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 //    api 'com.alibaba:fastjson:1.2.68'
 //    api 'jakarta.json.bind:jakarta.json.bind-api:2.0.0'

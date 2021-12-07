@@ -1,5 +1,6 @@
 package com.bt.rpc.client;
 
+import com.bt.rpc.annotation.Doc;
 import lombok.AllArgsConstructor;
 
 import java.util.LinkedHashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
  *
  * @author Martin.C
  */
+@Doc("客户端LRU缓存，不指定的话默认会使用")
 public class SimpleLRUCache implements CacheManager {
 
 

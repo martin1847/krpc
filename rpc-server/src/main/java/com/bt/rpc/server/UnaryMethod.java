@@ -98,7 +98,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 var type = (Class)firstInputType;
                 var needValidator =  validator !=null && RefUtils.needValidator(type);
                 if(needValidator){
-                    log.info("set up validator for method {}({})",methodName,type);
+                    log.debug("set up validator for method {}({})",methodName,type);
                     invoke = new NormalValidator(validator, in -> (RpcResult) stub.method.invoke(serviceToInvoke,in),type );
                 }else {
                     invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke,DynamicInvoke.parseInput(sc,type));
@@ -111,7 +111,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 var raw = (Class)pt.getRawType();
                 var needValidator =  validator !=null && RefUtils.needValidator(raw);
                 if(needValidator){
-                    log.info("set up validator for method {}({})",methodName,pt);
+                    log.debug("set up validator for method {}({})",methodName,pt);
                     invoke = new GenericValidator(validator, in -> (RpcResult) stub.method.invoke(serviceToInvoke,in),pt);
                 }else {
                     invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, DynamicInvoke.parseInput(sc, pt));
@@ -155,7 +155,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 var type = (Class)firstInputType;
                 var needValidator =  validator !=null && RefUtils.needValidator(type);
                 if(needValidator){
-                    log.info("set up validator for method {}({})",methodName,type);
+                    log.debug("set up validator for method {}({})",methodName,type);
                     invoke = new NormalValidator(validator, in->(RpcResult) mh.invoke(in),type);
                 }else {
                     invoke = sc -> (RpcResult) mh.invoke( DynamicInvoke.parseInput(sc,type) );
@@ -165,7 +165,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 log.debug("Found ParameterizedType {} " ,firstInputType);
                 if(validator !=null && RefUtils.needValidator((Class)pt.getRawType())){
 
-                    log.info("set up validator for method {}({})",methodName,pt);
+                    log.debug("set up validator for method {}({})",methodName,pt);
                     invoke = new GenericValidator(validator, in->(RpcResult) mh.invoke(in),pt);
                 }else {
                     invoke = sc -> (RpcResult) mh.invoke(DynamicInvoke.parseInput(sc, pt));
@@ -188,10 +188,15 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     // https://github.com/openzipkin/brave
 
-    static final Key<String> TRACE_ID = Metadata.Key.of(EnvUtils.env("TRACE_ID", "x-b3-traceid")
+
+    static final Key<String> TRACE_ID = Metadata.Key.of("x-b3-traceid"
             , Metadata.ASCII_STRING_MARSHALLER);
-    static final Key<String> SPAN_ID  = Metadata.Key.of(EnvUtils.env("SPAN_ID", "x-b3-spanid")
+    static final Key<String> SPAN_ID  = Metadata.Key.of( "x-b3-spanid"
             , Metadata.ASCII_STRING_MARSHALLER);
+    //static final Key<String> TRACE_ID = Metadata.Key.of(EnvUtils.env("TRACE_ID", "x-b3-traceid")
+    //        , Metadata.ASCII_STRING_MARSHALLER);
+    //static final Key<String> SPAN_ID  = Metadata.Key.of(EnvUtils.env("SPAN_ID", "x-b3-spanid")
+    //        , Metadata.ASCII_STRING_MARSHALLER);
 
     //static final String      HOST_NAME = ;
     // https://quarkus.io/guides/logging

@@ -4,7 +4,7 @@ include:
     file:
       - '.gradle.yml'
       - '.junit.yml'
-      - '.docker-java.yml'
+      - '.docker.yml'
 
 build:
   extends: .gradle
@@ -18,7 +18,7 @@ docker:
     DOCKER_TAG: latest
     APP_NAME: "rpcurl"
     APP_NAMESPACE: common
-  extends: .docker-java
+  extends: .docker
   rules:
   - if: '$CI_COMMIT_BRANCH == "dev"'
     when: manual

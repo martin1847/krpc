@@ -77,11 +77,11 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
                 ext = extVerifies.get();
             }
             var cookieName = rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
-            log.info("Reg CredentialVerify: {} ,cookieName: {}", url,cookieName);
-            if(ext != ExtVerify.EMPTY){
+            log.info("Reg CredentialVerify: {} ,cookieName: {}", url, cookieName);
+            if (ext != ExtVerify.EMPTY) {
                 log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
             }
-            var jwks = new JwsVerify(url,cookieName, ext);
+            var jwks = new JwsVerify(url, cookieName, ext);
             try {
                 jwks.loadJwks();
             } catch (RuntimeException e) {
@@ -150,12 +150,14 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
                 Instance<?> instance = CDI.current().select(bean.getBeanClass());
                 proxyServerBuilder.addService(instance.get(), filterList);
                 i++;
-                log.info("Found Rpc Service :=> {} , with filters {} ", bean.getBeanClass(), filterList);
+                if (filterList.size() > 0) {
+                    log.info("Found Rpc Service :=> {} , with filters {} ", bean.getBeanClass(), filterList);
+                }
             }
 
         }
         server = proxyServerBuilder.build().startServer();
-        log.info("***** RpcServer expose {} services on {}, {}.", i, port,RpcConstants.CI_BUILD_ID);
+        log.info("***** RpcServer expose {} services on {}, {}.", i, port, RpcConstants.CI_BUILD_ID);
     }
 
     @PreDestroy

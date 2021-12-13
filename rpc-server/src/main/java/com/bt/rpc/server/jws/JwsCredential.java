@@ -20,19 +20,18 @@ import com.bt.rpc.util.JsonUtils;
 public class JwsCredential implements UserCredential{
 
 
-
-    static final char DOT = '.';
+    public static final char DOT = '.';
 
     private Map<String,String> header;
     private Map<String,Object> payload;
 
 
-    private String header64,payload64,sign64;
+    public final String header64,payload64,sign64;
 
     public JwsCredential(String token){
         var next = 0;
         header64 = token.substring(0,(next=token.indexOf(DOT)));
-        header = JsonUtils.parse(decode(header64), HashMap.class);
+        header = JsonUtils.parse(decode64(header64), HashMap.class);
         next++;
         payload64 = token.substring(next,(next=token.indexOf(DOT,next)));
         next++;
@@ -47,10 +46,13 @@ public class JwsCredential implements UserCredential{
         return sign64;
     }
 
-    void markSignValid(){
-        payload = JsonUtils.parse(decode(payload64), HashMap.class);
+    void parsePayload(){
+        payload = JsonUtils.parse(decode64(payload64), HashMap.class);
     }
 
+    public Map<String, Object> getPayload() {
+        return payload;
+    }
 
     public String getAlgorithm() {
         return header.get(PublicClaims.ALGORITHM);
@@ -101,7 +103,7 @@ public class JwsCredential implements UserCredential{
     }
 
 
-    static String decode(String part){
+    static String decode64(String part){
         return  new String(Base64.getUrlDecoder().decode(part), StandardCharsets.UTF_8);
     }
 }

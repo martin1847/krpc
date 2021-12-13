@@ -14,8 +14,8 @@ import io.grpc.StatusException;
 @FunctionalInterface
 public interface ExtVerify {
 
-    void afterSignCheck(JwsCredential jws)  throws StatusException;
+    void afterSignCheck(JwsCredential jws,boolean isCookie)  throws StatusException;
 
-    ExtVerify EMPTY = jws -> {};
+    ExtVerify EMPTY = (jws,isCookie) -> {};
 
 }

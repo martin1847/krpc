@@ -112,7 +112,7 @@ public class JwsVerify implements CredentialVerify {
      */
 
     @Override
-    public UserCredential verify(String token, String cid) throws StatusException {
+    public UserCredential verify(String token, String cid,boolean isCookie) throws StatusException {
 
         if (null == token || token.isBlank()) {
             throw Status.UNAUTHENTICATED.withDescription("requireCredential but empty token").asException();
@@ -130,12 +130,12 @@ public class JwsVerify implements CredentialVerify {
         try {
             var valid = Es256Jwk.isValid(data, signature, key);
             if (valid) {
-                jws.markSignValid();
+                jws.parsePayload();
                 if (System.currentTimeMillis() / 1000L > jws.getExpiresAt().longValue()) {
                     throw Status.UNAUTHENTICATED.withDescription("Token expired at: " + jws.getExpiresAt()).asException();
                 }
 
-                extVerify.afterSignCheck(jws);
+                extVerify.afterSignCheck(jws,isCookie);
 
                 return jws;
             }

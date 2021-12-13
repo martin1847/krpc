@@ -3,6 +3,7 @@ package com.bt.rpc.server;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.validation.Validator;
 
@@ -34,20 +35,11 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
     public static final Key<String> COOKIE = Metadata.Key.of(HttpConst.COOKIE_HEADER, Metadata.ASCII_STRING_MARSHALLER);
     public static final Key<String> AUTHORIZATION = Metadata.Key.of(HttpConst.AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
 
-
-
     static CredentialVerify credentialVerify;
-
     static Validator validator;
-
     static String applicationName;
 
-    private Metadata headers;
-    final Metadata   responseHeaders = new Metadata();
-
-    private UserCredential credential;
-
-
+    private static final Pattern COOKIE_SPLIT =  Pattern.compile(";\\s*");
 
     public static void regGlobalFilter(ServerFilter filter) {
         GLOBAL_FILTERS.add(filter);
@@ -58,8 +50,22 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
     public static void regCredentialVerify(CredentialVerify credentialVerify) {
         ServerContext.credentialVerify = credentialVerify;
     }
+    public static ServerContext current(){
+        return  LOCAL.get();
+    }
+    public static String applicationName(){return  applicationName;}
+    public static Context currentContext(){
+        return  Context.current();
+    }
 
 
+
+
+    //--------------- static over --------------------//
+
+    private Metadata headers;
+    private final Metadata   responseHeaders = new Metadata();
+    private UserCredential credential;
 
     public ServerContext(Class service, String method, Type resDto, InputProto arg,
                          FilterChain<ServerResult,ServerContext> lastChain, Metadata headers) {
@@ -85,20 +91,22 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
         if (credentialVerify != null) {
             var tokenPlace = headers.get(AUTHORIZATION);
             String token = null;
+            boolean isCookie = false;
             if (null != tokenPlace && tokenPlace.startsWith(BEARER_FLAG)) {
                 token = tokenPlace.substring(BEARER_FLAG.length() + 1);
             } else if ((tokenPlace = headers.get(COOKIE)) != null) {
-                var cookies = tokenPlace.split(";\\s*");
+                var cookies = COOKIE_SPLIT.split(tokenPlace);
                 final String cookiePrefix = credentialVerify.getCookieName()+ '=';
                 for (var ck : cookies) {
                     if (ck.startsWith(cookiePrefix)) {
                         token = ck.substring(cookiePrefix.length());
+                        isCookie = true;
                         break;
                     }
                 }
             }
 
-            credential = credentialVerify.verify(token,clientId());
+            credential = credentialVerify.verify(token,clientId(),isCookie);
         }
     }
 
@@ -106,15 +114,6 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
         return credential;
     }
 
-    public static ServerContext current(){
-        return  LOCAL.get();
-    }
-
-    public static String applicationName(){return  applicationName;}
-
-    public static Context currentContext(){
-        return  Context.current();
-    }
 
 
 }

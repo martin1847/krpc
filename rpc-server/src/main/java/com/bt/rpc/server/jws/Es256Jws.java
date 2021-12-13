@@ -47,12 +47,17 @@ public class Es256Jws {
         return jws(subject,epochSecond,EMPTY);
     }
 
-    public String jws(String subject, long epochSecond, Consumer<Map<String, Object>> bodyHanlder) {
+    public String jws(String subject, long epochSecond, Consumer<Map<String, Object>> bodyRender) {
 
         var payloadClaims = new HashMap<String, Object>();
         payloadClaims.put(PublicClaims.SUBJECT, subject);
         payloadClaims.put(PublicClaims.EXPIRES_AT, epochSecond);
-        bodyHanlder.accept(payloadClaims);
+        bodyRender.accept(payloadClaims);
+        return jws(payloadClaims);
+    }
+
+
+    public String jws(Map<String, Object> payloadClaims){
         String header = jwtHeader64;
         String payload = Es256Signature.base64(JsonUtils.stringify(payloadClaims).getBytes(StandardCharsets.UTF_8));
         return signature.sign(header, payload);

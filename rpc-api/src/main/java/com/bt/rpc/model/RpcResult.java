@@ -1,9 +1,9 @@
 package com.bt.rpc.model;
 
+import java.io.Serializable;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
-
-import java.io.Serializable;
 
 /**
  * 2020-01-02 17:21
@@ -44,6 +44,10 @@ public class RpcResult<DTO> implements Serializable {
         res.code = code;
         res.message = msg;
         return res;
+    }
+
+    public static <T> RpcResult<T> error(RpcResult<?> error) {
+        return (RpcResult<T>) error;
     }
 
 }

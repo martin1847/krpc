@@ -66,6 +66,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
     private Metadata headers;
     private final Metadata   responseHeaders = new Metadata();
     private UserCredential credential;
+    private boolean isCookie = false;
 
     public ServerContext(Class service, String method, Type resDto, InputProto arg,
                          FilterChain<ServerResult,ServerContext> lastChain, Metadata headers) {
@@ -91,7 +92,6 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
         if (credentialVerify != null) {
             var tokenPlace = headers.get(AUTHORIZATION);
             String token = null;
-            boolean isCookie = false;
             if (null != tokenPlace && tokenPlace.startsWith(BEARER_FLAG)) {
                 token = tokenPlace.substring(BEARER_FLAG.length() + 1);
             } else if ((tokenPlace = headers.get(COOKIE)) != null) {

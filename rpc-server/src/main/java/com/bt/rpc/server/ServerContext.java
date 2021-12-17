@@ -13,6 +13,7 @@ import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.server.jws.CredentialVerify;
 import com.bt.rpc.server.jws.HttpConst;
 import com.bt.rpc.server.jws.UserCredential;
+import com.bt.rpc.util.EnvUtils;
 import io.grpc.Context;
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
@@ -58,6 +59,10 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
         return  Context.current();
     }
 
+    static final Key<String> TRACE_ID = Metadata.Key.of("x-b3-traceid"
+            , Metadata.ASCII_STRING_MARSHALLER);
+    static final Key<String> SPAN_ID  = Metadata.Key.of( "x-b3-spanid"
+            , Metadata.ASCII_STRING_MARSHALLER);
 
 
 
@@ -77,6 +82,10 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto,Serv
 
     public Metadata getHeaders(){
         return headers;
+    }
+
+    public String logTrace(){
+        return EnvUtils.hostName() + ":" + headers.get(TRACE_ID)+ ":" + headers.get(SPAN_ID);
     }
 
     public Metadata getResponseHeaders() {

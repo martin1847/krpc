@@ -179,26 +179,13 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
     }
 
-
-
     public ServerResult invoke(ServerContext req) throws Throwable {
         var res = invoke.invoke(req);
         return new ServerResult(res, bytesWrite ? ServerWriter.BYTES : Serial.Instance.get(req.getArg().getEValue()));
     }
 
+    static final int MAX_ERROR_LENGTH = 100;
     // https://github.com/openzipkin/brave
-
-
-    static final Key<String> TRACE_ID = Metadata.Key.of("x-b3-traceid"
-            , Metadata.ASCII_STRING_MARSHALLER);
-    static final Key<String> SPAN_ID  = Metadata.Key.of( "x-b3-spanid"
-            , Metadata.ASCII_STRING_MARSHALLER);
-    //static final Key<String> TRACE_ID = Metadata.Key.of(EnvUtils.env("TRACE_ID", "x-b3-traceid")
-    //        , Metadata.ASCII_STRING_MARSHALLER);
-    //static final Key<String> SPAN_ID  = Metadata.Key.of(EnvUtils.env("SPAN_ID", "x-b3-spanid")
-    //        , Metadata.ASCII_STRING_MARSHALLER);
-
-    //static final String      HOST_NAME = ;
     // https://quarkus.io/guides/logging
     // [%X{traceId}/%X{spanId}]
     @Override
@@ -224,10 +211,8 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             responseObserver.onNext(res.output);
             responseObserver.onCompleted();
         } catch (Throwable ex) {
-            // will cached by GraalVM
-            var headers = ctx.getHeaders();
-            var msg = EnvUtils.hostName() + ":" + headers.get(TRACE_ID);
-            log.error(msg + ":" + headers.get(SPAN_ID), ex);
+            var traceId = ctx.logTrace();
+            log.error(traceId , ex);
 
             Throwable wrapToClient = ex;
             if (ex instanceof InvocationTargetException) {
@@ -236,14 +221,17 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
                 //Server side application throws an exception (or does something other than returning a Status code to terminate an RPC)
                 //https://grpc.github.io/grpc/core/md_doc_statuscodes.html
+                var errMsg = wrapToClient.getMessage();
+                if(null != errMsg && errMsg.length() > MAX_ERROR_LENGTH){
+                    errMsg = errMsg.substring(0,MAX_ERROR_LENGTH)+"...";
+                }
                 wrapToClient = Status.UNKNOWN.withDescription(
-                                msg + " - " + wrapToClient.getClass().getName() + ": " + wrapToClient.getMessage())
+                                traceId + "," + wrapToClient.getClass().getSimpleName() + "," + errMsg)
                         .withCause(wrapToClient).asRuntimeException();
             }
             responseObserver.onError(wrapToClient);
         } finally {
             ServerContext.LOCAL.remove();
-
         }
     }
 }

@@ -32,6 +32,11 @@ public class RpcResult<DTO> implements Serializable {
         return OK == code;
     }
 
+    @JsonIgnore
+    public <T> RpcResult<T> error() {
+        return (RpcResult<T>) this;
+    }
+
 
     public static <T> RpcResult<T> ok(T data){
         RpcResult<T> res = new RpcResult<>();

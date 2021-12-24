@@ -1,0 +1,72 @@
+[
+
+  {
+    "name" : "io.grpc.netty.NettyChannelProvider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.netty.NettyServer$1",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "io.grpc.netty.WriteBufferingAndExceptionHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+  {
+    "name" : "io.grpc.netty.ProtocolNegotiators$WaitUntilActiveHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+  {
+    "name" : "io.grpc.netty.ProtocolNegotiators$GrpcNegotiationHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "io.grpc.netty.NettyServerHandler",
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+
+
+  {
+    "name" : "io.grpc.util.SecretRoundRobinLoadBalancerProvider$Provider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+
+  {
+    "name" : "io.grpc.internal.DnsNameResolverProvider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "io.grpc.internal.PickFirstLoadBalancerProvider",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  }
+
+
+]

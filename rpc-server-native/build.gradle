@@ -24,6 +24,8 @@ dependencies {
 
     implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
     implementation "io.quarkus:quarkus-arc"
+    api "io.quarkus:quarkus-netty"
+
 //    implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
 

@@ -9,7 +9,7 @@ syntax = "proto3";
 //https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/struct.proto
 // protoc  --java_out=outj internal.proto
 // --csharp_out=outc
-// protoc internal.proto  --js_out=import_style=commonjs,binary:grpc --grpc-web_out=import_style=typescript,mode=grpcweb:grpc
+// protoc internal.proto  --js_out=import_style=commonjs,binary:js --grpc-web_out=import_style=typescript,mode=grpcweb:js
 // https://github.com/grpc/grpc-web#wire-format-mode
 
 option csharp_namespace = "Com.Bt.Rpc.Internal";
@@ -27,18 +27,24 @@ package com.bt.rpc.internal;
 // https://github.com/protocolbuffers/protobuf/blob/master/java/lite.md
 
 
-service Grpc {
+service Rpc {
   rpc call (InputProto) returns (OutputProto);
 }
 
-//enum SerialEnum {
-//    JSON = 0;
-//}
+enum SerialEnum {
+    JSON = 0;
+    //HESSIAN = 1;
+    //MSG_PACK = 2;
+    //KRYO = 3;
+}
 
 
 message InputProto {
-  // int32 e = 1; // default from SerialEnum.JSON = 0 , not allow modify
-  string utf8 = 2;
+  SerialEnum e = 1;
+  oneof data {
+  	string utf8 = 2;//for json , txt like serial
+   	bytes bs = 3; // ByteString, others Serialization transfer by protobuf
+  }
 }
 
 message OutputProto {

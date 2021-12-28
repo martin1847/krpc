@@ -27,15 +27,15 @@ package com.bt.rpc.internal;
 // https://github.com/protocolbuffers/protobuf/blob/master/java/lite.md
 
 
-service Rpc {
-  rpc call (InputProto) returns (OutputProto);
-}
+//service Gr apc {
+//  rpc call (InputProto) returns (OutputProto);
+//}
 
 enum SerialEnum {
     JSON = 0;
-    //HESSIAN = 1;
-    //MSG_PACK = 2;
-    //KRYO = 3;
+    HESSIAN = 1;
+    MSG_PACK = 2;
+    KRYO = 3;
 }
 
 

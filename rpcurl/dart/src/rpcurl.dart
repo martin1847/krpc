@@ -91,8 +91,13 @@ void main(List<String> arguments) async {
 
   final channel = ClientChannel(uri.host, port: uri.port, options: options);
 
-  final baseService = BaseService(channel, app, sName,
-      ServiceConfig(accessToken: args['token'] ?? envVarMap[ENV_TOKEN]));
+  final baseService = BaseService(
+      channel,
+      app,
+      sName,
+      ServiceConfig(
+          accessToken: args['token'] ?? envVarMap[ENV_TOKEN],
+          clientId: 'drpcurl-${Platform.localHostname}'));
 
   String? param = args['data'];
   String? file = args['file'];

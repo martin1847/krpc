@@ -102,6 +102,8 @@ void main(List<String> arguments) async {
 
   final channel = ClientChannel(uri.host, port: uri.port, options: options);
 
+
+  // TODO clientId bind with the token & headers
   final baseService = BaseService(
       channel,
       app,

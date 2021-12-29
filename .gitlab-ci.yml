@@ -12,17 +12,17 @@ build:
     - gradle build -Dquarkus.package.type=native -x test
     - gradle publish
 
-
-docker:
-  variables:
-    DOCKER_TAG: latest
-    APP_NAME: "rpcurl"
-    APP_NAMESPACE: common
-  extends: .docker
-  rules:
-  - if: '$CI_COMMIT_BRANCH == "dev"'
-    when: manual
-
+#
+#docker:
+#  variables:
+#    DOCKER_TAG: latest
+#    APP_NAME: "rpcurl"
+#    APP_NAMESPACE: common
+#  extends: .docker
+#  rules:
+#  - if: '$CI_COMMIT_BRANCH == "dev"'
+#    when: manual
+#
 
 #
 #.helm:

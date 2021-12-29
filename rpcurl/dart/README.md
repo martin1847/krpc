@@ -8,5 +8,6 @@ The default entrypoint is for this image is Cmd.exe. To run the image:
 docker run mcr.microsoft.com/windows/servercore:ltsc2022
 
 ```bash
-dart compile exe  src/rpcurl.dart    
+dart run
+dart compile exe  bin/rpcurl.dart    
 ```

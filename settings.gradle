@@ -20,6 +20,7 @@ pluginManagement {
 
 include 'test-api','test-server'
 
-include 'rpc-api','rpc-common','rpc-client','rpc-server','rpcurl','rpc-server-native'
+include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-native'
+//include 'rpcurl'
 
 //include 'quarkus-mybatis','quarkus-mybatis-deployment'

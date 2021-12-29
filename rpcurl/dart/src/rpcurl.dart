@@ -8,6 +8,8 @@ import 'dart:core';
 
 /**
  * 
+ * rpcurl https://example.testbtyxapi.com/demo-java-server/Demo/hello 
+ * rest test the data
  *  dart compile exe  src/rpcurl.dart    
  * 
 Code	Meaning
@@ -37,7 +39,8 @@ void main(List<String> arguments) async {
     ..addFlag('help', negatable: false, abbr: 'h', help: 'show usage')
     ..addOption('url',
         abbr: 'u',
-        help: '服务地址,也可通过环境变量`$ENV_URL`传递，如: https://example.testbtyxapi.com')
+        help:
+            '服务地址,默认参数,必传,也可通过环境变量`$ENV_URL`传递，如: https://example.testbtyxapi.com/demo-java-server/Demo/hello')
     ..addOption('app',
         abbr: 'a', help: '服务项目名,也可通过环境变量`$ENV_APP`传递,如 demo-java-server')
     ..addOption('service', abbr: 's', help: '服务名', defaultsTo: META_SERVICE)
@@ -66,20 +69,28 @@ void main(List<String> arguments) async {
   if (local) {
     url = LOCAL;
   } else {
-    url = args['url'] ?? envVarMap[ENV_URL];
+    url = args['url'] ??
+        (args.rest.isNotEmpty ? args.rest[0] : null) ??
+        envVarMap[ENV_URL];
   }
 
-  String? app = args['app'] ?? envVarMap[ENV_APP];
-  if (args['help'] || null == app || null == url) {
-    print('Usage: rpcurl [-hLPVW] -a=<app> ...');
-    print('测试rpc服务\r\n');
-    print(parser.usage);
+  if (args['help'] || null == url) {
+    showUsage(parser);
     exit(1);
   }
 
-  var sName = args['service'];
-  var mName = args['method'];
   var uri = Uri.parse(url);
+
+  var paths = uri.pathSegments;
+  String? app =
+      paths.isNotEmpty ? paths.first : args['app'] ?? envVarMap[ENV_APP];
+  if (null == app) {
+    showUsage(parser);
+    exit(1);
+  }
+
+  var sName = paths.length >= 2 ? paths[1] : args['service'];
+  var mName = paths.length >= 3 ? paths[2] : args['method'];
   if ((args['no-web'] || sName == META_SERVICE) && !app.startsWith('-')) {
     app = "-" + app;
   }
@@ -107,7 +118,8 @@ void main(List<String> arguments) async {
 
   try {
     print('');
-    print('$uri/$app/$sName/$mName');
+    var portStr = uri.port == 443 || uri.port == 80 ? "" : ':${uri.port}';
+    print('${uri.scheme}://${uri.host}$portStr/$app/$sName/$mName');
     if (null != param) {
       print('${jsonDecode(param)}');
     }
@@ -124,6 +136,7 @@ void main(List<String> arguments) async {
         ? jsonEncode(jsonRes)
         : JsonEncoder.withIndent('  ').convert(jsonRes));
   } catch (e) {
+    print('');
     print('Caught error: $e');
   }
 
@@ -132,6 +145,12 @@ void main(List<String> arguments) async {
   await channel.shutdown();
 }
 
+void showUsage(ArgParser parser) {
+  print(
+      'Usage: rpcurl https://demo.btyxapi.com/appName/Demo/methodName -f param.json');
+  print('测试rpc服务\r\n');
+  print(parser.usage);
+}
 // Future<void> _handleError(String path) async {
 //   if (await FileSystemEntity.isDirectory(path)) {
 //     stderr.writeln('error: $path is a directory');

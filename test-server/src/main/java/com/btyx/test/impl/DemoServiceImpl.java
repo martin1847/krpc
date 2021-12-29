@@ -1,5 +1,6 @@
 package com.btyx.test.impl;
 
+import com.bt.rpc.server.ServerContext;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.dto.TimeResult;
 import com.btyx.test.DemoService;
@@ -14,6 +15,7 @@ import java.time.temporal.ChronoField;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * TODO change this comment
@@ -27,7 +29,8 @@ public class DemoServiceImpl implements DemoService {
     @Override
     public RpcResult<TimeResult> hello(TimeReq req) {
         var res = new TimeResult();
-        res.setTime(" from  (" + EnvUtils.hostName() + ") : " + req);
+
+        res.setTime(" from  (" + EnvUtils.hostName() + ", with meta : " + ServerContext.current().getHeaders()+") : " + req);
         res.setTimestamp(System.currentTimeMillis());
         return RpcResult.ok(res);
     }
@@ -63,24 +66,29 @@ public class DemoServiceImpl implements DemoService {
     }
 
     @Override
-    public RpcResult<String> str() {
-        return RpcResult.ok("java5678");
+    public RpcResult<String> str(String in) {
+        return RpcResult.ok("java5678:got:" + in);
     }
 
     @Override
-    public RpcResult<Map<String, Integer>> map() {
+    public RpcResult<Map<String, Integer>> testMap() {
         return RpcResult.ok(Collections.singletonMap("key1",123));
     }
 
     @Override
-    public RpcResult<Integer> pingWithRuntimeException() {
-        throw  new RuntimeException("Test Java RuntimeException");
-       //return RpcResult.success(9527);
+    public RpcResult<Integer> inc100(Integer i) {
+        return RpcResult.ok( 100 + i);
     }
 
     @Override
-    public RpcResult<List<Integer>> list() {
-        return RpcResult.ok(List.of(123,456));
+    public RpcResult<Integer> testRuntimeException() {
+        throw  new RuntimeException("Test Java RuntimeException");
+        //return RpcResult.success(9527);
     }
 
+    @Override
+    public RpcResult<List<Integer>> wordLength(List<String> list) {
+        return
+                RpcResult.ok(list.stream().map(String::length).collect(Collectors.toList()));
+    }
 }

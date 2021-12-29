@@ -1,10 +1,10 @@
 package com.btyx.test;
 
 import com.bt.rpc.annotation.UnsafeWeb;
-import com.btyx.test.dto.TimeReq;
-import com.btyx.test.dto.TimeResult;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
+import com.btyx.test.dto.TimeReq;
+import com.btyx.test.dto.TimeResult;
 
 import java.util.List;
 import java.util.Map;
@@ -18,7 +18,7 @@ import java.util.Map;
 @RpcService(description = "this is a Java test service")
 public interface DemoService {
 
-//    @Cached
+    //    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
 
     RpcResult<byte[]> bytesTime();
@@ -28,11 +28,16 @@ public interface DemoService {
     RpcResult<Integer> bytesSum(byte[] bytes);
 
     @Deprecated
-//    @Cached
-    RpcResult<String> str();
-    RpcResult<Map<String,Integer>> map();
+    RpcResult<String> str(String hello);
 
-    RpcResult<Integer> pingWithRuntimeException();
+    /**
+     * Only for test . use Map is a not a good design for really service
+     */
+    RpcResult<Map<String,Integer>> testMap();
 
-    RpcResult<List<Integer>> list();
+    RpcResult<Integer> inc100(Integer i);
+
+    RpcResult<Integer> testRuntimeException();
+
+    RpcResult<List<Integer>> wordLength(List<String> list);
 }

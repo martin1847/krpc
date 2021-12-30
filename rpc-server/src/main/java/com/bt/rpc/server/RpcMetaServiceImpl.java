@@ -1,11 +1,13 @@
 package com.bt.rpc.server;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,16 +59,17 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
     public void init(List<RpcMetaMethod> methods) {
 
-        var dtos = new HashMap<Type, Dto>();
+        var dtos = new HashMap<String, Dto>();
 
         List<Api> apis = new ArrayList<>();
         methods.stream()
                 .collect(Collectors.groupingBy(RpcMetaMethod::getServieName))
                 .forEach((k, v) -> {
                     List<Method> apiMethods = new ArrayList<>();
-                    for (var m : v) {
-                        apiMethods.add(new Method(m.getName(), getOrAdd(dtos, m.getArg()),
-                                getOrAdd(dtos, m.getRes()),
+                    for (RpcMetaMethod m : v) {
+                        apiMethods.add(new Method(m.getName(),
+                                getOrAdd(dtos, m.getArg(),true,"req",null),
+                                getOrAdd(dtos, m.getRes(),false,"",null),
                                Stream.of(m.getAnnotations()).map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
                         ));
                     }
@@ -81,55 +84,78 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
     }
 
-    static Dto getOrAdd(HashMap<Type, Dto> dic, Type t) {
-        if (null == t) {
+    static   Dto cls2dto(HashMap<String, Dto> dic, Type type,int generics, boolean input) {
+
+        if(null == type){
             return null;
         }
 
-        var dto = dic.get(t);
+        if(type instanceof Class ){
+            var fClz = ((Class<?>) type);
+            var fName = fClz.getSimpleName();
+            var dto = dic.get(fName);
+            if(null!=dto){
+                if(input){
+                    dto.setInput(input);
+                }
+                return dto;
+            }
 
-        if (dto != null) {
+            // skip Array , use list
+            if(!fClz.isPrimitive()){
+                if(fClz.isEnum()){
+                    fName = "String";
+                }
+                dto = new Dto(fName,generics,input);
+                if(!fClz.getName().startsWith("java.")){
+                    dto.setFields(clsFields(dic,fClz,input));
+                }
+                dic.put(fName,dto);
+            }
             return dto;
         }
-        var tp = t;
 
+        var pt = (ParameterizedType)type;
 
-        StringBuilder gen = null;
-        if (t instanceof ParameterizedType) {
-            tp = ((ParameterizedType) t).getRawType();
-            var genType = ((ParameterizedType) t).getActualTypeArguments();
-            if (genType != null && genType.length > 0) {
-                gen = new StringBuilder(30).append('<');
-                for (var genT : genType) {
-                    gen.append(((Class) genT).getSimpleName()).append(',');
-                    getOrAdd(dic, genT);
-                }
-                gen.setCharAt(gen.length() - 1, '>');
-            }
+        for (var t : pt.getActualTypeArguments()){
+            cls2dto(dic,t,0,input);
         }
-        var clz = (Class) tp;
-        var name = gen == null ? clz.getSimpleName() : clz.getSimpleName() + gen.toString();
-        var ns = clz.getPackageName();
-        var dd = new Dto();
-        dd.setName(name);
-        if (ns == null || !ns.startsWith("java")) {
+        return cls2dto(dic,pt.getRawType(),pt.getActualTypeArguments().length,input);
+    }
 
-
-            var fields = Stream.of(clz.getDeclaredFields())
-                    .filter(f-> ! Modifier.isStatic(f.getModifiers()))
+    static List<Property> clsFields(HashMap<String, Dto> dic,Class type,boolean input){
+        List<Field> fields = new ArrayList<>();
+        for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+            fields.addAll(Arrays.asList(c.getDeclaredFields()));
+        }
+        return fields.stream().filter(f-> ! Modifier.isStatic(f.getModifiers()))
                     .map(f ->
-                            new Property(f.getName()
-                                    , getOrAdd(dic, f.getType())
-                                    , Stream.of(f.getDeclaredAnnotations())
-                                    .map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
-                            )
+                            getOrAdd(dic, f.getType(),input ,f.getName(),f.getDeclaredAnnotations())
                     )
                     .collect(Collectors.toList());
-            dd.setFields(fields);
-        }
-        dic.put(t, dd);
-        return dd;
+    }
 
+    static Property getOrAdd(HashMap<String, Dto> dic, Type t, boolean input,String name,Annotation[] annotations) {
+
+
+        Dto  rawDto;
+        List<Dto> generics = null;
+        if(t instanceof ParameterizedType){
+            var genTypes = ((ParameterizedType) t).getActualTypeArguments();
+            generics = new ArrayList<>();
+            for (var genType : genTypes){
+                generics.add(cls2dto(dic,genType,0,input));
+            }
+            rawDto = cls2dto(dic,t,genTypes.length,input);
+        }else{
+            rawDto = cls2dto(dic,t,0,input);
+        }
+
+       return   new Property(name
+                , rawDto,generics
+                , annotations ==null? null: Stream.of(annotations)
+                .map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
+        );
     }
 
     @Data

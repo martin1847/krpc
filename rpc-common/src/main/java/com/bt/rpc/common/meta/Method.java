@@ -11,8 +11,8 @@ import java.util.List;
 @NoArgsConstructor
 public class Method {
     String name;
-    Dto arg;
-    Dto res;
+    Property arg;
+    Property res;
 
     List<Anno> annotations;
 }

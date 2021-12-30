@@ -122,6 +122,7 @@ public abstract class RefUtils {
 
     }
 
+    public static final char HIDDEN_SERVICE = '-';
     public static String rpcServiceName(String appName,Class clz) {
 
         //var pac =  clz.getPackageName();
@@ -141,7 +142,7 @@ public abstract class RefUtils {
         var fullName = appName + "/" + name;
         if(! clz.isAnnotationPresent(UnsafeWeb.class) ){
             // use - prefix to hidden the service
-            fullName = "-" + fullName;
+            fullName = HIDDEN_SERVICE + fullName;
         }
         return fullName ;
     }

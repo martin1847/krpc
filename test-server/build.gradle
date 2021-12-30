@@ -45,7 +45,7 @@ dependencies {
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
     testImplementation 'org.mockito:mockito-core:4.0.0'
 
-    testImplementation 'org.freemarker:freemarker:2.3.31'
+//    testImplementation 'org.freemarker:freemarker:2.3.31'
 
 //    implementation 'org.mybatis:mybatis:3.5.7'
 

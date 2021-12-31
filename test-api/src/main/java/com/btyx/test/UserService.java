@@ -4,6 +4,7 @@
  */
 package com.btyx.test;
 
+import com.bt.rpc.annotation.UnsafeWeb;
 import com.btyx.test.dto.User;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.model.PagedList;
@@ -16,6 +17,7 @@ import com.bt.rpc.model.RpcResult;
  * @version 2021/10/27 10:52 AM
  */
 @RpcService
+@UnsafeWeb
 public interface UserService {
 
     RpcResult<User> getUser(Integer id);

@@ -61,6 +61,11 @@
     "allPublicMethods" : true
   },
   {
+  "name" : "com.bt.rpc.common.meta.PropertyType",
+  "allPublicConstructors" : true,
+  "allPublicMethods" : true
+  },
+  {
     "name" : "com.bt.rpc.common.meta.Anno",
     "allPublicConstructors" : true,
     "allPublicMethods" : true

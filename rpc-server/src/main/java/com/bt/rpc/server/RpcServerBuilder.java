@@ -1,6 +1,8 @@
 package com.bt.rpc.server;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,16 +12,19 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.filter.FilterInvokeHelper;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
-import com.bt.rpc.server.RpcMetaServiceImpl.RpcMetaMethod;
-import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.common.meta.ApiMeta;
+import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerServiceDefinition;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -124,23 +129,11 @@ public class RpcServerBuilder {
 
 				boolean needMeta = clz != RpcMetaService.class;
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
-
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
-
 					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
-						var methodArgs = stub.method.getGenericParameterTypes();
-
-						metaMethods.add(new RpcMetaMethod
-										(
-							stub.methodDescriptor.getServiceName(),
-												stub.method.getName(),
-												methodArgs.length == 1 ? methodArgs[0]  : null,
-												stub.returnType
-												,attr.description()
-												, stub.method.getDeclaredAnnotations()
-										));
+						metaMethods.add(toMeta(stub,attr));
 					}
 				}
 				var srv = serviceDefBuilder.build();
@@ -159,10 +152,42 @@ public class RpcServerBuilder {
 
 
 		}
-		metaService.init(metaMethods);
+		metaService.init(buildApiMeta(metaMethods));
 		return serverBuilder.build();
 	}
-	
+
+	public static ApiMeta buildApiMeta(List<RpcMetaMethod> methods){
+		return 	RpcMetaServiceImpl.buildApiMeta(methods);
+	}
+
+	public static  RpcMetaMethod toMeta(MethodStub stub,RpcService attr){
+		var methodArgs = stub.method.getGenericParameterTypes();
+		return new RpcMetaMethod
+				(
+						stub.methodDescriptor.getServiceName(),
+						stub.method.getName(),
+						methodArgs.length == 1 ? methodArgs[0]  : null,
+						stub.returnType
+						,attr.description()
+						, stub.method.getDeclaredAnnotations()
+				);
+	}
+
+	@Data
+	@AllArgsConstructor
+	@NoArgsConstructor
+	public static class RpcMetaMethod {
+
+		String servieName;
+		String name;
+		Type   arg;
+		Type   res;
+
+		String description;
+
+		Annotation[] annotations;
+	}
+
 	public Server startServer() throws IOException {
 		return server.start();
 	}

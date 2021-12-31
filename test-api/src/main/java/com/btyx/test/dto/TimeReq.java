@@ -1,5 +1,7 @@
 package com.btyx.test.dto;
 
+import java.util.List;
+
 import com.bt.rpc.annotation.Doc;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,4 +27,17 @@ public class TimeReq {
     @NotNull
     @Min(1)@Max(80)
     private Integer age;
+
+
+    private String test;
+
+
+    private List<Integer> test1;
+
+    private List<User> test2;
+
+
+
+    @Doc(value = "test Hidden", hidden = true)
+    private String hidden;
 }

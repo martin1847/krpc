@@ -16,6 +16,7 @@ import freemarker.template.TemplateException;
  */
 public class TestFtl {
     public static void main(String[] args) throws TemplateException, IOException {
-        Gen.main(args);
+        //Gen.genTypescript("demo-java-server",null);
+        Gen.genDart("demo-java-server",null);
     }
 }

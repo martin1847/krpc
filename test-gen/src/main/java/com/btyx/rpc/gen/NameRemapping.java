@@ -4,12 +4,15 @@
  */
 package com.btyx.rpc.gen;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
-import com.bt.rpc.common.meta.Dto;
-import com.bt.rpc.common.meta.PropertyType;
+import com.btyx.rpc.gen.meta.Anno;
+import com.btyx.rpc.gen.meta.Dto;
+import com.btyx.rpc.gen.meta.PropertyType;
+import com.google.common.base.Function;
 
 /**
  *
@@ -18,44 +21,59 @@ import com.bt.rpc.common.meta.PropertyType;
  */
 public class NameRemapping {
 
+    final Map<String, String> nameMapping;
 
-    static Map<String,String> nameMapping = new HashMap<>();
+    final Map<String, Function<Anno, String>> annoMapping;
 
-    static {
-        nameMapping.put("String","string");
-        nameMapping.put("Integer","number");
-        nameMapping.put("Long","number");
-        nameMapping.put("Float","number");
-        nameMapping.put("Double","number");
-        nameMapping.put("Boolean","boolean");
-        nameMapping.put("List","Array");
-        nameMapping.put("byte[]","Uint8Array");
-        nameMapping.put("Object","T");
+    public NameRemapping(Map<String, String> nameMapping,
+                         Map<Class, Function<Anno, String>> annoMapping) {
+        this.nameMapping = nameMapping;
+        this.annoMapping = annoMapping.entrySet().stream().collect(
+                Collectors.toMap(k -> k.getKey().getSimpleName(), Entry::getValue));
     }
 
-
-    void remapping(Dto dto){
-        var newName =nameMapping.get(dto.getName());
-        if(null != newName){
+    void remapping(Dto dto) {
+        var newName = nameMapping.get(dto.getName());
+        if (null != newName) {
             dto.setName(newName);
         }
-        if(dto.hasChild()){
-            dto.getFields().forEach(f->{
+        if (dto.hasChild()) {
+            dto.getFields().forEach(f -> {
+                remappingAnnos(f.getAnnotations());
                 remapping(f.getType().getRawType());
                 remapping(f.getType().getGenerics());
             });
         }
     }
-    void remapping(PropertyType gen){
+
+    void remapping(PropertyType gen) {
+        if (null == gen) {
+            return;
+        }
         remapping(gen.getRawType());
         remapping(gen.getGenerics());
     }
 
-    void remapping(List<PropertyType> gens){
-        if(null == gens || gens.isEmpty()){
+    void remapping(List<PropertyType> gens) {
+        if (null == gens || gens.isEmpty()) {
             return;
         }
         gens.forEach(this::remapping);
+    }
+
+    void remappingAnnos(List<Anno> annos) {
+        if (null == annos || annos.isEmpty()) {
+            return;
+        }
+        for (var anno : annos) {
+            var mapping = annoMapping.get(anno.originName);
+            if (null != mapping) {
+                anno.setName(mapping.apply(anno));
+            } else {
+                //default as a comment
+                anno.setName("/// " + anno.originName + anno.getProperties());
+            }
+        }
     }
 
 }

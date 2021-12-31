@@ -4,6 +4,7 @@
  */
 package com.btyx.rpc.gen;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -16,12 +17,12 @@ import java.util.stream.Collectors;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.common.MethodStub;
-import com.bt.rpc.common.meta.ApiMeta;
-import com.bt.rpc.common.meta.Dto;
 import com.bt.rpc.server.RpcServerBuilder;
 import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
 import com.bt.rpc.util.JsonUtils;
 import com.bt.rpc.util.RefUtils;
+import com.btyx.rpc.gen.meta.ApiMetaRoot;
+import com.btyx.rpc.gen.meta.Dto;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import freemarker.template.Configuration;
@@ -36,14 +37,23 @@ import freemarker.template.TemplateExceptionHandler;
  */
 public class Gen {
 
-    public static void main(String[] args) throws IOException, TemplateException {
+
+
+    public static void genTypescript(String appName, File outFolder) throws IOException, TemplateException {
+        gen(appName,LangEnum.Typescript,outFolder);
+    }
+
+    public static void genDart(String appName, File outFolder) throws IOException, TemplateException {
+        gen(appName,LangEnum.Dart,outFolder);
+    }
+    static void gen(String appName, LangEnum template, File outFolder) throws IOException, TemplateException {
 
         //Set<ClassInfo> classesInPackage = ClassPath.from(cl).getTopLevelClassesRecursive("com.btyx");
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));
 
-        var metas =  scan("test-server","com.btyx");
+        var metas =  scan(appName,"com");
 
         /* Create and adjust the configuration singleton */
         Configuration cfg = new Configuration(Configuration.VERSION_2_3_31);
@@ -59,24 +69,34 @@ public class Gen {
         /* Create a data-model */
         Map root = new HashMap();
         root.put("app", metas.getApp());
-        var remapping = new NameRemapping();
         var dtos = metas.getDtos().stream().filter(Dto::hasChild).collect(Collectors.toList());
         //JSON dtos;
-        dtos.forEach(remapping::remapping);
+        dtos.forEach(template.remapping::remapping);
         root.put("dtos",dtos );
 
         /* Get the template (uses cache internally) */
-        Template temp = cfg.getTemplate("typescript/dto.ts");
-
+        Template dtoTemp = cfg.getTemplate(template.dto);
         /* Merge data-model with template */
         Writer out = new OutputStreamWriter(System.out);
-        temp.process(root, out);
+        dtoTemp.process(root, out);
+
+        Template serviceTemp = cfg.getTemplate(template.serive);
+        for (var api :metas.getApis()) {
+            root.put("service",api );
+            api.getMethods().forEach(m->{
+                template.remapping.remapping(m.getArg());
+                template.remapping.remapping(m.getRes());
+            });
+            /* Merge data-model with template */
+            out = new OutputStreamWriter(System.out);
+            serviceTemp.process(root, out);
+        }
         //System.out.println(out);
-        System.out.println(JsonUtils.stringify(metas.getDtos()));
+        //System.out.println(JsonUtils.stringify(metas.getDtos()));
     }
 
 
-    static ApiMeta scan(String appName ,String pkg) throws IOException {
+    static ApiMetaRoot scan(String appName , String pkg) throws IOException {
         Set<ClassInfo> classesInPackage = ClassPath.from(Thread.currentThread().getContextClassLoader())
                 .getTopLevelClassesRecursive(pkg);
 
@@ -86,7 +106,7 @@ public class Gen {
 
             if(clz.isInterface() && clz.isAnnotationPresent(UnsafeWeb.class)){
                 var rpcAnno = clz.getAnnotation(RpcService.class);
-                //System.out.println(clz);
+                System.out.println("Found RpcService : " + clz.getName() );
                 for(MethodStub stub : RefUtils.toRpcMethods(appName,clz)){
                     metaMethods.add(RpcServerBuilder.toMeta(stub,rpcAnno));
                 }
@@ -95,8 +115,9 @@ public class Gen {
 
         var api = RpcServerBuilder.buildApiMeta(metaMethods);
         api.setApp(appName);
-        return api;
+        var json = JsonUtils.stringify(api);
 
+        return JsonUtils.parse(json,ApiMetaRoot.class);
     }
 
 }

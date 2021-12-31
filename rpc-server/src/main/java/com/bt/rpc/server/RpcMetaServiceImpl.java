@@ -1,6 +1,7 @@
 package com.bt.rpc.server;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
@@ -179,8 +180,15 @@ class RpcMetaServiceImpl implements RpcMetaService {
                         if(val instanceof Collection && ((Collection<?>) val).isEmpty()){
                             continue;
                         }
+                        if(val.getClass().isArray() && Array.getLength(val) ==0){
+                            continue;
+                        }
+                        if(val instanceof String && ((String) val).isEmpty()){
+                            continue;
+                        }
+
                         params.put(param.getName(), val);
-                    } catch (IllegalAccessException | InvocationTargetException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }

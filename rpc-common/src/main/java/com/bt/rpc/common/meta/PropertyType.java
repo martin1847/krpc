@@ -5,9 +5,7 @@
 package com.bt.rpc.common.meta;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import lombok.Data;
@@ -37,20 +35,5 @@ public class PropertyType {
         this.generics = generics;
     }
 
-    @JsonIgnore
-    public boolean isGenerics() {
-        return null != generics && generics.size()>0;
-    }
-
-    @Override
-    public String toString() {
-        if(isGenerics()) {
-            //maybe List<Integer>
-            return rawType.getName() +
-                    generics.stream().map(PropertyType::toString).collect(Collectors.joining(",", "<", ">"));
-        }
-        //default List<T>
-        return  rawType.getTypeName();
-    }
 
 }

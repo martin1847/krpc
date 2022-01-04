@@ -80,9 +80,11 @@ public class NameRemapping {
 
     String dtoFileName(String app,LangEnum lang){
         if(lang == LangEnum.Dart){
-            app = app.replace('-','_');
+            app = app.replace('-','_')+"_dto";
+        }else {
+            app +="-dto";
         }
-        return  app + lang.fileExt;
+        return  app +  lang.fileExt;
     }
 
 

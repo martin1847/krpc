@@ -8,6 +8,11 @@ out/
 *.pyc
 nupkg/
 
+
+test-api/dart
+test-api/typescript
+
+
 target/
 wrapper/
 generated/

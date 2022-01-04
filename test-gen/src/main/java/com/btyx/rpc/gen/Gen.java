@@ -113,7 +113,7 @@ public class Gen {
 
         var dtoFileName = template.dtoFileName(metas.getApp());
 
-        root.put("fileName",dtoFileName );
+        root.put("dtoFile",dtoFileName );
         System.out.println("---------- gen to : "+ outFolder);
         System.out.println("---------- gen : "+ dtoFileName);
 
@@ -127,7 +127,7 @@ public class Gen {
                 template.remapping.remapping(m.getRes());
             });
             var serviceFile = template.serviceFileName(api.getName());
-            root.put("fileName",serviceFile );
+            root.put("serviceFile",serviceFile );
             System.out.println("---------- gen : "+ serviceFile);
             serviceTemp.process(root, toWriter(outFolder,serviceFile));
         }

@@ -96,4 +96,13 @@ public class Dto {
         sb.append('>');
         return sb.toString();
     }
+
+    public void setName(String name) {
+        this.name = name;
+        if(null == originName){
+            originName = name;
+        }
+    }
+
+    public String originName;
 }

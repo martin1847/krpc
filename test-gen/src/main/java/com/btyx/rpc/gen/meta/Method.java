@@ -34,7 +34,7 @@ public class Method {
                         Boolean.TRUE.equals(it.properties.get("hidden"))
         );
         //System.out.println(name + " hidden : " + hd+" " + annotations);
-        return hd || ( arg!=null && "byte[]".equals(arg.getRawType().name));
+        return hd || ( arg!=null && "byte[]".equals(arg.getRawType().originName));
     }
 
     public boolean isCustomerInput() {

@@ -23,6 +23,7 @@ class ${dto.typeName} {
 	<#if f.required>
 	<#assign hasRequired = true >
 	</#if>
+
 </#list>
 
 <#if hasRequired>

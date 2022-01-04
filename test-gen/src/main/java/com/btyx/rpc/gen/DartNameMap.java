@@ -38,6 +38,7 @@ public class DartNameMap {
         nameMapping.put("Double","int");
         nameMapping.put("Boolean","bool");
         nameMapping.put("byte[]","List<int>");
+        nameMapping.put("Object","dynamic");
     }
 
     final static Map<Class, Function<Anno,String>> annoMapping = new HashMap<>();

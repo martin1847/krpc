@@ -5,12 +5,14 @@
 package com.btyx.rpc.gen;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,13 +40,47 @@ import freemarker.template.TemplateExceptionHandler;
 public class Gen {
 
 
+    static final char FC = File.separatorChar;
 
-    public static void genTypescript(String appName, File outFolder) throws IOException, TemplateException {
-        gen(appName,LangEnum.Typescript,outFolder);
+    static final String CLS_FOLDER_SUF = FC+"out"+FC+"test"+FC+"classes"+FC;
+
+    public static File defaultFolder(LangEnum lan){
+        var url = Gen.class.getResource("/");
+        if(null == url){
+            return null;
+        }
+        var path = url.getPath();
+        if(path.endsWith(CLS_FOLDER_SUF)){
+            var f =  new File(path.substring(0,path.length() - CLS_FOLDER_SUF.length()));
+            var subLang =  new File(f,lan.name().toLowerCase(Locale.US));
+            subLang.mkdir();
+            return subLang;
+        }
+        return null;
     }
 
-    public static void genDart(String appName, File outFolder) throws IOException, TemplateException {
-        gen(appName,LangEnum.Dart,outFolder);
+    public static void genTypescript(String appName){
+        genTypescript(appName,defaultFolder(LangEnum.Typescript));
+    }
+
+    public static void genDart(String appName){
+        genDart(appName,defaultFolder(LangEnum.Dart));
+    }
+
+    public static void genTypescript(String appName, File outFolder) {
+        try {
+            gen(appName,LangEnum.Typescript,outFolder);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void genDart(String appName, File outFolder){
+        try {
+            gen(appName,LangEnum.Dart,outFolder);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
     static void gen(String appName, LangEnum template, File outFolder) throws IOException, TemplateException {
 
@@ -52,7 +88,6 @@ public class Gen {
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));
-
         var metas =  scan(appName,"com");
 
         /* Create and adjust the configuration singleton */
@@ -67,18 +102,22 @@ public class Gen {
         cfg.setFallbackOnNullLoopVariable(false);
 
         /* Create a data-model */
-        Map root = new HashMap();
+        var root = new HashMap<String,Object>();
         root.put("app", metas.getApp());
         var dtos = metas.getDtos().stream().filter(Dto::hasChild).collect(Collectors.toList());
         //JSON dtos;
         dtos.forEach(template.remapping::remapping);
         root.put("dtos",dtos );
 
-        /* Get the template (uses cache internally) */
         Template dtoTemp = cfg.getTemplate(template.dto);
-        /* Merge data-model with template */
-        Writer out = new OutputStreamWriter(System.out);
-        dtoTemp.process(root, out);
+
+        var dtoFileName = template.dtoFileName(metas.getApp());
+
+        root.put("fileName",dtoFileName );
+        System.out.println("---------- gen to : "+ outFolder);
+        System.out.println("---------- gen : "+ dtoFileName);
+
+        dtoTemp.process(root, toWriter(outFolder,dtoFileName));
 
         Template serviceTemp = cfg.getTemplate(template.serive);
         for (var api :metas.getApis()) {
@@ -87,14 +126,23 @@ public class Gen {
                 template.remapping.remapping(m.getArg());
                 template.remapping.remapping(m.getRes());
             });
-            /* Merge data-model with template */
-            out = new OutputStreamWriter(System.out);
-            serviceTemp.process(root, out);
+            var serviceFile = template.serviceFileName(api.getName());
+            root.put("fileName",serviceFile );
+            System.out.println("---------- gen : "+ serviceFile);
+            serviceTemp.process(root, toWriter(outFolder,serviceFile));
         }
         //System.out.println(out);
         //System.out.println(JsonUtils.stringify(metas.getDtos()));
     }
 
+    static Writer toWriter(File outFolder,String fileName) throws IOException {
+        if(null == outFolder){
+            return new OutputStreamWriter(System.out);
+        }
+        var out = new File(outFolder,fileName);
+        //out.getParentFile().mkdirs();
+        return new FileWriter(out, StandardCharsets.UTF_8);
+    }
 
     static ApiMetaRoot scan(String appName , String pkg) throws IOException {
         Set<ClassInfo> classesInPackage = ClassPath.from(Thread.currentThread().getContextClassLoader())
@@ -106,7 +154,7 @@ public class Gen {
 
             if(clz.isInterface() && clz.isAnnotationPresent(UnsafeWeb.class)){
                 var rpcAnno = clz.getAnnotation(RpcService.class);
-                System.out.println("Found RpcService : " + clz.getName() );
+                System.out.println("---------- Found RpcService : " + clz.getName() );
                 for(MethodStub stub : RefUtils.toRpcMethods(appName,clz)){
                     metaMethods.add(RpcServerBuilder.toMeta(stub,rpcAnno));
                 }

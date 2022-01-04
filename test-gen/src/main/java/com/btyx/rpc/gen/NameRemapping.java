@@ -5,6 +5,7 @@
 package com.btyx.rpc.gen;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -76,4 +77,16 @@ public class NameRemapping {
         }
     }
 
+
+    String dtoFileName(String app,LangEnum lang){
+        if(lang == LangEnum.Dart){
+            app = app.replace('-','_');
+        }
+        return  app + lang.fileExt;
+    }
+
+
+    String serviceFileName(String service,LangEnum lang){
+        return service.toLowerCase(Locale.US)+ (lang == LangEnum.Dart? '_':'-')+"service"+lang.fileExt;
+    }
 }

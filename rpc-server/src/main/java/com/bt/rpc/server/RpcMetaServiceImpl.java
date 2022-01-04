@@ -187,6 +187,11 @@ class RpcMetaServiceImpl implements RpcMetaService {
                             continue;
                         }
 
+                        // skip default message
+                        if("message".equals(param.getName()) && String.valueOf(val).startsWith("{javax.validation")){
+                            continue;
+                        }
+
                         params.put(param.getName(), val);
                     } catch (Exception e) {
                         e.printStackTrace();

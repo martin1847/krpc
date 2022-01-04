@@ -26,11 +26,22 @@ public enum LangEnum {
 
     final NameRemapping remapping;
 
+    final String fileExt;
+
     LangEnum(String dto, String serive, Map<String, String> nameMapping,
              Map<Class, Function<Anno, String>> annoMapping) {
         this.dto = dto;
         this.serive = serive;
         this.remapping = new NameRemapping(nameMapping,annoMapping);
+        this.fileExt = dto.substring(dto.indexOf('.'));
+    }
+
+    String dtoFileName(String app){
+        return remapping.dtoFileName(app,this);
+    }
+
+    String serviceFileName(String service){
+        return remapping.serviceFileName(service,this);
     }
 
 }

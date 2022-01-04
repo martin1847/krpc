@@ -4,10 +4,7 @@
  */
 package test.gen;
 
-import java.io.IOException;
-
 import com.btyx.rpc.gen.Gen;
-import freemarker.template.TemplateException;
 
 /**
  *
@@ -15,8 +12,8 @@ import freemarker.template.TemplateException;
  * @version 2021/12/30 6:08 PM
  */
 public class TestFtl {
-    public static void main(String[] args) throws TemplateException, IOException {
-        Gen.genTypescript("demo-java-server",null);
-        //Gen.genDart("demo-java-server",null);
+    public static void main(String[] args) {
+        Gen.genTypescript("demo-java-server");
+        Gen.genDart("demo-java-server");
     }
 }

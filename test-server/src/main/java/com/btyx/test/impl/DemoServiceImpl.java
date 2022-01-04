@@ -6,6 +6,8 @@ import com.btyx.test.dto.TimeResult;
 import com.btyx.test.DemoService;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.util.EnvUtils;
+import com.btyx.test.dto.User;
+import com.btyx.test.dto.UserStatus;
 import io.quarkus.runtime.Startup;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -33,6 +35,11 @@ public class DemoServiceImpl implements DemoService {
         res.setTime(" from  (" + EnvUtils.hostName() + ", with meta : " + ServerContext.current().getHeaders()+") : " + req);
         res.setTimestamp(System.currentTimeMillis());
         return RpcResult.ok(res);
+    }
+
+    @Override
+    public RpcResult<String> save(User user) {
+        return RpcResult.ok(String.valueOf(user));
     }
 
     @Override

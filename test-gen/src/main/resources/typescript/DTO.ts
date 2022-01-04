@@ -25,6 +25,14 @@ import {
 export const APP = '${app}';
 
 <#list dtos as dto>
+<#if dto.doc?has_content>/// ${dto.doc}</#if>
+<#if dto.enum>
+export const enum ${dto.typeName} {
+	<#list dto.fields as f>
+	${f.name} = "${f.name}"${f?has_next?then(',','')}
+	</#list>
+}
+<#else>
 export ${dto.input?then('class','interface')}  ${dto.typeName} {
  <#assign hasRequired = false>
  <#list dto.fields?filter(f->! f.hidden) as f>
@@ -46,5 +54,6 @@ export ${dto.input?then('class','interface')}  ${dto.typeName} {
 	}
  </#if>
 }
+</#if>
 
 </#list>

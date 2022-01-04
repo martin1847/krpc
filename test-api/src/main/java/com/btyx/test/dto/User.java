@@ -1,13 +1,19 @@
 package com.btyx.test.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class User {
     private Integer id;
     private String name;
+
+
+    UserStatus stat;
+
+    public User(Integer id, String name) {
+        this.id = id;
+        this.name = name;
+    }
 }

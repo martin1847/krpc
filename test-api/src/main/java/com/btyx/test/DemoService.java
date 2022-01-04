@@ -1,10 +1,12 @@
 package com.btyx.test;
 
+import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.dto.TimeResult;
+import com.btyx.test.dto.User;
 
 import java.util.List;
 import java.util.Map;
@@ -15,14 +17,17 @@ import java.util.Map;
  * @author Martin.C
  */
 @UnsafeWeb
-@RpcService(description = "this is a Java test service")
+@RpcService(description = "这是个例子, Demo，用来演示客户端调用")
 public interface DemoService {
 
     //    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
 
+    RpcResult<String> save(User user);
+
     RpcResult<byte[]> bytesTime();
 
+    // TS / Dart 客户端不支持 byte[] 做为入参
     RpcResult<byte[]> incBytes(byte[] bytes);
 
     RpcResult<Integer> bytesSum(byte[] bytes);
@@ -30,13 +35,12 @@ public interface DemoService {
     @Deprecated
     RpcResult<String> str(String hello);
 
-    /**
-     * Only for test . use Map is a not a good design for really service
-     */
+    // 只是做为功能测试，生产环境不要返回Map
     RpcResult<Map<String,Integer>> testMap();
 
     RpcResult<Integer> inc100(Integer i);
 
+    @Doc("调用这个接口服务端会抛出RuntimeException")
     RpcResult<Integer> testRuntimeException();
 
     RpcResult<List<Integer>> wordLength(List<String> list);

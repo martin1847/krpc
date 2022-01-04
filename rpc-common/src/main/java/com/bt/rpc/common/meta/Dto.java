@@ -28,21 +28,22 @@ public class Dto {
 
     // 是否只是做为范型占位符
     boolean parameterized;
+
+    String doc;
     //
     //public boolean hasChild() {
     //    return null != fields && !fields.isEmpty();
     //}
 
-    public Dto(String name, int typeVar, boolean input) {
-        this.name = name;
-        this.typeVar = typeVar;
-        this.input = input;
+    public Dto(String name, int typeVar, boolean input,String doc) {
+        this(name,typeVar,input,doc,false);
     }
 
-    public Dto(String name, int typeVar, boolean input,boolean parameterized) {
+    public Dto(String name, int typeVar, boolean input,String doc,boolean parameterized) {
         this.name = name;
         this.typeVar = typeVar;
         this.input = input;
+        this.doc = doc;
         this.parameterized = parameterized;
     }
 }

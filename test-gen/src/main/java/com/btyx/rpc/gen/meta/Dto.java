@@ -26,32 +26,16 @@ public class Dto {
     // 是否只是做为范型占位符
     boolean parameterized;
 
+
+    String doc;
+
     public boolean hasChild() {
         return null != fields && !fields.isEmpty();
     }
 
-    public Dto(String name, int typeVar, boolean input) {
-        this.name = name;
-        this.typeVar = typeVar;
-        this.input = input;
+    public boolean isEnum() {
+        return hasChild() && fields.get(0).type == null;
     }
-
-    public Dto(String name, int typeVar, boolean input,boolean parameterized) {
-        this.name = name;
-        this.typeVar = typeVar;
-        this.input = input;
-        this.parameterized = parameterized;
-    }
-
-    //public Dto(String name, List<String> typeVarList, boolean input) {
-    //    this.name = name;
-    //    this.typeVarList = typeVarList;
-    //    this.input = input;
-    //    if(null!=typeVarList){
-    //        typeVar = typeVarList.size();
-    //    }
-    //}
-
 
     public String getInnerType() {
         if(hasChild() && 1 == typeVar){

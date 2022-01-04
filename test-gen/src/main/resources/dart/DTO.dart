@@ -10,6 +10,14 @@ part '${dtoFile?replace(".dart",".g.dart")}';
 const APP_NAME = '${app}';
 
 <#list dtos as dto>
+<#if dto.doc?has_content>/// ${dto.doc}</#if>
+<#if dto.enum>
+enum ${dto.typeName} {
+	<#list dto.fields as f>
+	${f.name}${f?has_next?then(',','')}
+	</#list>
+}
+<#else>
 <#if !dto.input>/// Server Response </#if>
 @JsonSerializable(explicitToJson: true<#if dto.typeVar gt 0 >, genericArgumentFactories: true</#if>)
 class ${dto.typeName} {
@@ -40,5 +48,6 @@ class ${dto.typeName} {
 		_$${dto.name}ToJson(this<#if dto.typeVar gt 0 >, toJsonT</#if>);
 
 }
+</#if>
 
 </#list>

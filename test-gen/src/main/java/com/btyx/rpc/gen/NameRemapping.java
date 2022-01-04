@@ -41,8 +41,11 @@ public class NameRemapping {
         if (dto.hasChild()) {
             dto.getFields().forEach(f -> {
                 remappingAnnos(f.getAnnotations());
-                remapping(f.getType().getRawType());
-                remapping(f.getType().getGenerics());
+                var type = f.getType();
+                if(null != type) {
+                    remapping(type.getRawType());
+                    remapping(type.getGenerics());
+                }
             });
         }
     }

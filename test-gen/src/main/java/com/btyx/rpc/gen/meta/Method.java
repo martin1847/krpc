@@ -37,9 +37,9 @@ public class Method {
         return hd || ( arg!=null && "byte[]".equals(arg.getRawType().originName));
     }
 
-    public boolean isCustomerInput() {
-        return null!=arg && arg.rawType.hasChild();
-    }
+    //public boolean isCustomerInput() {
+    //    return null!=arg && arg.rawType.hasChild();
+    //}
 
     public boolean isCustomerRes() {
         return res.rawType.hasChild();

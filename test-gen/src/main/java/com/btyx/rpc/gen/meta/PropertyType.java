@@ -33,13 +33,17 @@ public class PropertyType {
         this.generics = generics;
     }
 
-    public boolean isGenerics() {
+    public boolean isGeneric() {
         return null != generics && generics.size()>0;
+    }
+
+    public boolean isCust() {
+        return rawType.hasChild() && ! rawType.isEnum();
     }
 
     @Override
     public String toString() {
-        if(isGenerics()) {
+        if(isGeneric()) {
             //maybe List<Integer>
             return rawType.getName() +
                     generics.stream().map(PropertyType::toString).collect(Collectors.joining(",", "<", ">"));

@@ -1,5 +1,7 @@
 package com.btyx.test.impl;
 
+import com.bt.model.PagedList;
+import com.bt.model.PagedQuery;
 import com.bt.rpc.server.ServerContext;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.dto.TimeResult;
@@ -97,5 +99,20 @@ public class DemoServiceImpl implements DemoService {
     public RpcResult<List<Integer>> wordLength(List<String> list) {
         return
                 RpcResult.ok(list.stream().map(String::length).collect(Collectors.toList()));
+    }
+
+    @Override
+    public RpcResult<PagedList<User>> plistUser(PagedQuery<User> query) {
+        return RpcResult.ok(new PagedList<>(query.getPageSize(),Collections.singletonList(query.getQ())));
+    }
+
+    @Override
+    public RpcResult<List<User>> listUser(List<User> query) {
+        return RpcResult.ok(query);
+    }
+
+    @Override
+    public RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query) {
+        return RpcResult.ok(new PagedList<>(query.getPageSize(),Collections.singletonList(query.getQ()  + 10)));
     }
 }

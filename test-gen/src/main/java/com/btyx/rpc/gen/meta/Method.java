@@ -41,9 +41,9 @@ public class Method {
     //    return null!=arg && arg.rawType.hasChild();
     //}
 
-    public boolean isCustomerRes() {
-        return res.rawType.hasChild();
-    }
+    //public boolean isCustomerRes() {
+    //    return res.rawType.hasChild();
+    //}
 
     public String dartRes() {
         if("List".equals(res.getRawType().getName())){

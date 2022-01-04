@@ -47,7 +47,7 @@ public class Dto {
                     gName = rowType.name;
                     break;
                 }
-                if(f.getType().isGenerics()){
+                if(f.getType().isGeneric()){
                     gName= f.getType().generics.get(0).getRawType().getTypeName();
                     break;
                 }

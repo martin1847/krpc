@@ -1,5 +1,7 @@
 package com.btyx.test;
 
+import com.bt.model.PagedList;
+import com.bt.model.PagedQuery;
 import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.annotation.RpcService;
@@ -44,4 +46,13 @@ public interface DemoService {
     RpcResult<Integer> testRuntimeException();
 
     RpcResult<List<Integer>> wordLength(List<String> list);
+
+    // 用来测试范型
+    RpcResult<PagedList<User>> plistUser(PagedQuery<User> query);
+
+    // 用来测试范型
+    RpcResult<List<User>> listUser(List<User> query);
+
+    // 用来测试范型
+    RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query);
 }

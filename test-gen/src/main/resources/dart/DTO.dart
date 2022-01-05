@@ -27,19 +27,10 @@ class ${dto.typeName} {
 	<#list (f.annotations![])?filter(a->a.name?has_content) as anno>
 	${anno.name}
 	</#list>
-	${(!f.required)?then('','final ')}${f.type}${(!f.required)?then('?','')} ${f.name};
-	<#if f.required>
-	<#assign hasRequired = true >
-	</#if>
+	<#if f.required><#assign hasRequired = true >final </#if>${f.type}${(!f.required)?then('?','')} ${f.name};
 
 </#list>
-
-<#if hasRequired>
-	${dto.name}(<#list dto.fields?filter(f->f.required) as f>this.${f.name}${f?has_next?then(',','')}</#list>);
-<#else>
-	${dto.name}();
-</#if>
-
+	${dto.name}(<#if hasRequired><#list dto.fields?filter(f->f.required) as f>this.${f.name}${f?has_next?then(',','')}</#list></#if>);
 
 	factory ${dto.name}.fromJson(Map<String, dynamic> json<#if dto.typeVar gt 0 >, ${dto.innerType} Function(Object? json) fromJsonT</#if>) =>
 		_$${dto.name}FromJson(json<#if dto.typeVar gt 0 >, fromJsonT</#if>);

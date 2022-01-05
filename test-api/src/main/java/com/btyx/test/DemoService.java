@@ -51,7 +51,13 @@ public interface DemoService {
     RpcResult<PagedList<User>> plistUser(PagedQuery<User> query);
 
     // 用来测试范型
+    RpcResult<List<User>> plistUser2(PagedQuery<User> query);
+
+    // 用来测试范型
     RpcResult<List<User>> listUser(List<User> query);
+
+    // 用来测试范型
+    RpcResult<PagedList<User>> listUser2(List<User> query);
 
     // 用来测试范型
     RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query);

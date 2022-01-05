@@ -107,8 +107,18 @@ public class DemoServiceImpl implements DemoService {
     }
 
     @Override
+    public RpcResult<List<User>> plistUser2(PagedQuery<User> query) {
+        return RpcResult.ok(Collections.singletonList(query.getQ()));
+    }
+
+    @Override
     public RpcResult<List<User>> listUser(List<User> query) {
         return RpcResult.ok(query);
+    }
+
+    @Override
+    public RpcResult<PagedList<User>> listUser2(List<User> query) {
+        return RpcResult.ok(new PagedList<>(query.size(),query));
     }
 
     @Override

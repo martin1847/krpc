@@ -37,19 +37,9 @@ public class Method {
         return hd || ( arg!=null && "byte[]".equals(arg.getRawType().originName));
     }
 
-    //public boolean isCustomerInput() {
-    //    return null!=arg && arg.rawType.hasChild();
-    //}
-
-    //public boolean isCustomerRes() {
-    //    return res.rawType.hasChild();
-    //}
 
     public String dartRes() {
-        if("List".equals(res.getRawType().getName())){
-            res.generics.get(0).getRawType().setName("dynamic");
-            //return "List<dynamic>";
-        }else if("Map".equals(res.getRawType().getName())){
+        if("Map".equals(res.getRawType().getName())){
             res.generics.get(1).getRawType().setName("dynamic");
             //return "Map<String,dynamic>";
         }

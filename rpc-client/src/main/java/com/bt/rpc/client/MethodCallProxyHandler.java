@@ -22,7 +22,8 @@ import com.bt.rpc.serial.ClientReader.Normal;
 import com.bt.rpc.serial.ClientWriter;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.util.RefUtils;
-import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import io.grpc.ClientCall;
+import io.grpc.ForwardingClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.stub.ClientCalls;
@@ -107,35 +108,13 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         protected OutputProto rpc(ClientContext req, InputProto input) {
             var option = req.getCallOptions();
+
             var call = channel.newCall(stub.methodDescriptor, option);
 
             var traceId = MDC.get(TraceMeta.X_B3_TRACE_ID);
-
             if (null != traceId) {
-                log.debug("Client Propagate Trace : {}",traceId);
-                var spanId = MDC.get(TraceMeta.X_B3_SPAN_ID);
-                var parentSpanId = MDC.get(TraceMeta.X_B3_PARENT_SPAN_ID);
-                var sampled = MDC.get(TraceMeta.X_B3_SAMPLED);
-                var requestId = MDC.get(TraceMeta.X_REQUEST_ID);
-                call = new SimpleForwardingClientCall<>(call) {
-                    @Override
-                    public void start(Listener<OutputProto> responseListener, Metadata headers) {
-                        headers.put(TraceMeta.TRACE_ID, traceId);
-                        if (null != spanId) {
-                            headers.put(TraceMeta.SPAN_ID, spanId);
-                        }
-                        if (null != parentSpanId) {
-                            headers.put(TraceMeta.PARENT_SPAN_ID, parentSpanId);
-                        }
-                        if (null != sampled) {
-                            headers.put(TraceMeta.SAMPLED, sampled);
-                        }
-                        if (null != requestId) {
-                            headers.put(TraceMeta.REQUEST_ID, requestId);
-                        }
-                        super.start(responseListener, headers);
-                    }
-                };
+                //log.debug("Client Propagate Trace : {}",traceId);
+                call = new PropagateTraceCall(call, traceId);
             }
 
             return ClientCalls.blockingUnaryCall(call, input);

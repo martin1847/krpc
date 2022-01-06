@@ -201,12 +201,13 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         //2. https://github.com/grpc/grpc-java/issues/7381
         // https://github.com/LesnyRumcajs/grpc_bench/wiki/2021-05-20-bench-results
         try {
+            /// first thing set the Context so that all after method can use
+            ServerContext.LOCAL.set(ctx);
 
             if(requireCredential){
                 ctx.checkCredential();
             }
 
-            ServerContext.LOCAL.set(ctx);
             var res = filterChain.invoke(ctx);
             responseObserver.onNext(res.output);
             responseObserver.onCompleted();

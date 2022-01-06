@@ -9,6 +9,7 @@ import javax.validation.Validator;
 
 import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;
+import com.bt.rpc.context.TraceMeta;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.server.jws.CredentialVerify;
 import com.bt.rpc.server.jws.HttpConst;
@@ -58,15 +59,20 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
     }
 
     public static String applicationName() {return applicationName;}
+
+    private static boolean injectMdc(Metadata headers,String keyStr,Key<String> key){
+        var val = headers.get(key);
+        if(null != val) {
+            MDC.put(keyStr, val);
+            return true;
+        }
+        return false;
+    }
     //
     //public static Context grpcContext() {
     //    return Context.current();
     //}
 
-    static final String      B3_TRACE_ID = "x-b3-traceid";
-    static final String      B3_SPAN_ID  = "x-b3-spanid";
-    static final Key<String> TRACE_ID    = Metadata.Key.of(B3_TRACE_ID, Metadata.ASCII_STRING_MARSHALLER);
-    static final Key<String> SPAN_ID     = Metadata.Key.of(B3_SPAN_ID, Metadata.ASCII_STRING_MARSHALLER);
 
     //--------------- static over --------------------//
 
@@ -79,19 +85,22 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
                          FilterChain<ServerResult, ServerContext> lastChain, Metadata headers) {
         super(service, method, resDto, arg, lastChain);
         this.headers = headers;
-        var traceId = headers.get(TRACE_ID);
-        if(null != traceId) {
-            MDC.put(B3_TRACE_ID, traceId);
-            MDC.put(B3_SPAN_ID, headers.get(SPAN_ID));
+        if(injectMdc(headers, TraceMeta.X_B3_TRACE_ID,TraceMeta.TRACE_ID)){
+            injectMdc(headers, TraceMeta.X_B3_SPAN_ID,TraceMeta.SPAN_ID);
+            injectMdc(headers, TraceMeta.X_B3_PARENT_SPAN_ID,TraceMeta.PARENT_SPAN_ID);
+            injectMdc(headers, TraceMeta.X_B3_SAMPLED,TraceMeta.SAMPLED);
+            injectMdc(headers, TraceMeta.X_REQUEST_ID,TraceMeta.REQUEST_ID);
         }
     }
+
+
 
     public Metadata getHeaders() {
         return headers;
     }
 
     public String logTrace() {
-        return ":" + headers.get(TRACE_ID) + ":" + headers.get(SPAN_ID);
+        return ":" + headers.get(TraceMeta.TRACE_ID) + ":" + headers.get(TraceMeta.SPAN_ID);
     }
 
     public Metadata getResponseHeaders() {

@@ -9,8 +9,9 @@ import java.util.Map;
 
 import com.bt.rpc.annotation.Cached;
 import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.context.TraceMeta;
+import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
@@ -21,9 +22,12 @@ import com.bt.rpc.serial.ClientReader.Normal;
 import com.bt.rpc.serial.ClientWriter;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.util.RefUtils;
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
 import io.grpc.ManagedChannel;
+import io.grpc.Metadata;
 import io.grpc.stub.ClientCalls;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 //import  sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
@@ -42,9 +46,9 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     private final CacheManager cacheManager;
 
     private final SerialEnum serialEnum;
-    private final String serverName;
+    private final String     serverName;
 
-    public MethodCallProxyHandler(String serverName,ManagedChannel channel, Class<T> clz,
+    public MethodCallProxyHandler(String serverName, ManagedChannel channel, Class<T> clz,
                                   List<ClientFilter> filterList,
                                   CacheManager cacheManager,
                                   SerialEnum serialEnum) {
@@ -72,11 +76,11 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         public ChannelMethodInvoker(MethodStub stub) {
             this.stub = stub;
             //hasInputs = stub.method.getParameterCount() > 0;
-            if(0 == stub.method.getParameterCount() ){
+            if (0 == stub.method.getParameterCount()) {
                 clientWriter = ClientWriter.ZERO_INPUT;
-            }else if (byte[].class == stub.method.getParameterTypes()[0]) {
+            } else if (byte[].class == stub.method.getParameterTypes()[0]) {
                 clientWriter = ClientWriter.BYTES;
-            }else {
+            } else {
                 clientWriter = ClientWriter.BY_USER;
             }
 
@@ -104,6 +108,36 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         protected OutputProto rpc(ClientContext req, InputProto input) {
             var option = req.getCallOptions();
             var call = channel.newCall(stub.methodDescriptor, option);
+
+            var traceId = MDC.get(TraceMeta.X_B3_TRACE_ID);
+
+            if (null != traceId) {
+                log.debug("Client Propagate Trace : {}",traceId);
+                var spanId = MDC.get(TraceMeta.X_B3_SPAN_ID);
+                var parentSpanId = MDC.get(TraceMeta.X_B3_PARENT_SPAN_ID);
+                var sampled = MDC.get(TraceMeta.X_B3_SAMPLED);
+                var requestId = MDC.get(TraceMeta.X_REQUEST_ID);
+                call = new SimpleForwardingClientCall<>(call) {
+                    @Override
+                    public void start(Listener<OutputProto> responseListener, Metadata headers) {
+                        headers.put(TraceMeta.TRACE_ID, traceId);
+                        if (null != spanId) {
+                            headers.put(TraceMeta.SPAN_ID, spanId);
+                        }
+                        if (null != parentSpanId) {
+                            headers.put(TraceMeta.PARENT_SPAN_ID, parentSpanId);
+                        }
+                        if (null != sampled) {
+                            headers.put(TraceMeta.SAMPLED, sampled);
+                        }
+                        if (null != requestId) {
+                            headers.put(TraceMeta.REQUEST_ID, requestId);
+                        }
+                        super.start(responseListener, headers);
+                    }
+                };
+            }
+
             return ClientCalls.blockingUnaryCall(call, input);
         }
     }
@@ -132,7 +166,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     //(Lcom/bt/rpc/demo/service/HelloBean;Lcom/bt/rpc/demo/service/HelloBean;)
     // Lcom/bt/rpc/model/RpcResult<Lcom/bt/rpc/demo/service/HelloRes;>;
     private void initStub() {
-        for (MethodStub stub : RefUtils.toRpcMethods(serverName,clz)) {
+        for (MethodStub stub : RefUtils.toRpcMethods(serverName, clz)) {
 
             if (cacheManager != null && stub.method.isAnnotationPresent(Cached.class)) {
 
@@ -166,8 +200,8 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         var cm = stubMap.get(method);
 
         //maybe call toString
-        if(null == cm){
-            return  "UnSupported Method : " + clz + "." + method;
+        if (null == cm) {
+            return "UnSupported Method : " + clz + "." + method;
         }
 
         var reqContext = new ClientContext(clz, method.getName(), cm.stub.returnType

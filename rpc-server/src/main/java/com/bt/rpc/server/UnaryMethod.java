@@ -26,6 +26,7 @@ import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 @Slf4j
 public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto> {
@@ -233,6 +234,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             responseObserver.onError(wrapToClient);
         } finally {
             ServerContext.LOCAL.remove();
+            //MDC.clear();
         }
     }
 }

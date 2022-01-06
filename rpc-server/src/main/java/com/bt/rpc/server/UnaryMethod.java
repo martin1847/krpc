@@ -234,7 +234,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             responseObserver.onError(wrapToClient);
         } finally {
             ServerContext.LOCAL.remove();
-            //MDC.clear();
+            MDC.clear();
         }
     }
 }

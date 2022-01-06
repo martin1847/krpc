@@ -59,17 +59,5 @@
     "allPublicMethods": true,
     "allDeclaredFields": true,
     "allPublicFields": true
-  },
-  {
-    "name": "io.netty.channel.DefaultChannelPipeline$HeadContext",
-    "allPublicMethods": true
-  },
-  {
-    "name": "io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor",
-    "allPublicMethods": true
-  },
-  {
-    "name": "io.netty.channel.DefaultChannelPipeline$TailContext",
-    "allPublicMethods": true
   }
 ]

@@ -24,7 +24,9 @@ dependencies {
 
     implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
     implementation "io.quarkus:quarkus-arc"
-    api "io.quarkus:quarkus-netty"
+    // not transfer ok
+    // TODO change to api CDI dependonly , next time http-server-expose together
+//    api "io.quarkus:quarkus-netty"
 
 //    implementation 'io.quarkus:quarkus-config-yaml'
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'

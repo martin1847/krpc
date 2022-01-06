@@ -16,7 +16,7 @@ dependencies {
 
     implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
     implementation "io.quarkus:quarkus-arc"
-//    implementation 'io.quarkus:quarkus-config-yaml'
+    implementation "io.quarkus:quarkus-netty"
 //    implementation 'io.quarkus:quarkus-grpc-common-deployment'
 //    implementation "io.grpc:grpc-netty:${grpcVersion}"
 
@@ -25,6 +25,7 @@ dependencies {
 
     implementation "io.quarkus:quarkus-agroal"
     implementation "io.quarkus:quarkus-jdbc-mysql"
+
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
     implementation "com.bt.ext:ext-mybatis:1.0.0"

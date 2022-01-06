@@ -1,6 +1,9 @@
 
 
+apply from: "$rootProject.projectDir/upload.gradle"
 
+
+group = "com.btyx.example"
 
 dependencies {
 

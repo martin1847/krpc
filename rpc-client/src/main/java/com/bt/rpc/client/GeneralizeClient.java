@@ -49,10 +49,10 @@ public class GeneralizeClient {
 
         var headerForwardCall = new SimpleForwardingClientCall<>(call){
             @Override
-            public void start(Listener responseListener, Metadata headers) {
+            public void start(Listener<OutputProto> responseListener, Metadata headers) {
                 cutomerHeaders.accept(headers);
                 //super.start(responseListener, headers);
-                super.start(new SimpleForwardingClientCallListener(responseListener) {
+                super.start(new SimpleForwardingClientCallListener<>(responseListener) {
                     @Override
                     public void onHeaders(Metadata resHeader) {
                         System.out.println();

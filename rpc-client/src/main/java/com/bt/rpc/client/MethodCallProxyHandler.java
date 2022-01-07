@@ -22,10 +22,9 @@ import com.bt.rpc.serial.ClientReader.Normal;
 import com.bt.rpc.serial.ClientWriter;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.util.RefUtils;
+import io.grpc.CallOptions;
 import io.grpc.ClientCall;
-import io.grpc.ForwardingClientCall;
 import io.grpc.ManagedChannel;
-import io.grpc.Metadata;
 import io.grpc.stub.ClientCalls;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -36,18 +35,18 @@ import org.slf4j.MDC;
 public class MethodCallProxyHandler<T> implements InvocationHandler {
 
     private final ManagedChannel channel;
-    private final Class<T>       clz;
+    final Class<T>       clz;
 
-    private final Map<Method, ChannelMethodInvoker> stubMap = new HashMap<>();
+    final Map<Method, ChannelMethodInvoker> stubMap = new HashMap<>();
 
     //    private ClientFilter[] filters;
 
     FilterChain<ClientResult, ClientContext> filterChain;
 
-    private final CacheManager cacheManager;
+    final CacheManager cacheManager;
 
-    private final SerialEnum serialEnum;
-    private final String     serverName;
+    final SerialEnum serialEnum;
+    final String     serverName;
 
     public MethodCallProxyHandler(String serverName, ManagedChannel channel, Class<T> clz,
                                   List<ClientFilter> filterList,
@@ -67,7 +66,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         log.info("[ RPC Client ] Proxy Init {}  methods for {}", stubMap.size(), clz);
     }
 
-    private class ChannelMethodInvoker implements FilterChain<ClientResult, ClientContext> {
+    class ChannelMethodInvoker implements FilterChain<ClientResult, ClientContext> {
         //        ClientCall<InputMessage, OutputMessage> clientCall;
         final MethodStub   stub;
         final ClientReader clientReader;
@@ -97,28 +96,38 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         @Override
         public ClientResult invoke(ClientContext req) {
-            var serial = Serial.Instance.get(req.getSerial().getNumber());
-
-            var input = InputProto.newBuilder();
-            input.setE(req.getSerial());
-            clientWriter.writeParameters(req.getArg(), input);
-            OutputProto response = rpc(req, input.build());
-            return new ClientResult(response, clientReader, serial);
+            var input = buildInput(req.getSerial(),req.getArg());
+            var response = rpc(req.getCallOptions(), input);
+            return buildResult(req.getSerial(),response);
         }
 
-        protected OutputProto rpc(ClientContext req, InputProto input) {
-            var option = req.getCallOptions();
+        ClientResult buildResult(SerialEnum se,OutputProto response){
+            return new ClientResult(response, clientReader, Serial.Instance.get(se.getNumber()));
+        }
 
-            var call = channel.newCall(stub.methodDescriptor, option);
+        InputProto buildInput(SerialEnum se,Object[] args){
+            var input = InputProto.newBuilder();
+            input.setE(se);
+            clientWriter.writeParameters(args, input);
+            return input.build();
+        }
 
+
+        protected OutputProto rpc(CallOptions options, InputProto input) {
+            var call = makeCall (options);
+            return ClientCalls.blockingUnaryCall(call, input);
+        }
+
+        public ClientCall<InputProto,OutputProto> makeCall(CallOptions options){
+            var call = channel.newCall(stub.methodDescriptor, options);
             var traceId = MDC.get(TraceMeta.X_B3_TRACE_ID);
             if (null != traceId) {
                 //log.debug("Client Propagate Trace : {}",traceId);
-                call = new PropagateTraceCall(call, traceId);
+                return new PropagateTraceCall(call, traceId);
             }
-
-            return ClientCalls.blockingUnaryCall(call, input);
+            return call;
         }
+
     }
 
     private class CachedChannelMethodInvoker extends ChannelMethodInvoker {
@@ -128,13 +137,13 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         }
 
         @Override
-        protected OutputProto rpc(ClientContext req, InputProto input) {
+        protected OutputProto rpc(CallOptions options, InputProto input) {
             var cacheKey = cacheManager.cacheKey(stub, input);
             var out = cacheManager.get(stub, cacheKey);
             if (null != out) {
                 return out;
             }
-            out = super.rpc(req, input);
+            out = super.rpc(options, input);
             if (out.getC() == RpcResult.OK) {
                 cacheManager.set(stub, cacheKey, out);
             }

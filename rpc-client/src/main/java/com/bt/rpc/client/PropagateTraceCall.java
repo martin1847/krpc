@@ -23,14 +23,17 @@ class PropagateTraceCall extends ForwardingClientCall<InputProto, OutputProto> {
 
     final ClientCall<InputProto, OutputProto> delegate;
     final String                              traceId, spanId, parentSpanId,requestId;
-    //final String  sampled;
+    final String  sampled,debugFlag;
 
     PropagateTraceCall(ClientCall<InputProto, OutputProto> delegate,@NotNull String traceId) {
         this.delegate = delegate;
         this.traceId = traceId;
         spanId = MDC.get(TraceMeta.X_B3_SPAN_ID);
         parentSpanId = MDC.get(TraceMeta.X_B3_PARENT_SPAN_ID);
-        //sampled = MDC.get(TraceMeta.X_B3_SAMPLED);
+
+        sampled = MDC.get(TraceMeta.X_B3_SAMPLED);
+        debugFlag = MDC.get(TraceMeta.X_B3_DEBUG_FLAG);
+
         requestId = MDC.get(TraceMeta.X_REQUEST_ID);
     }
 
@@ -43,9 +46,12 @@ class PropagateTraceCall extends ForwardingClientCall<InputProto, OutputProto> {
         if (null != parentSpanId) {
             headers.put(TraceMeta.PARENT_SPAN_ID, parentSpanId);
         }
-        //if (null != sampled) {
-        //    headers.put(TraceMeta.SAMPLED, sampled);
-        //}
+        if (null != sampled) {
+            headers.put(TraceMeta.SAMPLED, sampled);
+        }
+        if (null != debugFlag) {
+            headers.put(TraceMeta.DEBUG_FLAG, debugFlag);
+        }
         if (null != requestId) {
             headers.put(TraceMeta.REQUEST_ID, requestId);
         }

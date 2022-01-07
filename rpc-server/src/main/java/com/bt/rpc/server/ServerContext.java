@@ -89,7 +89,9 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
             injectMdc(headers, TraceMeta.X_B3_SPAN_ID,TraceMeta.SPAN_ID);
             injectMdc(headers, TraceMeta.X_B3_PARENT_SPAN_ID,TraceMeta.PARENT_SPAN_ID);
             injectMdc(headers, TraceMeta.X_REQUEST_ID,TraceMeta.REQUEST_ID);
-            //injectMdc(headers, TraceMeta.X_B3_SAMPLED,TraceMeta.SAMPLED);
+
+            injectMdc(headers, TraceMeta.X_B3_SAMPLED,TraceMeta.SAMPLED);
+            injectMdc(headers, TraceMeta.X_B3_DEBUG_FLAG,TraceMeta.DEBUG_FLAG);
         }
     }
 

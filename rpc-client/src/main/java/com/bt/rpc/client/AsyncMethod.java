@@ -11,6 +11,7 @@ import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
 import com.bt.rpc.model.RpcResult;
 import io.grpc.CallOptions;
+import io.grpc.Context;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
@@ -59,8 +60,8 @@ public class AsyncMethod<RpcService, Input, DTO> {
 
     public void call(Input param, ResultObserver<DTO> resultObserver) {
         var input = invoker.buildInput(serialEnum, param == null ? null : new Object[] {param});
-        var call = invoker.makeCall(CallOptions.DEFAULT);
-        ClientCalls.asyncUnaryCall(call, input, resultObserver == null ? defaultObserver : new StreamObserver<OutputProto>() {
+
+        var observer = resultObserver == null ? defaultObserver : new StreamObserver<OutputProto>() {
 
             @Override
             public void onNext(OutputProto value) {
@@ -77,7 +78,18 @@ public class AsyncMethod<RpcService, Input, DTO> {
             public void onCompleted() {
                 resultObserver.onCompleted();
             }
+        };
+        //https://stackoverflow.com/questions/57110811/grpc-random-cancelled-exception-on-rpc-calls
+
+        // Set ctx as the current context within the Runnable
+        var call = invoker.makeCall(CallOptions.DEFAULT);
+        Context ctx = Context.current().fork();
+        ctx.run(() -> {
+            // Can start asynchronous work here that will not
+            // be cancelled when myRpcMethod returns
+            ClientCalls.asyncUnaryCall(call, input, observer);
         });
+
     }
 
     static class MethodStreamObserver implements StreamObserver<OutputProto> {

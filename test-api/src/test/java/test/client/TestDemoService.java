@@ -25,20 +25,24 @@ public class TestDemoService {
         System.out.println(demoService.bytesTime());
 
         var asyncClient = new AsyncClient<>(demoService);
-        var b = System.currentTimeMillis();
-        asyncClient.call("save",new User(11,"async"),new ResultObserver(){
+        testAsync(asyncClient,"save",new User(11,"async"));
+        testAsync(asyncClient,"save",new User(22,"async"));
+        testAsync(asyncClient,"inc100",100);
+        Thread.sleep(1000);
+    }
 
+    static <DTO> void testAsync(AsyncClient client,String method,Object param){
+        var b = System.currentTimeMillis();
+        client.call(method,param,new ResultObserver<DTO>(){
             @Override
             public void onError(Throwable t) {
-
             }
 
             @Override
-            public void onSuccess(RpcResult res) {
-                System.out.println("async call res :"+res);
+            public void onSuccess(RpcResult<DTO> res) {
+                System.out.println( Thread.currentThread().getName() +  " |  async call res :"+res);
             }
         });
-        System.out.println("async call "+(System.currentTimeMillis() -b));
-        Thread.sleep(1000);
+        System.out.println(Thread.currentThread().getName() + "| async call "+(System.currentTimeMillis() -b));
     }
 }

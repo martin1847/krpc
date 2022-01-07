@@ -63,7 +63,7 @@ public class AsyncClient<T> {
                 if (null != resultObserver) {
                     resultObserver.onError(t);
                 } else {
-                    log.error("async call " +rpcService.getSimpleName() +"."+ method + " error", t);
+                    log.warn("Async call " +rpcService.getSimpleName() +"."+ method + " error", t);
                 }
             }
 

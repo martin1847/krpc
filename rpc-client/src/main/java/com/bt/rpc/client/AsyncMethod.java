@@ -21,20 +21,17 @@ import lombok.extern.slf4j.Slf4j;
  * @version 2022/01/07 4:03 PM
  */
 @Slf4j
-public class AsyncMethod<RpcService,Input,DTO> {
-
+public class AsyncMethod<RpcService, Input, DTO> {
 
     final MethodCallProxyHandler<RpcService>.ChannelMethodInvoker invoker;
-    final     SerialEnum                                  serialEnum;
-    final Class<RpcService> rpcService;
-    final String methodName;
+    final SerialEnum                                              serialEnum;
+    final MethodStreamObserver                                    defaultObserver;
 
     AsyncMethod(MethodCallProxyHandler<RpcService>.ChannelMethodInvoker invoker,
-                SerialEnum serialEnum,Class<RpcService> rpcService,String method) {
+                SerialEnum serialEnum, Class<RpcService> rpcService, String method) {
         this.invoker = invoker;
         this.serialEnum = serialEnum;
-        this.rpcService = rpcService;
-        this.methodName = method;
+        defaultObserver = new MethodStreamObserver(rpcService.getSimpleName() + "." + method);
 
         //This can be done using StackWalker since Java 9.
 
@@ -47,47 +44,64 @@ public class AsyncMethod<RpcService,Input,DTO> {
 
     }
 
-    public static <RpcService,Input,DTO> AsyncMethod<RpcService,Input,DTO> from(RpcService service,String method){
+    public static <RpcService, Input, DTO> AsyncMethod<RpcService, Input, DTO> from(RpcService service, String method) {
         var handler = (MethodCallProxyHandler<RpcService>) Proxy.getInvocationHandler(service);
         var invoker = handler.stubMap.entrySet().stream()
                 .filter(kv -> kv.getKey().getName().equals(method))
                 .findFirst().map(Entry::getValue).orElseThrow();
         SerialEnum serialEnum = handler.serialEnum;
-        return new AsyncMethod<>(invoker,serialEnum, handler.clz, method);
+        return new AsyncMethod<>(invoker, serialEnum, handler.clz, method);
     }
 
-
-    public void call(Input param){
-        call(param,null);
+    public void call(Input param) {
+        call(param, null);
     }
 
-    public void call(Input param,ResultObserver<DTO> resultObserver) {
+    public void call(Input param, ResultObserver<DTO> resultObserver) {
         var input = invoker.buildInput(serialEnum, param == null ? null : new Object[] {param});
         var call = invoker.makeCall(CallOptions.DEFAULT);
-        ClientCalls.asyncUnaryCall(call, input, new StreamObserver<OutputProto>() {
+        ClientCalls.asyncUnaryCall(call, input, resultObserver == null ? defaultObserver : new StreamObserver<OutputProto>() {
 
             @Override
             public void onNext(OutputProto value) {
-                if (null != resultObserver) {
-                    var res = invoker.buildResult(serialEnum, value);
-                    resultObserver.onSuccess(res.toReturn());
-                }
+                var res = invoker.buildResult(serialEnum, value);
+                resultObserver.onSuccess(res.toReturn());
             }
 
             @Override
             public void onError(Throwable t) {
-                if (null != resultObserver) {
-                    resultObserver.onError(t);
-                } else {
-                    log.warn("Async call " +rpcService.getSimpleName() +"."+ methodName + " error", t);
-                }
+                resultObserver.onError(t);
             }
 
             @Override
             public void onCompleted() {
-                if (null != resultObserver) {resultObserver.onCompleted();}
+                resultObserver.onCompleted();
             }
         });
+    }
+
+    static class MethodStreamObserver implements StreamObserver<OutputProto> {
+
+        final String methodId;
+
+        public MethodStreamObserver(String methodId) {
+            this.methodId = methodId;
+        }
+
+        @Override
+        public void onNext(OutputProto value) {
+            log.debug("Async call {} , code: {}, message: {}", methodId, value.getC(), value.getM());
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            log.warn("Async call " + methodId + " error", t);
+        }
+
+        @Override
+        public void onCompleted() {
+
+        }
     }
 
     public interface ResultObserver<DTO> {

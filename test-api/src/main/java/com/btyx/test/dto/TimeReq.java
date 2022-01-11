@@ -16,6 +16,7 @@ import javax.validation.constraints.Size;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Doc("测试请求")
 public class TimeReq {
 
     @Doc("姓名")

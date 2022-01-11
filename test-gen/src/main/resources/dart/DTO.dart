@@ -10,7 +10,7 @@ part '${dtoFile?replace(".dart",".g.dart")}';
 const APP_NAME = '${app}';
 
 <#list dtos as dto>
-<#if dto.doc?has_content>/// ${dto.doc}</#if>
+<#if dto.doc?has_content || !dto.input>/// ${dto.doc!""} ${(!dto.input)?then('[Response]','')}</#if>
 <#if dto.enum>
 enum ${dto.typeName} {
 	<#list dto.fields as f>
@@ -18,7 +18,6 @@ enum ${dto.typeName} {
 	</#list>
 }
 <#else>
-<#if !dto.input>/// Server Response </#if>
 @JsonSerializable(explicitToJson: true<#if dto.typeVar gt 0 >, genericArgumentFactories: true</#if>)
 class ${dto.typeName} {
 

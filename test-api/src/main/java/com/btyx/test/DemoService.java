@@ -6,6 +6,7 @@ import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
+import com.btyx.test.dto.Img;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.dto.TimeResult;
 import com.btyx.test.dto.User;
@@ -61,4 +62,9 @@ public interface DemoService {
 
     // 用来测试范型
     RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query);
+
+
+    default RpcResult<Integer> saveImg(Img img){
+        return null;
+    }
 }

@@ -34,7 +34,11 @@ public class Method {
                         Boolean.TRUE.equals(it.properties.get("hidden"))
         );
         //System.out.println(name + " hidden : " + hd+" " + annotations);
-        return hd || ( arg!=null && "byte[]".equals(arg.getRawType().originName));
+        // dart 端没有处理ByteArray / Uint8List类型的返回
+        return hd
+                || ( arg!=null && "byte[]".equals(arg.getRawType().originName))
+                || "byte[]".equals(res.getRawType().originName)
+                ;
     }
 
 

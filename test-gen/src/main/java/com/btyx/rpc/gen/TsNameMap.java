@@ -39,7 +39,7 @@ public class TsNameMap {
         nameMapping.put("Double","number");
         nameMapping.put("Boolean","boolean");
         nameMapping.put("List","Array");
-        nameMapping.put("byte[]","Uint8Array");
+        nameMapping.put("byte[]","Array<number>");
     }
 
     final static Map<Class, Function<Anno,String>> annoMapping = new HashMap<>();

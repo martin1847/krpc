@@ -40,6 +40,8 @@ import freemarker.template.TemplateExceptionHandler;
 public class Gen {
 
 
+    public static String basePkg ="com.btyx";
+
     static final char FC = File.separatorChar;
 
     static final String CLS_FOLDER_SUF = FC+"out"+FC+"test"+FC+"classes"+FC;
@@ -88,7 +90,7 @@ public class Gen {
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));
-        var metas =  scan(appName,"com");
+        var metas =  scan(appName,basePkg);
 
         /* Create and adjust the configuration singleton */
         Configuration cfg = new Configuration(Configuration.VERSION_2_3_31);

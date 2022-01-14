@@ -39,6 +39,7 @@ public class TsNameMap {
         nameMapping.put("Double","number");
         nameMapping.put("Boolean","boolean");
         nameMapping.put("List","Array");
+        nameMapping.put("Date","number");
         nameMapping.put("byte[]","Array<number>");
     }
 

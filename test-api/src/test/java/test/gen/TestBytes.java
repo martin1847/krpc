@@ -5,9 +5,11 @@
 package test.gen;
 
 import java.util.Arrays;
+import java.util.Date;
 
 import com.bt.rpc.util.JsonUtils;
 import com.btyx.test.dto.Img;
+import com.btyx.test.dto.TimeResult;
 
 /**
  *
@@ -17,6 +19,10 @@ import com.btyx.test.dto.Img;
 public class TestBytes {
 
     public static void main(String[] args) {
+
+        var res = new TimeResult();
+        res.setDate(new Date());
+        System.out.println(JsonUtils.stringify(res));
 
         var json = "{\"name\":\"123\",\"img\":[1,2,3,4]}";
 

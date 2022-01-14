@@ -12,6 +12,8 @@ import com.btyx.rpc.gen.Gen;
  * @version 2021/12/30 6:08 PM
  */
 public class TestFtl {
+
+
     public static void main(String[] args) {
         Gen.basePkg = "com.btyx.test";
         Gen.genTypescript("demo-java-server");

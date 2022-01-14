@@ -40,6 +40,7 @@ public class DartNameMap {
         //nameMapping.put("byte[]","List<int>");
         //   @JsonKey(fromJson: BaseService.jsonToU8, toJson: BaseService.u8ToJson)
         nameMapping.put("byte[]","Uint8List");
+        nameMapping.put("Date","int");
         nameMapping.put("Object","dynamic");
     }
 

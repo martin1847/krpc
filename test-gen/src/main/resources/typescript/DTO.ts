@@ -41,7 +41,7 @@ export ${dto.input?then('class','interface')}  ${dto.typeName} {
     ${anno.name}
     </#list>
     ${f.name}${(dto.input && !f.required)?then('?','')}: ${f.type};
-    <#if f.required>
+    <#if dto.input && f.required>
     <#assign hasRequired = true >
     </#if>
  </#list>

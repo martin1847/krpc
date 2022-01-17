@@ -139,4 +139,12 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         return credential;
     }
 
+    /**
+     * JKS 中的用户id <Subject id
+     * @return
+     */
+    public String uid(){
+        return credential.getSubject();
+    }
+
 }

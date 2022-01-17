@@ -11,11 +11,11 @@ package com.bt.rpc.util;
  */
 public abstract class StringUtils {
 
-    public boolean isNotEmpty(String str) {
+    public static boolean isNotEmpty(String str) {
         return null != str && !str.isEmpty();
     }
 
-    public boolean isNotBlank(String str) {
+    public static boolean isNotBlank(String str) {
         return null != str && !str.isBlank();
     }
 

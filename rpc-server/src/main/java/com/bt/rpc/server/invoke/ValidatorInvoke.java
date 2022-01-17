@@ -11,12 +11,14 @@ import javax.validation.Validator;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;
 import io.grpc.Status;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  *
  * @author Martin.C
  * @version 2021/11/08 2:02 PM
  */
+@Slf4j
 public abstract class ValidatorInvoke<DTO>  implements DynamicInvoke<DTO>{
     protected final Validator validator;
 
@@ -29,6 +31,7 @@ public abstract class ValidatorInvoke<DTO>  implements DynamicInvoke<DTO>{
     @Override
     public RpcResult<DTO> invoke(ServerContext sc) throws Throwable {
         var input = readInput(sc);
+        //TODO log.debug("ValidatorInvoke get  PageQuery, no validator  input {}",input);
         var violationSet = validator.validate(input);
         if(violationSet.size() > 0){
             throw Status.INVALID_ARGUMENT.withDescription(

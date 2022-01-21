@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
  * @version 2022/01/07 4:03 PM
  */
 @Slf4j
+@Deprecated(since = "跟随父生命周期，父亲结束之后异步接口会被取消")
 public class AsyncMethod<RpcService, Input, DTO> {
 
     final MethodCallProxyHandler<RpcService>.ChannelMethodInvoker invoker;
@@ -82,6 +83,7 @@ public class AsyncMethod<RpcService, Input, DTO> {
         //https://stackoverflow.com/questions/57110811/grpc-random-cancelled-exception-on-rpc-calls
 
         // Set ctx as the current context within the Runnable
+        ////生命周期仍然跟随父Context
         var call = invoker.makeCall(CallOptions.DEFAULT);
         Context ctx = Context.current().fork();
         ctx.run(() -> {

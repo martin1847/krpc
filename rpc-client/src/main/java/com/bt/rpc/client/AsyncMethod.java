@@ -36,7 +36,6 @@ public class AsyncMethod<RpcService, Input, DTO> {
         defaultObserver = new MethodStreamObserver(rpcService.getSimpleName() + "." + method);
 
         //This can be done using StackWalker since Java 9.
-
         //public static String getCurrentMethodName() {
         //    return StackWalker.getInstance()
         //            .walk(s -> s.skip(1).findFirst())

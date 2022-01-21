@@ -9,7 +9,7 @@ include:
 build:
   extends: .gradle
   script:
-    - gradle $build -Dquarkus.package.type=native -x test
+    - gradle build -Dquarkus.package.type=native -x test
     - gradle $publish
 
 #

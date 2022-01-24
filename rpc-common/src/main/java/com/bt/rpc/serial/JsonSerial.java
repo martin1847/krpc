@@ -11,12 +11,14 @@ import com.bt.rpc.internal.InputProto.Builder;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
 import com.bt.rpc.util.JsonUtils;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  *
  * @author martin.cong
  * @version 2021-10-17 13:10
  */
+@Slf4j
 public class JsonSerial  implements Serial{
     @Override
     public void writeInput(Object arg, Builder builder) {
@@ -51,7 +53,7 @@ public class JsonSerial  implements Serial{
     @Override
     public void writeOutput(Object obj, OutputProto.Builder out) {
         if(obj.getClass() == byte[].class) {
-            System.out.println("Server write got bytes ....");
+            log.debug("Server write got bytes ....");
         }
         out.setUtf8(JsonUtils.stringify(obj));
     }

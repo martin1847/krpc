@@ -20,13 +20,13 @@ public interface RpcConstants {
     String VENDOR = "java";
 
     //利用graalVM特性，缓存构建信息
-    String CI_BUILD_ID = System.getenv("CI_PIPELINE_ID")+"-"
-            +System.getenv("CI_COMMIT_SHORT_SHA")+"-"+ LocalDateTime.now();
+    String CI_BUILD_ID = "v"+System.getenv("CI_PIPELINE_ID")+"-"+System.getenv("SPRINT")
+            +"-"+System.getenv("CI_COMMIT_SHORT_SHA")+"-"+ LocalDateTime.now();
 
     int DEFAULT_PORT = 50051;
 
     int HTTP1_PORT = 80;
 
     /// use in app.yaml
-    String CONFIG_PLUGIN_DOMAIN = "plugin";
+    //String CONFIG_PLUGIN_DOMAIN = "plugin";
 }

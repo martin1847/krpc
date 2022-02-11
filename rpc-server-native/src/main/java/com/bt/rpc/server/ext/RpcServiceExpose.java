@@ -3,14 +3,12 @@ package com.bt.rpc.server.ext;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.Bean;
@@ -32,8 +30,8 @@ import com.bt.rpc.server.jws.ExtVerify;
 import com.bt.rpc.server.jws.JwsVerify;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
-import io.quarkus.runtime.StartupEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * @author Martin.C
@@ -43,13 +41,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RpcServiceExpose {//} extends SimpleBuildItem{
 
-    @Inject
-    RpcConfig rpcConfig;
+    //@Inject
+    //RpcConfig rpcConfig;
 
     Server server;
 
+    @Inject
+    Validator validator;
+    //
     //@Inject
-    //Validator validator;
+    //Instance<Validator> validator2;
 
 
     //void onStart(@Observes StartupEvent ev) {
@@ -59,91 +60,116 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     //    //event.getHelloReceiver().accept("Hi, I was detected using an empty META-INF/beans.xml file.");
     //}
 
+    static final String NULL = "null";
+
+    @ConfigProperty(name = "rpc.server.app",defaultValue = NULL)
+    String app;
+
+    @ConfigProperty(name = "rpc.server.jwks",defaultValue = NULL)
+    String jwks;
+
+
+    @ConfigProperty(name = "rpc.server.jwtCookie",defaultValue = JwsVerify.DEFAULT_COOKIE_NAME)
+    String jwtCookie;
+
+    @ConfigProperty(name = "rpc.server.exitOnJwksError",defaultValue = "false")
+    boolean exitOnJwksError;
+
+
+    @ConfigProperty(name = "rpc.server.port",defaultValue = RpcConstants.DEFAULT_PORT+"")
+    int port;
+
     @PostConstruct
     public void expose() throws Exception {
 
+        initFilter();
 
-        var bm = CDI.current().getBeanManager();
-        Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});
-        var sfSet = bm.getBeans(ServerFilter.class);
-        var map = new TreeMap<GlobalFilter.Order, ServerFilter>();
-        sfSet.forEach(bean -> {
-            var gf = bean.getBeanClass().getAnnotation(GlobalFilter.class);
-            if (null != gf) {
-                map.put(new Order(gf.value(), bean.getBeanClass().getSimpleName()),
-                        (ServerFilter) CDI.current().select(bean.getBeanClass()).get());
-            }
-        });
-        map.forEach((k, v) -> {
-            log.info("Reg GlobalFilter :  {}", k);
-            ServerContext.regGlobalFilter(v);
-        });
+        initValidator();
 
-        var validators = CDI.current().select(Validator.class);
-        if (validators.isResolvable()) {
-            log.info("Reg GlobalValidator :  {}", validators.get());
-            ServerContext.regValidator(validators.get());
-        }else {
-            log.warn("NO Validator Found, All Rpc Validator will Skip, Are you Sure?");
-        }
-
-        rpcConfig.jwks().ifPresent(url -> {
-
-            ExtVerify ext = ExtVerify.EMPTY;
-            var extVerifies = CDI.current().select(ExtVerify.class);
-            if (extVerifies.isResolvable()) {
-                ext = extVerifies.get();
-            }
-            var cookieName = rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
-            log.info("Reg CredentialVerify: {} ,cookieName: {}", url, cookieName);
-            if (ext != ExtVerify.EMPTY) {
-                log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
-            }
-            var jwks = new JwsVerify(url, cookieName, ext);
-            try {
-                jwks.loadJwks();
-            } catch (RuntimeException e) {
-                if (Boolean.TRUE.equals(rpcConfig.exitOnJwksError().orElse(Boolean.FALSE))) {
-                    throw e;
-                } else {
-                    log.warn("Error load jwks {} , {}", jwks.getUrl(), e.getMessage());
-                }
-            }
-            ServerContext.regCredentialVerify(jwks);
-        });
+        initJwsVerify();
 
         //System.getProperties().forEach((k,v)->{
         //    System.out.println( k + "$$$$$$$$$$$$" + v);
         //});
-        var app = rpcConfig.app().orElseGet(() -> {
-            //HOSTNAME=demo-java-server-ddc6cc976-sm6pn
-            var podName = System.getenv("HOSTNAME");
-            int split;
-            if (null != podName && (split = podName.lastIndexOf('-')) > 0) {
-                if ((split = podName.lastIndexOf('-', split - 1)) > 0) {
-                    return podName.substring(0, split);
-                }
+
+        app = autoAppName();
+        var serviceSize = initServer(app);
+        log.info("***** RpcServer expose {} services on {}, {}.",serviceSize, port, RpcConstants.CI_BUILD_ID);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        if (null != server) {
+            server.shutdownNow();
+        }
+        log.info("***** RpcServer shutting down , since JVM is shutting down.");
+    }
+
+
+    String autoAppName(){
+        if(!NULL.equals(app)){
+            return app;
+        }
+        var podName = System.getenv("HOSTNAME");
+        int split;
+        if (null != podName && (split = podName.lastIndexOf('-')) > 0) {
+            if ((split = podName.lastIndexOf('-', split - 1)) > 0) {
+                return podName.substring(0, split);
             }
-            //java.class.path   = /Users/garden/bt-rpc/test-server/build/test-server-dev.jar
-            var path = System.getProperty("java.class.path");
-            var fileSplit = File.separatorChar;
-            var buildFLag = fileSplit + "build" + fileSplit;
+        }
+        //java.class.path   = /Users/garden/bt-rpc/test-server/build/test-server-dev.jar
+        var path = System.getProperty("java.class.path");
+        var fileSplit = File.separatorChar;
+        var buildFLag = fileSplit + "build" + fileSplit;
 
-            if ((split = path.indexOf(buildFLag)) <= 0) {
-                path = System.getProperty("native.image.path");
-                split = path.indexOf(buildFLag);
+        if ((split = path.indexOf(buildFLag)) <= 0) {
+            path = System.getProperty("native.image.path");
+            split = path.indexOf(buildFLag);
+        }
+
+        if (split > 0) {
+            return path.substring(path.lastIndexOf(fileSplit, split - 1) + 1, split);
+        }
+
+        throw new RuntimeException("pls SET the rpc.server.app in application.properties");
+    }
+
+    void initJwsVerify(){
+        if(NULL.equals(jwks)){
+            log.info("No Jwks Url Set, Skip.");
+            return;
+        }
+        var url = jwks;
+        ExtVerify ext = ExtVerify.EMPTY;
+        var extVerifies = CDI.current().select(ExtVerify.class);
+        if (extVerifies.isResolvable()) {
+            ext = extVerifies.get();
+        }
+        var cookieName = jwtCookie;//rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
+        log.info("Reg CredentialVerify: {} ,cookieName: {}", url, cookieName);
+        if (ext != ExtVerify.EMPTY) {
+            log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
+        }
+        var jwks = new JwsVerify(url, cookieName, ext);
+        try {
+            jwks.loadJwks();
+        } catch (RuntimeException e) {
+            if (exitOnJwksError) {
+                throw e;
+            } else {
+                log.warn("Error load jwks {} , {}", jwks.getUrl(), e.getMessage());
             }
+        }
+        ServerContext.regCredentialVerify(jwks);
 
-            if (split > 0) {
-                return path.substring(path.lastIndexOf(fileSplit, split - 1) + 1, split);
-            }
+    }
 
-            throw new RuntimeException("pls SET the rpc.server.app in application.properties");
-        });
 
-        var port = rpcConfig.port().orElse(RpcConstants.DEFAULT_PORT);
+    int initServer(String app) throws Exception {
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
+        var bm = CDI.current().getBeanManager();
+        Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});
         int i = 0;
         for (Bean<?> bean : beans) {
 
@@ -175,15 +201,36 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
         }
         server = proxyServerBuilder.build().startServer();
-        log.info("***** RpcServer expose {} services on {}, {}.", i, port, RpcConstants.CI_BUILD_ID);
+        return i;
     }
 
-    @PreDestroy
-    public void shutdown() {
-        if (null != server) {
-            server.shutdownNow();
+    public void initValidator(){
+        //var validators = CDI.current().select(Validator.class);
+        //if (validators.isResolvable()) {
+        if (validator instanceof EmptyValidator) {
+            log.warn("EmptyValidator Found, All Rpc Validator will Skip, Are you Sure?");
+        }else {
+            log.info("Reg GlobalValidator :  {}", validator);
+            ServerContext.regValidator(validator);
         }
-        log.info("***** RpcServer shutting down , since JVM is shutting down.");
+    }
+
+
+    public void initFilter(){
+        var bm = CDI.current().getBeanManager();
+        var sfSet = bm.getBeans(ServerFilter.class);
+        var map = new TreeMap<GlobalFilter.Order, ServerFilter>();
+        sfSet.forEach(bean -> {
+            var gf = bean.getBeanClass().getAnnotation(GlobalFilter.class);
+            if (null != gf) {
+                map.put(new Order(gf.value(), bean.getBeanClass().getSimpleName()),
+                        (ServerFilter) CDI.current().select(bean.getBeanClass()).get());
+            }
+        });
+        map.forEach((k, v) -> {
+            log.info("Reg GlobalFilter :  {}", k);
+            ServerContext.regGlobalFilter(v);
+        });
     }
 
 }

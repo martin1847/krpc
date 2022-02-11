@@ -7,7 +7,6 @@ package com.bt.rpc.util;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import org.apache.commons.lang3.StringUtils;
 
 /**
  *
@@ -19,10 +18,10 @@ public abstract class EnvUtils {
 
     public static String env(String key,String defaultValue){
         var value = System.getenv(key);
-        if(StringUtils.isBlank(value)){
-            value = defaultValue;
+        if(StringUtils.isNotBlank(value)){
+            return value;
         }
-        return value;
+        return defaultValue;
     }
 
 

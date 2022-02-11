@@ -22,26 +22,22 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
-    implementation "io.quarkus:quarkus-arc"
-    // not transfer ok
-    // TODO change to api CDI dependonly , next time http-server-expose together
-//    api "io.quarkus:quarkus-netty"
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
 
-//    implementation 'io.quarkus:quarkus-config-yaml'
-//    implementation 'io.quarkus:quarkus-grpc-common-deployment'
+//    implementation platform("io.quarkus:quarkus-bom:2.4.2.Final")
+//    implementation "io.quarkus:quarkus-arc:2.4.2.Final"
+    //this version is the max to support JNI/DrawCaptcha
+    implementation "io.quarkus:quarkus-core:2.4.2.Final"
+
+    //use to vailator RpcConfig/Property
+    runtimeOnly "io.quarkus:quarkus-hibernate-validator:2.4.2.Final"
+//    implementation "smallrye-config-core:io.smallrye.config:2.5.1"
+
+
+    api "com.bt.ext:ext-rpc:1.0.0"
 
     runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
-    api "com.bt.ext:ext-rpc:1.0.0"
-//    api "com.bt.ext:ext-rpc:$version"
 
-    runtimeOnly "io.quarkus:quarkus-hibernate-validator"
-
-
-
-    //1.4.2.Final  1.5.0.Beta1
-//    implementation 'org.mapstruct:mapstruct:1.5.0.Beta1'
-//    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.0.Beta1'
 }
 
 

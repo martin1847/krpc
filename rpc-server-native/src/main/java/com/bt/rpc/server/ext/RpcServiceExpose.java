@@ -3,12 +3,14 @@ package com.bt.rpc.server.ext;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.Bean;
@@ -30,6 +32,7 @@ import com.bt.rpc.server.jws.ExtVerify;
 import com.bt.rpc.server.jws.JwsVerify;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
+import io.quarkus.runtime.StartupEvent;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -45,8 +48,21 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     Server server;
 
+    //@Inject
+    //Validator validator;
+
+
+    //void onStart(@Observes StartupEvent ev) {
+    //    log.info("use to not remove Startup ");
+    //
+    //    //https://github.com/eugenp/tutorials/blob/master/quarkus-jandex/hello-sender-beans-xml/src/main/java/com/baeldung/quarkus/hello/sender/beansxml/BeansXmlHelloSender.java
+    //    //event.getHelloReceiver().accept("Hi, I was detected using an empty META-INF/beans.xml file.");
+    //}
+
     @PostConstruct
     public void expose() throws Exception {
+
+
         var bm = CDI.current().getBeanManager();
         Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});
         var sfSet = bm.getBeans(ServerFilter.class);
@@ -67,6 +83,8 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         if (validators.isResolvable()) {
             log.info("Reg GlobalValidator :  {}", validators.get());
             ServerContext.regValidator(validators.get());
+        }else {
+            log.warn("NO Validator Found, All Rpc Validator will Skip, Are you Sure?");
         }
 
         rpcConfig.jwks().ifPresent(url -> {

@@ -8,8 +8,8 @@ dependencies {
     // com.google.api.grpc/proto-google-common-protos/1.12.0
     
     api "io.grpc:grpc-api:${grpcVersion}"
-    api 'com.google.errorprone:error_prone_annotations:2.9.0'
-    api 'com.google.guava:guava:30.1.1-jre'
+    api "com.google.errorprone:error_prone_annotations:$errorProneVersion"
+    api "com.google.guava:guava:$guavaVersion"
     // above override grpc-api dependency//
 
 
@@ -22,7 +22,7 @@ dependencies {
     api "org.slf4j:slf4j-api:$slf4jVersion"
 
 //    implementation 'org.yaml:snakeyaml:1.28'
-    implementation 'org.apache.commons:commons-lang3:3.12.0'
+//    implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
 

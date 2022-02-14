@@ -3,6 +3,7 @@ package com.bt.rpc.server.ext;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -61,13 +62,13 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     //    //event.getHelloReceiver().accept("Hi, I was detected using an empty META-INF/beans.xml file.");
     //}
 
-    static final String NULL = "null";
+    //static final String NULL = "null";
 
-    @ConfigProperty(name = "rpc.server.app",defaultValue = NULL)
-    String app;
+    @ConfigProperty(name = "rpc.server.app")//,defaultValue = NULL
+    Optional<String> app;
 
-    @ConfigProperty(name = "rpc.server.jwks",defaultValue = NULL)
-    String jwks;
+    @ConfigProperty(name = "rpc.server.jwks")//,defaultValue = NULL
+    Optional<String> jwks;
 
 
     @ConfigProperty(name = "rpc.server.jwtCookie",defaultValue = JwsVerify.DEFAULT_COOKIE_NAME)
@@ -93,7 +94,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         //    System.out.println( k + "$$$$$$$$$$$$" + v);
         //});
 
-        app = autoAppName();
+        var app = autoAppName();
         var serviceSize = initServer(app);
         log.info("***** 【 {} 】 RpcServer expose {} services on {}, {}.", EnvUtils.current(),serviceSize, port, RpcConstants.CI_BUILD_ID);
     }
@@ -103,13 +104,13 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         if (null != server) {
             server.shutdownNow();
         }
-        log.info("***** RpcServer shutting down , since JVM is shutting down.");
+        log.info("***** 【 {} 】 RpcServer shutting down , since JVM is shutting down.", EnvUtils.current());
     }
 
 
     String autoAppName(){
-        if(!NULL.equals(app)){
-            return app;
+        if(app.isPresent()){
+            return app.get();
         }
         var podName = System.getenv("HOSTNAME");
         int split;
@@ -136,11 +137,11 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     }
 
     void initJwsVerify(){
-        if(NULL.equals(jwks)){
+        if(jwks.isEmpty()){
             log.info("No Jwks Url Set, Skip.");
             return;
         }
-        var url = jwks;
+        var url = jwks.get();
         ExtVerify ext = ExtVerify.EMPTY;
         var extVerifies = CDI.current().select(ExtVerify.class);
         if (extVerifies.isResolvable()) {

@@ -27,8 +27,6 @@ import com.bt.rpc.server.ReflectionHelper;
 import com.bt.rpc.server.RpcServerBuilder;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
-import com.bt.rpc.server.jws.ExtVerify;
-import com.bt.rpc.server.jws.JwsVerify;
 import com.bt.rpc.util.EnvUtils;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
@@ -50,33 +48,12 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     @Inject
     Validator validator;
-    //
-    //@Inject
-    //Instance<Validator> validator2;
 
-
-    //void onStart(@Observes StartupEvent ev) {
-    //    log.info("use to not remove Startup ");
-    //
-    //    //https://github.com/eugenp/tutorials/blob/master/quarkus-jandex/hello-sender-beans-xml/src/main/java/com/baeldung/quarkus/hello/sender/beansxml/BeansXmlHelloSender.java
-    //    //event.getHelloReceiver().accept("Hi, I was detected using an empty META-INF/beans.xml file.");
-    //}
-
-    //static final String NULL = "null";
+    @Inject
+    InitJwsVerify initJwsVerify;
 
     @ConfigProperty(name = "rpc.server.app")//,defaultValue = NULL
     Optional<String> app;
-
-    @ConfigProperty(name = "rpc.server.jwks")//,defaultValue = NULL
-    Optional<String> jwks;
-
-
-    @ConfigProperty(name = "rpc.server.jwtCookie",defaultValue = JwsVerify.DEFAULT_COOKIE_NAME)
-    String jwtCookie;
-
-    @ConfigProperty(name = "rpc.server.exitOnJwksError",defaultValue = "false")
-    boolean exitOnJwksError;
-
 
     @ConfigProperty(name = "rpc.server.port",defaultValue = RpcConstants.DEFAULT_PORT+"")
     int port;
@@ -88,7 +65,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
         initValidator();
 
-        initJwsVerify();
+        initJwsVerify.init();
 
         //System.getProperties().forEach((k,v)->{
         //    System.out.println( k + "$$$$$$$$$$$$" + v);
@@ -136,35 +113,6 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         throw new RuntimeException("pls SET the rpc.server.app in application.properties");
     }
 
-    void initJwsVerify(){
-        if(jwks.isEmpty()){
-            log.info("No Jwks Url Set, Skip.");
-            return;
-        }
-        var url = jwks.get();
-        ExtVerify ext = ExtVerify.EMPTY;
-        var extVerifies = CDI.current().select(ExtVerify.class);
-        if (extVerifies.isResolvable()) {
-            ext = extVerifies.get();
-        }
-        var cookieName = jwtCookie;//rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
-        log.info("Reg CredentialVerify: {} ,cookieName: {}", url, cookieName);
-        if (ext != ExtVerify.EMPTY) {
-            log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
-        }
-        var jwks = new JwsVerify(url, cookieName, ext);
-        try {
-            jwks.loadJwks();
-        } catch (RuntimeException e) {
-            if (exitOnJwksError) {
-                throw e;
-            } else {
-                log.warn("Error load jwks {} , {}", jwks.getUrl(), e.getMessage());
-            }
-        }
-        ServerContext.regCredentialVerify(jwks);
-
-    }
 
 
     int initServer(String app) throws Exception {

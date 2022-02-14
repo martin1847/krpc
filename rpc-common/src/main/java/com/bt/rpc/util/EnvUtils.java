@@ -6,7 +6,7 @@ package com.bt.rpc.util;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
+import java.util.Locale;
 
 /**
  * 获取环境变量，以及当前部署环境
@@ -25,7 +25,7 @@ public abstract class EnvUtils {
 
     public static AppEnv current(){
         var env = env(APP_ENV,AppEnv.DEV.name());
-        return AppEnv.valueOf(env);
+        return AppEnv.valueOf(env.toUpperCase(Locale.ROOT));
     }
 
 

@@ -28,6 +28,7 @@ import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
 import com.bt.rpc.server.jws.ExtVerify;
 import com.bt.rpc.server.jws.JwsVerify;
+import com.bt.rpc.util.EnvUtils;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
 import lombok.extern.slf4j.Slf4j;
@@ -94,7 +95,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
         app = autoAppName();
         var serviceSize = initServer(app);
-        log.info("***** RpcServer expose {} services on {}, {}.",serviceSize, port, RpcConstants.CI_BUILD_ID);
+        log.info("***** 【 {} 】 RpcServer expose {} services on {}, {}.", EnvUtils.current(),serviceSize, port, RpcConstants.CI_BUILD_ID);
     }
 
     @PreDestroy

@@ -22,6 +22,8 @@ public class JwsCredential implements UserCredential{
 
     public static final char DOT = '.';
 
+    public static final String CLIENT_HASH_LONG ="chl";
+
     private Map<String,String> header;
     private Map<String,Object> payload;
 
@@ -102,6 +104,10 @@ public class JwsCredential implements UserCredential{
         return payload.get(key);
     }
 
+
+    public Long getClientHash(){
+        return (Long) payload.get(CLIENT_HASH_LONG);
+    }
 
     static String decode64(String part){
         return  new String(Base64.getUrlDecoder().decode(part), StandardCharsets.UTF_8);

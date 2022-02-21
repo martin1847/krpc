@@ -30,6 +30,8 @@ public class InitJwsVerify {
     public static final String JWKS_CONFIG_KEY = "rpc.server.jwks";
     public static final String JWS_COOKIE_CONFIG_KEY = "rpc.server.jwsCookie";
 
+    public static final String JWS_BIND_CONFIG_KEY = "rpc.server.jwsBindClient";
+
     public static final String EXIT_ON_JWKS_ERROR_CONFIG_KEY = "rpc.server.exitOnJwksError";
 
 
@@ -42,6 +44,9 @@ public class InitJwsVerify {
 
     @ConfigProperty(name = EXIT_ON_JWKS_ERROR_CONFIG_KEY,defaultValue = "false")
     boolean exitOnJwksError;
+
+    @ConfigProperty(name = JWS_BIND_CONFIG_KEY,defaultValue = "false")
+    boolean bindClient;
 
 
     void init(){
@@ -56,11 +61,11 @@ public class InitJwsVerify {
             ext = extVerifies.get();
         }
         var cookieName = jwsCookie;//rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
-        log.info("Init CredentialVerify: {} ,cookieName: {}", url, cookieName);
+        log.info("Init Credential JwsVerify: {} ,cookieName: {} , bindClient: {}", url, cookieName, bindClient);
         if (ext != ExtVerify.EMPTY) {
             log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
         }
-        var jwks = new JwsVerify(url, cookieName, ext);
+        var jwks = new JwsVerify(url, cookieName, ext,bindClient);
         try {
             jwks.loadJwks();
             ServerContext.regCredentialVerify(jwks);

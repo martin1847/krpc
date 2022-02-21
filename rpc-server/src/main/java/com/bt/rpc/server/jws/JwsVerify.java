@@ -48,21 +48,24 @@ public class JwsVerify implements CredentialVerify {
     @Getter
     final String cookieName;
 
+    final boolean bindClient;
+
     public JwsVerify(String url){
         this(url,DEFAULT_COOKIE_NAME);
     }
 
     public JwsVerify(String url,String cookieName) {
-        this(url,cookieName,ExtVerify.EMPTY);
+        this(url,cookieName,ExtVerify.EMPTY,false);
     }
 
-    public JwsVerify(String url,String cookieName,ExtVerify extVerify) {
+    public JwsVerify(String url,String cookieName,ExtVerify extVerify,boolean bindClient) {
         if (!url.endsWith(".json")) {
             url += url.endsWith("/") ? WELL_KNOWN_JWKS_PATH : "/" + WELL_KNOWN_JWKS_PATH;
         }
         this.url = url;
         this.cookieName = cookieName;
         this.extVerify = extVerify;
+        this.bindClient = bindClient;
     }
 
     ECPublicKey useKey(String kid) {
@@ -133,6 +136,12 @@ public class JwsVerify implements CredentialVerify {
                 jws.parsePayload();
                 if (System.currentTimeMillis() / 1000L > jws.getExpiresAt().longValue()) {
                     throw Status.UNAUTHENTICATED.withDescription("Token expired at: " + jws.getExpiresAt()).asException();
+                }
+                if(bindClient){
+                    var clientHash = jws.getClientHash();
+                    if( null == clientHash || clientHash != Murmur3.hash64(cid.getBytes(StandardCharsets.UTF_8))){
+                        throw Status.UNAUTHENTICATED.withDescription("Token forge : " + cid).asException();
+                    }
                 }
 
                 extVerify.afterSignCheck(jws,isCookie);

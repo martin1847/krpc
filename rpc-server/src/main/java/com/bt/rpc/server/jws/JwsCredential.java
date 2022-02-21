@@ -105,8 +105,9 @@ public class JwsCredential implements UserCredential{
     }
 
 
-    public Long getClientHash(){
-        return (Long) payload.get(CLIENT_HASH_LONG);
+    // Jackson for number > Integer.MAX then Long , otherwise Integer
+    public Number getClientHashLong(){
+        return (Number) payload.get(CLIENT_HASH_LONG);
     }
 
     static String decode64(String part){

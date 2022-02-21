@@ -138,8 +138,8 @@ public class JwsVerify implements CredentialVerify {
                     throw Status.UNAUTHENTICATED.withDescription("Token expired at: " + jws.getExpiresAt()).asException();
                 }
                 if(bindClient){
-                    var clientHash = jws.getClientHash();
-                    if( null == clientHash || clientHash != Murmur3.hash64(cid.getBytes(StandardCharsets.UTF_8))){
+                    var clientHash = jws.getClientHashLong();
+                    if( null == clientHash || clientHash.longValue() != Murmur3.hash64(cid.getBytes(StandardCharsets.UTF_8))){
                         throw Status.UNAUTHENTICATED.withDescription("Token forge : " + cid).asException();
                     }
                 }

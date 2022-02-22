@@ -27,7 +27,7 @@ package com.bt.rpc.internal;
 // https://github.com/protocolbuffers/protobuf/blob/master/java/lite.md
 
 
-//service Gr apc {
+//service Grpc {
 //  rpc call (InputProto) returns (OutputProto);
 //}
 

@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.bt.rpc.annotation.RpcService;
@@ -46,6 +47,7 @@ public class RpcServerBuilder {
 		private final int port;
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
 		public static final List<BindableService> PROTO_SERVICE_LIST = new ArrayList<>();
+		Executor executor;
 
 		//public final String applicationName;
 
@@ -71,6 +73,11 @@ public class RpcServerBuilder {
 			return this;
 		}
 
+		public Builder executor(Executor executor) {
+			this.executor = executor;
+			return this;
+		}
+
 		public Builder regGlobalFilter(ServerFilter... filters) {
 			for (var filter : filters) {
 				ServerContext.regGlobalFilter(filter);
@@ -91,11 +98,13 @@ public class RpcServerBuilder {
 	
 	private RpcServerBuilder(Builder builder) throws Exception {
 		this.port = builder.port;
-		this.server = init(builder.services);
+		this.server = init(builder.services,builder.executor);
 	}
 	
-	private  Server init(Map<Object,List<ServerFilter>> services) throws Exception {
+	private  Server init(Map<Object,List<ServerFilter>> services,Executor executor) throws Exception {
 		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
+
+		serverBuilder.executor(executor);
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);

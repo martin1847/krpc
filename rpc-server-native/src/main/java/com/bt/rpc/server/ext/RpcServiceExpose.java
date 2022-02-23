@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -27,6 +28,7 @@ import com.bt.rpc.server.ReflectionHelper;
 import com.bt.rpc.server.RpcServerBuilder;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
+import com.bt.rpc.server.exe.ThreadPool;
 import com.bt.rpc.util.EnvUtils;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
@@ -46,6 +48,8 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     Server server;
 
+    ExecutorService executor;
+
     @Inject
     Validator validator;
 
@@ -57,6 +61,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     @ConfigProperty(name = "rpc.server.port",defaultValue = RpcConstants.DEFAULT_PORT+"")
     int port;
+
+    @ConfigProperty(name = "rpc.server.defaultExecutor",defaultValue = "false")
+    boolean defaultExecutor;
 
     @PostConstruct
     public void expose() throws Exception {
@@ -72,16 +79,31 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         //});
 
         var app = autoAppName();
+
+        if(!defaultExecutor) {
+            // instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL ( SHARED_CHANNEL_EXECUTOR/ NAME = "grpc-default-executor")
+            var name = app + "-rpc-exe";
+            var cpus = Runtime.getRuntime().availableProcessors();
+            executor = ThreadPool.newExecutor(name, cpus);
+            log.info("Init Executor {}({} cpus),  instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name, cpus);
+        }else {
+            log.info("Use CachedThreadPool ServerImplBuilder.DEFAULT_EXECUTOR_POOL grpc-default-executor.");
+        }
+
         var serviceSize = initServer(app);
         log.info("***** 【 {} 】 RpcServer expose {} services on {}, {}.", EnvUtils.current(),serviceSize, port, RpcConstants.CI_BUILD_ID);
     }
 
     @PreDestroy
     public void shutdown() {
+        var waitTask = 0;
         if (null != server) {
             server.shutdownNow();
         }
-        log.info("***** 【 {} 】 RpcServer shutting down , since JVM is shutting down.", EnvUtils.current());
+        if(null != executor){
+            waitTask = executor.shutdownNow().size();
+        }
+        log.info("***** 【 {} 】 RpcServer shutting down with {} waiting tasks, since JVM is shutting down.", EnvUtils.current(),waitTask);
     }
 
 
@@ -117,6 +139,8 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     int initServer(String app) throws Exception {
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
+
+        proxyServerBuilder.executor(executor);
 
         var bm = CDI.current().getBeanManager();
         Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});

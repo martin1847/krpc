@@ -18,6 +18,11 @@ public class ThreadPool {
      *
      * https://github.com/grpc/grpc-java/issues/7381#issuecomment-685894912
      *
+     * 36ms
+     * 36/(36-33)=12
+     * 47/(47-36)= 5
+     * DEBUG [c.b.c.AcsClient] (grpc-default-executor-772) :603e1e6d6a187f87dd9e4484c68dd7e2 CallAli  vod.GetPlayInfo -> 33 ms
+     *
      * .如何估算线程数？
      * 在电商业务类型下，任务大部分都是IO密集型的，而IO密集型的线程数可以根据如下公式计算得出：线程池线程数=CPU核数*
      * (响应时间/（响应时间-调用第三方接口时间-访问数据库时间））。

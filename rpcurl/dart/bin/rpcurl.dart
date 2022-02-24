@@ -26,10 +26,12 @@ void main(List<String> arguments) async {
   final String ENV_URL = "RPC_URL";
   final String ENV_APP = "RPC_APP";
   final String ENV_TOKEN = "RPC_TOKEN";
+  final String ENV_CID = "RPC_CID";
+  final String ENV_CMETA = "RPC_CMETA";
 
   final String LOCAL = 'http://127.0.0.1:50051';
 
-  final String VERSION = 'rpcurl-1.0 2021.12.28';
+  final String VERSION = 'rpcurl-1.0 2022.02.24';
 
   final parser = ArgParser()
     ..addFlag('no-url',
@@ -52,7 +54,10 @@ void main(List<String> arguments) async {
     ..addOption('token',
         abbr: 't',
         help: 'authorization: Bearer <accessToken>,也可通过环境变量`$ENV_TOKEN`传递')
-    ..addOption('header', abbr: 'H', help: 'curl like add headers <key:value>')
+    ..addOption('header',
+        abbr: 'H',
+        help:
+            'env 设置 c-meta : `$ENV_CMETA` , c-id  `$ENV_CID`; curl like add headers <key:value>')
     ..addFlag('version', abbr: 'V', help: '打印版本号 $VERSION');
 
   ArgResults args = parser.parse(arguments);
@@ -102,7 +107,6 @@ void main(List<String> arguments) async {
 
   final channel = ClientChannel(uri.host, port: uri.port, options: options);
 
-
   // TODO clientId bind with the token & headers
   final baseService = BaseService(
       channel,
@@ -110,7 +114,8 @@ void main(List<String> arguments) async {
       sName,
       ServiceConfig(
           accessToken: args['token'] ?? envVarMap[ENV_TOKEN],
-          clientId: 'drpcurl-${Platform.localHostname}'));
+          clientId: envVarMap[ENV_CID] ?? 'drpcurl-${Platform.localHostname}',
+          headers: {"c-meta": envVarMap[ENV_CMETA] ?? '{"os":"drpcurl"}'}));
 
   String? param = args['data'];
   String? file = args['file'];

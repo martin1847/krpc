@@ -8,6 +8,29 @@ import com.bt.rpc.internal.SerialEnum;
 import io.grpc.ManagedChannel;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * https://github.com/googleapis/gax-java/blob/main/gax-grpc/src/main/java/com/google/api/gax/grpc/ChannelPool.java
+ *
+ * todo 客户端请求非常大的时候，多开连接
+ *
+ * https://github.com/grpc/grpc/issues/21386
+ * https://grpc.io/docs/guides/performance/#general
+ *
+ * (Special topic) Each gRPC channel uses 0 or more HTTP/2 connections and each connection usually has a limit on the number of
+ * concurrent streams. When the number of active RPCs on the connection reaches this limit, additional RPCs are queued in the client and
+ * must wait for active RPCs to finish before they are sent. Applications with high load or long-lived streaming RPCs might see
+ * performance issues because of this queueing. There are two possible solutions:
+ *
+ * Create a separate channel for each area of high load in the application.
+ *
+ * Use a pool of gRPC channels to distribute RPCs over multiple connections (channels must have different channel args to prevent re-use
+ * so define a use-specific channel arg such as channel number).
+ *
+ * Side note: The gRPC team has plans to add a feature to fix these performance issues (see grpc/grpc#21386 for more info), so any
+ * solution involving creating multiple channels is a temporary workaround that should eventually not be needed.
+ *
+ *
+ */
 @Slf4j
 public class RpcClientFactory {
 

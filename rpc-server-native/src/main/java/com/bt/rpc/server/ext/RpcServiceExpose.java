@@ -84,6 +84,11 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             // instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL ( SHARED_CHANNEL_EXECUTOR/ NAME = "grpc-default-executor")
             var name = app + "-rpc-exe";
             var cpus = Runtime.getRuntime().availableProcessors();
+            if(cpus < 4 ){
+                // docker may be 1
+                log.info(" cpus is too small {} , change to default 4.",cpus);
+                cpus = 4;
+            }
             executor = ThreadPool.newExecutor(name, cpus);
             log.info("Init Executor {}({} cpus),  instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name, cpus);
         }else {

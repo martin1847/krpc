@@ -115,7 +115,8 @@ void main(List<String> arguments) async {
           clientId: args['clientId'] ??
               envVarMap[ENV_CID] ??
               'drpcurl-${Platform.localHostname}',
-          clientMeta: args['clientMeta'] ?? envVarMap[ENV_CMETA]));
+          clientMeta:
+              args['clientMeta'] ?? envVarMap[ENV_CMETA] ?? '{"os":4}'));
 
   String? param = args['data'];
   String? file = args['file'];

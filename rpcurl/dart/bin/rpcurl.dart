@@ -42,22 +42,21 @@ void main(List<String> arguments) async {
     ..addOption('url',
         abbr: 'u',
         help:
-            '服务地址,默认参数,必传,也可通过环境变量`$ENV_URL`传递，如: https://example.testbtyxapi.com/demo-java-server/Demo/hello')
+            '服务地址,默认参数,必传,也可通过环境变量`$ENV_URL`传递,如: https://example.testbtyxapi.com/demo-java-server/Demo/hello')
     ..addOption('app',
         abbr: 'a', help: '服务项目名,也可通过环境变量`$ENV_APP`传递,如 demo-java-server')
     ..addOption('service', abbr: 's', help: '服务名', defaultsTo: META_SERVICE)
     ..addOption('method', abbr: 'm', help: '方法名', defaultsTo: DEFAULT_METHOD)
     ..addOption('data',
-        abbr: 'd', help: '入参json,优先级高于file，如 -d \'{"name":"rpcurl"}\'')
-    ..addOption('file', abbr: 'f', help: '入参jsonFile，如 -f test.json')
+        abbr: 'd', help: '入参json,优先级高于file,如 -d \'{"name":"rpcurl"}\'')
+    ..addOption('file', abbr: 'f', help: '入参jsonFile,如 -f test.json')
     // ..addOption('cookie', abbr: 'c', help: 'set cookie: <a=b; c=d>')
     ..addOption('token',
         abbr: 't',
         help: 'authorization: Bearer <accessToken>,也可通过环境变量`$ENV_TOKEN`传递')
-    ..addOption('header',
-        abbr: 'H',
-        help:
-            'env 设置 c-meta : `$ENV_CMETA` , c-id  `$ENV_CID`; curl like add headers <key:value>')
+    ..addOption('clientId', abbr: 'i', help: '设置c-id,或者环境变量 `$ENV_CID`')
+    ..addOption('clientMeta',
+        abbr: 'M', help: '设置 c-meta(json),或者环境变量 `$ENV_CMETA`')
     ..addFlag('version', abbr: 'V', help: '打印版本号 $VERSION');
 
   ArgResults args = parser.parse(arguments);
@@ -107,15 +106,16 @@ void main(List<String> arguments) async {
 
   final channel = ClientChannel(uri.host, port: uri.port, options: options);
 
-  // TODO clientId bind with the token & headers
   final baseService = BaseService(
       channel,
       app,
       sName,
       ServiceConfig(
           accessToken: args['token'] ?? envVarMap[ENV_TOKEN],
-          clientId: envVarMap[ENV_CID] ?? 'drpcurl-${Platform.localHostname}',
-          headers: {"c-meta": envVarMap[ENV_CMETA] ?? '{"os":"drpcurl"}'}));
+          clientId: args['clientId'] ??
+              envVarMap[ENV_CID] ??
+              'drpcurl-${Platform.localHostname}',
+          clientMeta: args['clientMeta'] ?? envVarMap[ENV_CMETA]));
 
   String? param = args['data'];
   String? file = args['file'];

@@ -54,10 +54,6 @@ class RpcMetaServiceImpl implements RpcMetaService {
         return result;
     }
 
-    @Override
-    public RpcResult<String> v() {
-        return RpcResult.ok(RpcConstants.CI_BUILD_ID + "-" + EnvUtils.hostName());
-    }
 
     @Override
     public RpcResult<List<String>> serials() {

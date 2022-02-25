@@ -16,6 +16,7 @@ import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
+import com.bt.rpc.common._MetaService;
 import com.bt.rpc.common.meta.ApiMeta;
 import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.util.RefUtils;
@@ -113,8 +114,11 @@ public class RpcServerBuilder {
 
 
 		var metaService = new RpcMetaServiceImpl();
+		var publicMetaService = new _MetaServiceImpl();
 		var metaMethods = new ArrayList<RpcMetaMethod>();
 		services.put(metaService,Collections.emptyList());
+		services.put(publicMetaService,Collections.emptyList());
+
 
 		var typeSets = new HashSet<Class>();
 		for(var kv : services.entrySet()) {
@@ -136,7 +140,7 @@ public class RpcServerBuilder {
 
 				var attr = (RpcService)clz.getAnnotation(RpcService.class);
 
-				boolean needMeta = clz != RpcMetaService.class;
+				boolean needMeta = clz != RpcMetaService.class && clz != _MetaService.class;
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));

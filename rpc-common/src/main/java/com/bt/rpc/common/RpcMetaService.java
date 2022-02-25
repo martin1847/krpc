@@ -14,14 +14,7 @@ import com.bt.rpc.model.RpcResult;
 @RpcService
 public interface RpcMetaService {
 
-
-
     RpcResult<ApiMeta> listApis();
-
-    /**
-     * 返回GraalVM 构建号
-     */
-    RpcResult<String> v();
 
     /**
      * 支持的序列化方式

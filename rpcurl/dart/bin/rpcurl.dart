@@ -33,6 +33,8 @@ void main(List<String> arguments) async {
 
   final String VERSION = 'rpcurl-1.0 2022.02.24';
 
+  final String DEFAULT_CID = 'drpcurl-${Platform.localHostname}';
+
   final parser = ArgParser()
     ..addFlag('no-url',
         negatable: false, abbr: 'L', help: '本机测试，本机测试 url=$LOCAL')
@@ -54,7 +56,8 @@ void main(List<String> arguments) async {
     ..addOption('token',
         abbr: 't',
         help: 'authorization: Bearer <accessToken>,也可通过环境变量`$ENV_TOKEN`传递')
-    ..addOption('clientId', abbr: 'i', help: '设置c-id,或者环境变量 `$ENV_CID`')
+    ..addOption('clientId',
+        abbr: 'i', help: '设置c-id,或者环境变量 `$ENV_CID`,默认 $DEFAULT_CID')
     ..addOption('clientMeta',
         abbr: 'M', help: '设置 c-meta(json),或者环境变量 `$ENV_CMETA`')
     ..addFlag('version', abbr: 'V', help: '打印版本号 $VERSION');
@@ -112,9 +115,7 @@ void main(List<String> arguments) async {
       sName,
       ServiceConfig(
           accessToken: args['token'] ?? envVarMap[ENV_TOKEN],
-          clientId: args['clientId'] ??
-              envVarMap[ENV_CID] ??
-              'drpcurl-${Platform.localHostname}',
+          clientId: args['clientId'] ?? envVarMap[ENV_CID] ?? DEFAULT_CID,
           clientMeta:
               args['clientMeta'] ?? envVarMap[ENV_CMETA] ?? '{"os":4}'));
 

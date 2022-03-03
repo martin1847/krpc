@@ -82,6 +82,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
                          FilterChain<ServerResult, ServerContext> lastChain, Metadata headers) {
         super(service, method, resDto, arg, lastChain);
         this.headers = headers;
+        injectMdc(headers, HttpConst.CLIENT_ID_HEADER,CLIENT_ID);
         if(injectMdc(headers, TraceMeta.X_B3_TRACE_ID,TraceMeta.TRACE_ID)){
             injectMdc(headers, TraceMeta.X_B3_SPAN_ID,TraceMeta.SPAN_ID);
             injectMdc(headers, TraceMeta.X_B3_PARENT_SPAN_ID,TraceMeta.PARENT_SPAN_ID);

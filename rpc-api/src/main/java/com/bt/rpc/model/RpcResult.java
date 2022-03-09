@@ -1,6 +1,7 @@
 package com.bt.rpc.model;
 
 import java.io.Serializable;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
@@ -14,6 +15,7 @@ import lombok.Data;
 public class RpcResult<DTO> implements Serializable {
 
     public static final int OK = 0;
+    public static final int DATA_LOSS = 15;
 
     /**
      * google.rpc.Code/CommonCode 的超集<br>
@@ -36,6 +38,19 @@ public class RpcResult<DTO> implements Serializable {
     public <T> RpcResult<T> error() {
         return (RpcResult<T>) this;
     }
+
+
+    public <T> RpcResult<T> ifOk(Function<DTO,T> dataHandler) {
+        if( null != data ){
+            var res = dataHandler.apply(data);
+            if(null != res) {
+                return RpcResult.ok(res);
+            }
+            return RpcResult.error(DATA_LOSS,"call ifOk But got null !!!");
+        }
+        return (RpcResult<T>) this;
+    }
+
 
 
     public static <T> RpcResult<T> ok(T data){

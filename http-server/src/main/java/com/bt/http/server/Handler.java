@@ -6,6 +6,8 @@ package com.bt.http.server;
 
 import java.util.List;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 /**
  *
  * @author Martin.C
@@ -28,7 +30,7 @@ public interface Handler<ParamDTO> {
         return "/"+ Character.toLowerCase(c) + name.substring(1);
     }
 
-    byte[] handle(ParamDTO param, List<AsciiHeader> resHeader);
+    byte[] handle(ParamDTO param, List<AsciiHeader> resHeader, HttpHeaders requestHeaders);
 
 
     default String contextType(){

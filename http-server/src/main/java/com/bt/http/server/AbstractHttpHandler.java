@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -71,14 +72,14 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             var query = new QueryStringDecoder(uri);
             var handler = getHanlderMap.get(query.rawPath());
             if(null != handler){
-                writeHandler(ctx,handler,query);
+                writeHandler(ctx,handler,query,request.headers());
                 return;
             }
         }else if("POST".equals(method)){
              var post = postMap.get(uri);
              if(null != post) {
                  var dto = parsePost(request, post);
-                 writeHandler(ctx, post, dto);
+                 writeHandler(ctx, post, dto,request.headers());
                  return;
              }
         }
@@ -86,10 +87,10 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         writeNotFound(ctx);
 
     }
-    <ParamDTO> void  writeHandler(ChannelHandlerContext ctx, Handler<ParamDTO> handler, ParamDTO dto){
+    <ParamDTO> void  writeHandler(ChannelHandlerContext ctx, Handler<ParamDTO> handler, ParamDTO dto, HttpHeaders requestHeaders){
         List<AsciiHeader> extHeaders = new ArrayList<AsciiHeader>();
         try {
-            var bytes =  handler.handle(dto,extHeaders);
+            var bytes =  handler.handle(dto,extHeaders,requestHeaders);
             writeResponse(ctx , HttpResponseStatus.OK, handler.contextType(), bytes,extHeaders);
         } catch (final Exception ex) {
             log.error("handler " +handler.path()+ " error",ex);
@@ -122,6 +123,9 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         String jsonBody = request.content().toString(CharsetUtil.UTF_8);
         if( null == jsonBody || jsonBody.isBlank()){
             return null;
+        }
+        if(String.class == post.paramClass){
+            return (ParamDTO)jsonBody;
         }
         var input = JsonUtils.parse(jsonBody, post.paramClass);
         if(post.useValidator){

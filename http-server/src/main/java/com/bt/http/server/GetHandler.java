@@ -4,8 +4,6 @@
  */
 package com.bt.http.server;
 
-import java.util.List;
-
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
@@ -14,8 +12,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  * @version 2021/12/22 9:24 AM
  */
 public interface GetHandler extends Handler<QueryStringDecoder> {
-
-    byte[] handle(QueryStringDecoder query, List<AsciiHeader> resHeader);
 
     default String param(QueryStringDecoder query, String key) {
         var params = query.parameters().get(key);

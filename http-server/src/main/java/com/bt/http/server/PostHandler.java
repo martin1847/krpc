@@ -4,45 +4,17 @@
  */
 package com.bt.http.server;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-
 /**
  *
  * @author Martin.C
  * @version 2021/12/22 9:24 AM
  */
-public abstract class PostHandler<ParamDTO> implements Handler<ParamDTO> {
+public interface PostHandler<ParamDTO> extends Handler<ParamDTO> {
 
-    public final Class<ParamDTO> paramClass;
+    Class<ParamDTO> getParamClass();
 
-    public final boolean useValidator ;
-
-    public PostHandler(){
-        this(true);
-    }
-    public PostHandler(boolean useValidator) {
-        Type[] pTypes = getParameterizedTypes(this);
-        paramClass = (Class<ParamDTO>) pTypes[0];
-        this.useValidator = useValidator;
+    default boolean useValidator() {
+        return true;
     }
 
-    public static Type[] getParameterizedTypes(Object object) {
-        Type superclassType = object.getClass().getGenericSuperclass();
-
-        // 简单上硕源两次
-        if(superclassType instanceof  Class){
-            superclassType = ((Class<?>) superclassType).getGenericSuperclass();
-        }
-
-        if(superclassType instanceof  Class){
-            superclassType = ((Class<?>) superclassType).getGenericSuperclass();
-        }
-
-        //
-        //if (!ParameterizedType.class.isAssignableFrom(superclassType.getClass())) {
-        //    return null;
-        //}
-        return ((ParameterizedType) superclassType).getActualTypeArguments();
-    }
 }

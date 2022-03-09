@@ -124,11 +124,11 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         if( null == jsonBody || jsonBody.isBlank()){
             return null;
         }
-        if(String.class == post.paramClass){
+        if(String.class == post.getParamClass()){
             return (ParamDTO)jsonBody;
         }
-        var input = JsonUtils.parse(jsonBody, post.paramClass);
-        if(post.useValidator){
+        var input = JsonUtils.parse(jsonBody,post.getParamClass());
+        if(post.useValidator()){
             var violationSet = getValidator().validate(input);
             if (violationSet.size() > 0) {
                 //400: StatusCode.INVALID_ARGUMENT 3;

@@ -29,9 +29,20 @@ public abstract class PostHandler<ParamDTO> implements Handler<ParamDTO> {
 
     public static Type[] getParameterizedTypes(Object object) {
         Type superclassType = object.getClass().getGenericSuperclass();
-        if (!ParameterizedType.class.isAssignableFrom(superclassType.getClass())) {
-            return null;
+
+        // 简单上硕源两次
+        if(superclassType instanceof  Class){
+            superclassType = ((Class<?>) superclassType).getGenericSuperclass();
         }
+
+        if(superclassType instanceof  Class){
+            superclassType = ((Class<?>) superclassType).getGenericSuperclass();
+        }
+
+        //
+        //if (!ParameterizedType.class.isAssignableFrom(superclassType.getClass())) {
+        //    return null;
+        //}
         return ((ParameterizedType) superclassType).getActualTypeArguments();
     }
 }

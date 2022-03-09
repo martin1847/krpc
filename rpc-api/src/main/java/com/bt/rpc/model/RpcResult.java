@@ -41,7 +41,7 @@ public class RpcResult<DTO> implements Serializable {
 
 
     public <T> RpcResult<T> ifOk(Function<DTO,T> dataHandler) {
-        if( null != data ){
+        if( OK == code ){
             var res = dataHandler.apply(data);
             if(null != res) {
                 return RpcResult.ok(res);

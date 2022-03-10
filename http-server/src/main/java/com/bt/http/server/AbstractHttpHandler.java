@@ -68,6 +68,8 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         var method = request.method().name();
         var uri = request.uri();
 
+
+
         if("GET".equals(method)){
             var query = new QueryStringDecoder(uri);
             var handler = getHanlderMap.get(query.rawPath());
@@ -94,7 +96,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             writeResponse(ctx , HttpResponseStatus.OK, handler.contextType(), bytes,extHeaders);
         } catch (final Exception ex) {
             log.error("handler " +handler.path()+ " error",ex);
-            writeInternalServerError(ctx);
+            writeInternalServerError(ctx,handler.contextType(),ex.getMessage());
         }
     }
     //
@@ -120,6 +122,11 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
 
 
     <ParamDTO> ParamDTO parsePost(FullHttpRequest request, PostHandler<ParamDTO> post){
+
+        //if(QueryStringDecoder.class == post.getParamClass()){
+        //    return (ParamDTO)q;
+        //}
+
         String jsonBody = request.content().toString(CharsetUtil.UTF_8);
         if( null == jsonBody || jsonBody.isBlank()){
             return null;
@@ -163,9 +170,15 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
      * @param ctx The channel context.
      */
     private static void writeInternalServerError(
-            final ChannelHandlerContext ctx ) {
+            final ChannelHandlerContext ctx ,String contextType,String msg) {
         var status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        writeResponse(ctx, status, TYPE_PLAIN, status.reasonPhrase().getBytes(StandardCharsets.UTF_8),null);
+        if(null == msg){
+            msg = status.reasonPhrase();
+        }
+        if(null == contextType){
+            contextType = TYPE_PLAIN;
+        }
+        writeResponse(ctx, status, contextType, msg.getBytes(StandardCharsets.UTF_8),null);
     }
 
     /**

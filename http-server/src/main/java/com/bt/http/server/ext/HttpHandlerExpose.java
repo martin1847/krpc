@@ -58,14 +58,14 @@ public class HttpHandlerExpose extends AbstractHttpHandler {
                 g++;
                 var handler = (GetHandler) CDI.current().select(bean.getBeanClass()).get();
                 getHanlderMap.put(handler.path(), handler);
-                log.info("reg HTTP GET {} ", handler.path());
+                log.debug(" found HTTP GET {} ", handler.path());
             }
 
             if(PostHandler.class.isAssignableFrom(bean.getBeanClass())){
                 p++;
                 var handler = (PostHandler<?>) CDI.current().select(bean.getBeanClass()).get();
                 postMap.put(handler.path(), handler);
-                log.info("reg HTTP POST {} ", handler.path());
+                log.debug(" found HTTP POST {} ", handler.path());
             }
         }
         if(g+p == 0){

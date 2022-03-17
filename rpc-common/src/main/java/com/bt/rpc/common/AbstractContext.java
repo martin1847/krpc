@@ -5,7 +5,6 @@ import lombok.Data;
 import java.lang.reflect.Type;
 
 /**
- * TODO change this comment
  * 2020-04-03 16:03
  *
  * @author Martin.C

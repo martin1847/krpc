@@ -19,4 +19,5 @@ dependencies:
   btrpc:
     git:
       url: https://gitlab.botaoyx.com/middleware/btyx-rpc-dart-client.git
-      ref: master
+      ref: be2d27a3
+      #ref: master

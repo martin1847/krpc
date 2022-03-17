@@ -3,7 +3,6 @@ package com.bt.rpc.common;
 import java.lang.reflect.Type;
 
 /**
- * TODO change this comment
  * 2020-04-03 15:25
  *
  * @author Martin.C

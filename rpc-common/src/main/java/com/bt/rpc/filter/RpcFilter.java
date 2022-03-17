@@ -5,7 +5,7 @@ import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.common.RpcContext;
 
 /**
- * TODO change this comment
+ * 自定义service拦截器，不依赖具体实现Grpc/Dubbo，解藕
  * 2020-04-03 15:32
  *
  * @author Martin.C

@@ -11,7 +11,7 @@ import static com.btyx.rpc.gen.meta.Property.DOC_ANNO;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Method {
+public class Method implements Comparable<Method>{
     String       name;
     PropertyType arg;
     PropertyType res;
@@ -50,4 +50,8 @@ public class Method {
         return res.toString();
     }
 
+    @Override
+    public int compareTo(Method o) {
+        return name.compareTo(o.name);
+    }
 }

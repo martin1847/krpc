@@ -11,6 +11,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
@@ -128,6 +129,7 @@ public class Gen {
                 template.remapping.remapping(m.getArg());
                 template.remapping.remapping(m.getRes());
             });
+            Collections.sort(api.getMethods());
             var serviceFile = template.serviceFileName(api.getName());
             root.put("serviceFile",serviceFile );
             System.out.println("---------- gen : "+ serviceFile);

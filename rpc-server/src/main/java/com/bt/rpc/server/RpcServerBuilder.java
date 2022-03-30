@@ -151,14 +151,13 @@ public class RpcServerBuilder {
 				}
 				var srv = serviceDefBuilder.build();
 				serverBuilder.addService(srv);
+				var sd = srv.getServiceDescriptor();
+				log.info("[ RpcService Expose: ] {}",  sd.getName());
 				if(needMeta){
-					var sd = srv.getServiceDescriptor();
-					log.info("[ RpcService Expose: ] {}",  sd.getName());
 					var index = new AtomicInteger();
 					sd.getMethods().forEach(it->
 							log.info("     {}). {}",index.incrementAndGet(), it.getFullMethodName() )
 							);
-
 				}
 
 			}

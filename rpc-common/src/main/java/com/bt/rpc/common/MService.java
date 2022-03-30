@@ -11,7 +11,7 @@ import com.bt.rpc.model.RpcResult;
  */
 @RpcService
 @UnsafeWeb
-public interface _MetaService {
+public interface MService {
     /**
      * 返回GraalVM 构建号
      */

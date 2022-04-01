@@ -36,6 +36,10 @@
     "allPublicMethods" : true
   },
   {
+    "name" : "com.bt.rpc.common.MService",
+    "allPublicMethods" : true
+  },
+  {
     "name" : "com.bt.rpc.common.meta.ApiMeta",
     "allPublicConstructors" : true,
     "allPublicMethods" : true

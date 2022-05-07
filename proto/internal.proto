@@ -2,6 +2,7 @@ syntax = "proto3";
 
 
 //package bt.rpc;
+option go_package = "google.golang.org/btrpc";
 
 service Grpc {
   rpc call (InputProto) returns (OutputProto);

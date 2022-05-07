@@ -5,11 +5,14 @@ brew install go
 
 
 ## docker镜像
-https://github.com/mfycheng/protoc-gen-go/blob/master/Dockerfile
-docker pull mfycheng/protoc-gen-go:0.5
+https://hub.docker.com/r/onosproject/protoc-go
 
-docker run -v --mount type=bind,source="$(pwd)"/go1,dst=/proto --mount type=bind,source="$(pwd)"/go2,dst=/genproto  mfycheng/protoc-gen-go:0.5
+docker pull onosproject/protoc-go:v1.2.1
 
--v go1:/proto -v go2:/genproto
+docker run  --rm -it --entrypoint /bin/bash  --mount type=bind,source="$(pwd)",dst=/proto onosproject/protoc-go:v1.2.1  
 
-docker run  --rm -it --entrypoint /bin/bash --mount type=bind,source="$(pwd)"/go1,dst=/proto --mount type=bind,source="$(pwd)"/go2,dst=/genproto mfycheng/protoc-gen-go:0.5
+protoc --go_out=. --go_opt=paths=source_relative \
+--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+internal.proto
+
+

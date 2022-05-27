@@ -27,7 +27,7 @@ dependencies {
 //    implementation platform("io.quarkus:quarkus-bom:2.4.2.Final")
 //    implementation "io.quarkus:quarkus-arc:2.4.2.Final"
     //this version is the max to support JNI/DrawCaptcha
-    implementation "io.quarkus:quarkus-core:2.4.2.Final"
+    implementation "io.quarkus:quarkus-core:$quarkusMiniSupport"
 
     api "com.bt.ext:ext-rpc:1.0.0"
 

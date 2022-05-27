@@ -16,7 +16,7 @@ dependencies {
     runtimeOnly "io.quarkus:quarkus-hibernate-validator"
 
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+    implementation platform("io.quarkus:quarkus-bom:${quarkusVersion}")
     implementation "io.quarkus:quarkus-arc"
     implementation "io.quarkus:quarkus-netty"
     implementation  "io.quarkus:quarkus-hibernate-validator"

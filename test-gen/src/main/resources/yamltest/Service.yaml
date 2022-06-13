@@ -2,16 +2,14 @@
 
 story: ${service.description!serviceFile}
 base:
-	domain: \$API_COM
-	# 对应后台应用名
-	app: ${app}
-	# 对应后台服务名
-	service: ${service.name}
-#	token: .xxx.x.x.xx
-#	useToken: true
+  domain: $API_COM
+  app: ${app}
+  service: ${service.name}
+  useToken: true
+  token: .xxx.x.x.xx
 cases:
-	<#list service.methods?filter(f->! f.hidden)  as m>
-- name: ${m.doc!m.name}
+  <#list service.methods?filter(f->! f.hidden)  as m>
+- name: "${m.doc!m.name}"
   method: ${m.name}
  <#if m.arg??>
   <#if m.arg.rawType.hasChild() >
@@ -25,8 +23,8 @@ cases:
  </#if>
   </#if>
   asserts:
-	- code == 0
+    - code == 0
 
 
-	</#list>
+  </#list>
 

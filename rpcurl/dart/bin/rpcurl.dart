@@ -31,7 +31,7 @@ void main(List<String> arguments) async {
 
   final String LOCAL = 'http://127.0.0.1:50051';
 
-  final String VERSION = 'rpcurl-1.0 2022.02.24';
+  final String VERSION = 'rpcurl-1.0 2022.06.13';
 
   final String DEFAULT_CID = 'drpcurl-${Platform.localHostname}';
 
@@ -60,6 +60,8 @@ void main(List<String> arguments) async {
         abbr: 'i', help: '设置c-id,或者环境变量 `$ENV_CID`,默认 $DEFAULT_CID')
     ..addOption('clientMeta',
         abbr: 'M', help: '设置 c-meta(json),或者环境变量 `$ENV_CMETA`')
+    ..addMultiOption('header',
+        abbr: 'H', help: 'custom header(s) : -H a=b -H c=d')
     ..addFlag('version', abbr: 'V', help: '打印版本号 $VERSION');
 
   ArgResults args = parser.parse(arguments);
@@ -132,8 +134,9 @@ void main(List<String> arguments) async {
     if (null != param) {
       print('${jsonDecode(param)}');
     }
-    final response =
-        await baseService.call0(mName, param, toJson: (String p0) => p0);
+
+    final response = await baseService.call0(mName, param,
+        headers: parseHeaders(args), toJson: (String p0) => p0);
 
     print('');
     var jsonRes = {'code': response.code, 'data': response.data};
@@ -159,6 +162,20 @@ void showUsage(ArgParser parser) {
       'Usage: rpcurl https://demo.btyxapi.com/appName/Demo/methodName -f param.json');
   print('测试rpc服务\r\n');
   print(parser.usage);
+}
+
+Map<String, String> parseHeaders(ArgResults args) {
+  List<String> headList = args['header'];
+  Map<String, String> headerMap = {};
+  if (headList.isNotEmpty) {
+    for (var kv in headList) {
+      var kvs = kv.split('=');
+      headerMap[kvs[0].trim()] = kvs[1].trim();
+    }
+    print('custom header(s) -> $headerMap');
+  }
+
+  return headerMap;
 }
 // Future<void> _handleError(String path) async {
 //   if (await FileSystemEntity.isDirectory(path)) {

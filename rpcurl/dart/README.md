@@ -13,3 +13,11 @@ $ dart pub get
 dart run
 dart compile exe  bin/rpcurl.dart    
 ```
+
+## alpline build
+
+dart:2.17 bash
+```bash
+docker run --rm -it --mount type=bind,source="$(pwd)",dst=/wk dart:2.17 bash
+dart
+```

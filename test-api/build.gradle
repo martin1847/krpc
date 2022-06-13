@@ -9,6 +9,9 @@ dependencies {
 
     api project(':rpc-api')
 
+//    api 'com.btyx.course:partner-admin-api:1.2.0606'
+
+
     testImplementation project(':test-gen')
     testImplementation project(':rpc-client')
     testImplementation "io.grpc:grpc-netty:${grpcVersion}"

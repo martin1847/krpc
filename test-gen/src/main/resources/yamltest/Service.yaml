@@ -15,7 +15,7 @@ cases:
   <#if m.arg.rawType.hasChild() >
   param: {
     <#list m.arg.rawType.fields as f>
-    "${f.name}": "${f.type}"${f?has_next?then(',','')}
+    "${f.name}": "${f.type!}"${f?has_next?then(',','')}
     </#list>
   }
  <#else>

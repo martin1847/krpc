@@ -70,6 +70,14 @@ public class Gen {
         genDart(appName,defaultFolder(LangEnum.Dart));
     }
 
+    public static void genYamltest(String appName){
+        try {
+            gen(appName,LangEnum.Yamltest,defaultFolder(LangEnum.Yamltest));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static void genTypescript(String appName, File outFolder) {
         try {
             gen(appName,LangEnum.Typescript,outFolder);

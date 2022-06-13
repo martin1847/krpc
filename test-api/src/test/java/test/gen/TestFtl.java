@@ -16,7 +16,8 @@ public class TestFtl {
 
     public static void main(String[] args) {
         Gen.basePkg = "com.btyx.test";
-        Gen.genTypescript("demo-java-server");
-        Gen.genDart("demo-java-server");
+        //Gen.genTypescript("demo-java-server");
+        //Gen.genDart("demo-java-server");
+        Gen.genYamltest("demo-java-server");
     }
 }

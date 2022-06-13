@@ -55,3 +55,4 @@ gradlew*
 /java-grpc/gradle/
 
 
+/test-api/yamltest/

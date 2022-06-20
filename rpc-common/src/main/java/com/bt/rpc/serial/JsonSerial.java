@@ -37,12 +37,20 @@ public class JsonSerial  implements Serial{
 
     @Override
     public <T> T readInput(InputProto proto, Class<T> type) {
-        return JsonUtils.parse(proto.getUtf8(), type);
+        var utf8 = proto.getUtf8();
+        if(utf8.isEmpty()){
+            return null;
+        }
+        return JsonUtils.parse(utf8, type);
     }
 
     @Override
     public <T> T readInput(InputProto proto, ParameterizedType type) {
-        return JsonUtils.parse(proto.getUtf8(), type);
+        var utf8 = proto.getUtf8();
+        if(utf8.isEmpty()){
+            return null;
+        }
+        return JsonUtils.parse(utf8, type);
     }
 
     @Override

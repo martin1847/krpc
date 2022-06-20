@@ -51,9 +51,9 @@ public abstract class JsonUtils {
     }
 
     public static <T> T parse(String json, Class<T> type) {
-        if (null == json || json.isEmpty()) {
-            return null;
-        }
+        //if (null == json || json.isEmpty()) {
+        //    return null;
+        //}
         try {
             return (T) MAPPER.readValue(json, type);
         } catch (JsonProcessingException e) {
@@ -73,9 +73,9 @@ public abstract class JsonUtils {
     //}
 
     public static <T> T parse(String json, ParameterizedType type) {
-        if (null == json || json.isEmpty()) {
-            return null;
-        }
+        //if (null == json || json.isEmpty()) {
+        //    return null;
+        //}
         JavaType genc = TYPES_MAP.computeIfAbsent(type, t -> {
             var parameterClasses = Stream.of(type.getActualTypeArguments())
                     .map(it -> (Class) it)

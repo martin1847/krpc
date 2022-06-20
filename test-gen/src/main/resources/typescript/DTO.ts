@@ -37,8 +37,14 @@ export ${dto.input?then('class','interface')}  ${dto.typeName} {
  <#assign hasRequired = false>
  <#list dto.fields?filter(f->! f.hidden) as f>
 
+
     <#list (f.annotations![])?filter(a->a.name?has_content) as anno>
+    <#if anno?is_last && dto.input && !f.required>
+    ${anno.name}
+    @IsOptional()
+    <#else>
     ${dto.input?then('','//')}${anno.name}
+    </#if>
     </#list>
     ${f.name}${(dto.input && !f.required)?then('?','')}: ${f.type};
     <#if dto.input && f.required>

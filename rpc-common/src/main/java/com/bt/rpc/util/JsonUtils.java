@@ -51,7 +51,7 @@ public abstract class JsonUtils {
     }
 
     public static <T> T parse(String json, Class<T> type) {
-        if(null == json){
+        if (null == json || json.isEmpty()) {
             return null;
         }
         try {
@@ -60,7 +60,6 @@ public abstract class JsonUtils {
             throw new RuntimeException(e);
         }
     }
-
 
     //@Deprecated
     //public static <T> T parse(String json, TypeReference<T> type) {
@@ -74,7 +73,7 @@ public abstract class JsonUtils {
     //}
 
     public static <T> T parse(String json, ParameterizedType type) {
-        if(null == json){
+        if (null == json || json.isEmpty()) {
             return null;
         }
         JavaType genc = TYPES_MAP.computeIfAbsent(type, t -> {

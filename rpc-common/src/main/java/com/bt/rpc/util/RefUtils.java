@@ -136,9 +136,10 @@ public abstract class RefUtils {
         }
         if(name.endsWith("Service")){
             end -= "Service".length();
-        }else if(name.endsWith("Rpc")){
-            end -= "Rpc".length();
         }
+        //else if(name.endsWith("Rpc")){
+        //    end -= "Rpc".length();
+        //}
         name = name.substring(begin,end);
 
         var fullName = appName + "/" + name;

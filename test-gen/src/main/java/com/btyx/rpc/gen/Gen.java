@@ -143,8 +143,6 @@ public class Gen {
             System.out.println("---------- gen : "+ serviceFile);
             serviceTemp.process(root, toWriter(outFolder,serviceFile));
         }
-        //System.out.println(out);
-        //System.out.println(JsonUtils.stringify(metas.getDtos()));
     }
 
     static Writer toWriter(File outFolder,String fileName) throws IOException {

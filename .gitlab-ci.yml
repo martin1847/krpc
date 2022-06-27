@@ -8,9 +8,13 @@ include:
 
 build:
   extends: .gradle
+  variables:
+    SONAR_HOST_URL: "http://sonarqube-sonarqube.gitlab:9000"
   script:
     - gradle build -Dquarkus.package.type=native -x test
-    - gradle $publish
+#    - gradle $publish
+    - gradle clean publish
+    - gradle sonarqube -Dsonar.qualitygate.wait=true
 
 #
 #docker:

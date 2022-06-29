@@ -36,7 +36,7 @@ public class JwsVerify implements CredentialVerify {
 
     final Map<String, ECPublicKey> jwksCache = new ConcurrentHashMap<>();
 
-    long lastAccess;
+    volatile long lastAccess;
 
 
     volatile Jwks lastJwks;
@@ -81,7 +81,7 @@ public class JwsVerify implements CredentialVerify {
         return url;
     }
 
-    public Jwks loadJwks() {
+    public synchronized Jwks loadJwks() {
         if (System.currentTimeMillis() - lastAccess >= GAP_MILL) {
             lastAccess = System.currentTimeMillis();
             try (InputStream in = new URL(url).openStream()) {

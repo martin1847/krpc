@@ -11,9 +11,10 @@ build:
   variables:
     SONAR_HOST_URL: "http://sonarqube-sonarqube.gitlab:9000"
   script:
-    - gradle build -Dquarkus.package.type=native -x test
+    #  -Dquarkus.package.type=native  -Dquarkus.native.additional-build-args=-Ob
+    - gradle build -x test
 #    - gradle $publish
-    - gradle clean publish
+    - gradle clean $publish
     - gradle sonarqube -Dsonar.qualitygate.wait=true
 
 #

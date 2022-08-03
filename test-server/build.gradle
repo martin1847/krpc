@@ -8,7 +8,7 @@ dependencies {
 
     implementation project(':test-api')
     implementation project(':rpc-server-native')
-//    implementation project(':rpc-client')
+    implementation project(':rpc-client')
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

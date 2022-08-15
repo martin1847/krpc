@@ -41,6 +41,7 @@ public class TsNameMap {
         nameMapping.put("List","Array");
         nameMapping.put("Date","number");
         nameMapping.put("byte[]","Array<number>");
+        nameMapping.put("int[]","Array<number>");
     }
 
     final static Map<Class, Function<Anno,String>> annoMapping = new HashMap<>();

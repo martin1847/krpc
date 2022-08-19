@@ -7,8 +7,8 @@ import 'dart:io';
 void main(List<String> arguments) async {
   // parseSubtitlesFromNetwork(
   //     "https://v0.zhijisx.net/subtitle/0670C59462E64B008B19D813FC235A3B-3-3.vtt");
-  parseSubtitlesFromFile("/Users/yyc/Downloads/3line.utfbom.vtt");
-  // parseSubtitlesFromFile("/Users/yyc/Downloads/4line.utf8.vtt");
+  parseSubtitlesFromFile("/Users/yyc/Downloads/DIDTWN03U01.vtt");
+  parseSubtitlesFromFile("/Users/yyc/Downloads/DIDTWN01U09C.vtt");
 }
 
 void parseSubtitlesFromFile(String? url) async {
@@ -47,17 +47,25 @@ void parseSubtitlesFromNetwork(String? url) async {
 }
 
 void _parseString(String value) {
+  final bool isWebVTT = value.startsWith("WEBVTT");
+  if (isWebVTT && value.contains("\r\n\r\n")) {
+    value = "WEBVTT\r\n\r\n" + value.substring(6).trimLeft();
+  }
+
   List<String> components = value.split('\r\n\r\n');
   if (components.length == 1) {
     components = value.split('\n\n');
   }
+
+  print(value.startsWith("WEBVTT\r")); //false
+  print(value.startsWith("WEBVTT\n")); //true
 
   // Skip parsing files with no cues
   if (components.length == 1) {
     return;
   }
 
-  final bool isWebVTT = components.contains("WEBVTT");
+  // final bool isWebVTT = components.contains("WEBVTT");
   for (final component in components) {
     if (component.isEmpty) {
       continue;

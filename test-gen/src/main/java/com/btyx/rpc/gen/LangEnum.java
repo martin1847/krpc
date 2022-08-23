@@ -5,8 +5,10 @@
 package com.btyx.rpc.gen;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import com.btyx.rpc.gen.meta.Anno;
+import com.btyx.rpc.gen.meta.PropertyType;
 import com.google.common.base.Function;
 
 /**
@@ -30,7 +32,7 @@ public enum LangEnum {
     final String fileExt;
 
     LangEnum(String dto, String serive, Map<String, String> nameMapping,
-             Map<Class, Function<Anno, String>> annoMapping) {
+             Map<Class, BiFunction<Anno, PropertyType, String>> annoMapping) {
         this.dto = dto;
         this.serive = serive;
         this.remapping = new NameRemapping(nameMapping,annoMapping);

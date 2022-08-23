@@ -11,6 +11,7 @@ import {
   IsEmail,
   IsFQDN,
   IsDate,
+  IsArray,
   Min,
   Max,
   IsOptional,
@@ -18,6 +19,8 @@ import {
   IsNotEmpty,
   MinLength,
   MaxLength,
+  ArrayMinSize,
+  ArrayMaxSize,
   IsPositive,
   IsNegative,
 } from 'class-validator';
@@ -40,6 +43,7 @@ export ${dto.input?then('class','interface')}  ${dto.typeName} {
 
     <#list (f.annotations![])?filter(a->a.name?has_content) as anno>
     <#if anno?is_last && dto.input && !f.required>
+    <#-- if f.type?starts_with("Array")>@IsArray()//</#if -->
     ${anno.name}
     @IsOptional()
     <#else>

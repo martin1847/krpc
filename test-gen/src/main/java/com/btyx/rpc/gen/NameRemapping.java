@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import com.btyx.rpc.gen.meta.Anno;
@@ -24,10 +25,10 @@ public class NameRemapping {
 
     final Map<String, String> nameMapping;
 
-    final Map<String, Function<Anno, String>> annoMapping;
+    final Map<String, BiFunction<Anno,PropertyType, String>> annoMapping;
 
     public NameRemapping(Map<String, String> nameMapping,
-                         Map<Class, Function<Anno, String>> annoMapping) {
+                         Map<Class, BiFunction<Anno,PropertyType, String>> annoMapping) {
         this.nameMapping = nameMapping;
         this.annoMapping = annoMapping.entrySet().stream().collect(
                 Collectors.toMap(k -> k.getKey().getSimpleName(), Entry::getValue));
@@ -40,7 +41,7 @@ public class NameRemapping {
         }
         if (dto.hasChild()) {
             dto.getFields().forEach(f -> {
-                remappingAnnos(f.getAnnotations());
+                remappingAnnos(f.getAnnotations(),f.getType());
                 var type = f.getType();
                 if(null != type) {
                     remapping(type.getRawType());
@@ -65,14 +66,14 @@ public class NameRemapping {
         gens.forEach(this::remapping);
     }
 
-    void remappingAnnos(List<Anno> annos) {
+    void remappingAnnos(List<Anno> annos,PropertyType type) {
         if (null == annos || annos.isEmpty()) {
             return;
         }
         for (var anno : annos) {
             var mapping = annoMapping.get(anno.originName);
             if (null != mapping) {
-                anno.setName(mapping.apply(anno));
+                anno.setName(mapping.apply(anno,type));
             } else {
                 //default as a comment
                 anno.setName("/// " + anno.originName + anno.getProperties());

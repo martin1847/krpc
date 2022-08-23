@@ -6,6 +6,7 @@ package com.btyx.rpc.gen;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.Max;
@@ -20,6 +21,7 @@ import javax.validation.constraints.Size;
 
 import com.bt.rpc.annotation.Doc;
 import com.btyx.rpc.gen.meta.Anno;
+import com.btyx.rpc.gen.meta.PropertyType;
 import com.google.common.base.Function;
 
 /**
@@ -38,36 +40,41 @@ public class TsNameMap {
         nameMapping.put("Float","number");
         nameMapping.put("Double","number");
         nameMapping.put("Boolean","boolean");
-        nameMapping.put("List","Array");
+
         nameMapping.put("Date","number");
+
+        nameMapping.put("List","Array");
+        nameMapping.put("Map","Record");
         nameMapping.put("byte[]","Array<number>");
         nameMapping.put("int[]","Array<number>");
     }
 
-    final static Map<Class, Function<Anno,String>> annoMapping = new HashMap<>();
+    final static Map<Class, BiFunction<Anno, PropertyType,String>> annoMapping = new HashMap<>();
 
     static {
-        annoMapping.put(Doc.class, it->"/// "+it.getProperties().get("value"));
-        annoMapping.put(Deprecated.class,it->"/// Deprecated");
-        annoMapping.put(Null.class, it->"@IsOptional()");
-        annoMapping.put(NotNull.class, it->"@IsDefined()");
-        annoMapping.put(NotEmpty.class, it->"@IsNotEmpty()");
-        annoMapping.put(NotBlank.class, it->"@MinLength(1)");
-        annoMapping.put(Positive.class, it->"@IsPositive()");
-        annoMapping.put(Negative.class, it->"@IsNegative()");
-        annoMapping.put(Email.class, it->"@IsEmail()");
-        annoMapping.put(Min.class, it->"@Min("+it.getProperties().get("value")+")");
-        annoMapping.put(Max.class, it->"@Max("+it.getProperties().get("value")+")");
-        annoMapping.put(Size.class, anno->{
+        annoMapping.put(Doc.class, (it,t)->"/// "+it.getProperties().get("value"));
+        annoMapping.put(Deprecated.class,(it,t)->"/// Deprecated");
+        annoMapping.put(Null.class, (it,t)->"@IsOptional()");
+        annoMapping.put(NotNull.class, (it,t)->"@IsDefined()");
+        annoMapping.put(NotEmpty.class, (it,t)->"@IsNotEmpty()");
+        annoMapping.put(NotBlank.class, (it,t)->"@MinLength(1)");
+        annoMapping.put(Positive.class, (it,t)->"@IsPositive()");
+        annoMapping.put(Negative.class, (it,t)->"@IsNegative()");
+        annoMapping.put(Email.class, (it,t)->"@IsEmail()");
+        annoMapping.put(Min.class, (it,t)->"@Min("+it.getProperties().get("value")+")");
+        annoMapping.put(Max.class, (it,t)->"@Max("+it.getProperties().get("value")+")");
+        annoMapping.put(Size.class, (anno,t)->{
             Integer min = (Integer)anno.getProperties().get("min");
             Integer max = (Integer)anno.getProperties().get("max");
+            var isStr = t.getRawType().getTypeName().equals("String");
             if(min!=null && max!=null){
-                return "@Length(" + min + ", " + max + ")";
+                return isStr ? "@Length(" + min + ", " + max + ")" :
+                        "@ArrayMinSize("+ min+")@ArrayMaxSize("+max+ ")";
             }
             if(min!=null){
-                return "@MinLength(" + min + ")";
+                return (isStr ?"@MinLength(" :  "@ArrayMinSize(") + min + ")" ;
             }
-            return "@MaxLength(" + max + ")";
+            return (isStr ?"@MaxLength(" :  "@ArrayMaxSize(")  + max + ")";
         });
     }
 

@@ -5,7 +5,7 @@ plugins {
 apply from: "$rootProject.projectDir/upload.gradle"
 
 
-version = "1.0.0"
+//version = "1.0.0"
 
 dependencies {
 //    compileOnly "javax.annotation:javax.annotation-api:1.2"

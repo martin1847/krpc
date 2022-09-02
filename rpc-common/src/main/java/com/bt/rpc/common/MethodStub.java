@@ -31,7 +31,7 @@ public class MethodStub {
 
     public final Method method;
 
-    public final Cached cached;
+    //public final Cached cached;
 
     public final RpcService rpcService;
 
@@ -43,11 +43,6 @@ public class MethodStub {
         this.method = method;
         this.rpcService = rpcService;
 
-        if (method.isAnnotationPresent(Cached.class)) {
-            cached = method.getAnnotation(Cached.class);
-        } else {
-            cached = null;
-        }
 
         // RefUtils.GenericTypeBySignature.findRpcResultGenericType(method);
 

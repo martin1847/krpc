@@ -1,5 +1,5 @@
 
-apply from: "$rootProject.projectDir/gradle/upload.gradle"
+apply from: "$rootProject.projectDir/upload.gradle"
 
 
 dependencies {
@@ -8,21 +8,21 @@ dependencies {
     // com.google.api.grpc/proto-google-common-protos/1.12.0
     
     api "io.grpc:grpc-api:${grpcVersion}"
-    api 'com.google.errorprone:error_prone_annotations:2.9.0'
-    api 'com.google.guava:guava:30.1.1-jre'
+    api "com.google.errorprone:error_prone_annotations:$errorProneVersion"
+    api "com.google.guava:guava:$guavaVersion"
     // above override grpc-api dependency//
 
 
     api("io.grpc:grpc-protobuf-lite:${grpcVersion}")
-    api 'com.google.protobuf:protobuf-java:3.17.3'
-    api 'com.google.protobuf:protobuf-javalite:3.17.3'
+    api "com.google.protobuf:protobuf-java:$protobufVersion"
+    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 //    api 'com.alibaba:fastjson:1.2.68'
 //    api 'jakarta.json.bind:jakarta.json.bind-api:2.0.0'
     api "org.slf4j:slf4j-api:$slf4jVersion"
 
 //    implementation 'org.yaml:snakeyaml:1.28'
-    implementation 'org.apache.commons:commons-lang3:3.12.0'
+//    implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
 

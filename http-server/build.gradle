@@ -1,0 +1,22 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version '0.11.0'
+}
+
+apply from: "$rootProject.projectDir/upload.gradle"
+
+
+//version = "1.0.0"
+
+dependencies {
+
+    api project(':rpc-common')
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+    implementation "io.quarkus:quarkus-core:$quarkusMiniSupport"
+
+    api "io.netty:netty-codec-http:$nettyGrpcVersion"
+
+}
+
+

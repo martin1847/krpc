@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-//TODO use spring to Get
 @Slf4j
 public class ReflectionHelper {
 	

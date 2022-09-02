@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "EC",
+      "use": "sig",
+      "crv": "P-256",
+      "kid": "bo-test-2111",
+      "x": "RhdqCsq1MooCjBiOrliZInAii8fdf4-3jOT0pRpohus",
+      "y": "6s9ECrJurlHCkSx8CTnqhS5HN7h9-dblFgLfpRPcPeg"
+    }
+  ]
+}

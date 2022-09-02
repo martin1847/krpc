@@ -18,8 +18,9 @@ pluginManagement {
     }
 }
 
-include 'test-api','test-server','test-client'
+include 'test-api','test-gen','test-server'
 
-include 'rpc-api','rpc-common','rpc-client','rpc-server','rpcurl'
+include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-native','http-server'
+//include 'rpcurl'
 
 //include 'quarkus-mybatis','quarkus-mybatis-deployment'

@@ -32,6 +32,9 @@ public class ClientContext extends AbstractContext<ClientResult,Object[],ClientC
 
     private SerialEnum serial;
 
+    /**
+     * only use in filter , after the context create
+      */
     public CallOptions getCallOptions(){
         return CallOptions.DEFAULT;
     }

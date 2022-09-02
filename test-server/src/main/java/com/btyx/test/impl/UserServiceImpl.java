@@ -10,10 +10,12 @@ import javax.transaction.Transactional;
 
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
+import com.bt.rpc.server.Filters;
 import com.bt.rpc.model.RpcResult;
 import com.btyx.test.UserService;
 import com.btyx.test.convert.UserConvert;
 import com.btyx.test.dto.User;
+import com.btyx.test.filter.TestFilter2;
 import com.btyx.test.mapper.UserMapper;
 import io.quarkus.runtime.Startup;
 
@@ -24,6 +26,7 @@ import io.quarkus.runtime.Startup;
  */
 @ApplicationScoped
 @Startup
+@Filters(TestFilter2.class)
 public class UserServiceImpl implements UserService {
 
     @Inject //by the ext

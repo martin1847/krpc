@@ -1,5 +1,6 @@
 package com.bt.rpc.client;
 
+import com.bt.rpc.annotation.Doc;
 import lombok.AllArgsConstructor;
 
 import java.util.LinkedHashMap;
@@ -10,12 +11,13 @@ import java.util.Map;
  *
  * @author Martin.C
  */
+@Doc("客户端LRU缓存，不指定的话默认会使用")
 public class SimpleLRUCache implements CacheManager {
 
 
     @AllArgsConstructor
     final class ValueWrap{
-        final String val;
+        final byte[] val;
         final long timestamp;
     }
 
@@ -36,7 +38,7 @@ public class SimpleLRUCache implements CacheManager {
     }
 
     @Override
-    public String get(String cacheKey) {
+    public byte[] get(String cacheKey) {
         var wrap = map.get(cacheKey);
         if (wrap != null) {
             if (wrap.timestamp >= System.currentTimeMillis()) {
@@ -48,8 +50,8 @@ public class SimpleLRUCache implements CacheManager {
     }
 
     @Override
-    public void set(String cacheKey, String bytesStr, int expireSeconds) {
-        var wrap = new ValueWrap(bytesStr,System.currentTimeMillis() + expireSeconds* 1000L);
+    public void set(String cacheKey, byte[] bytes, int expireSeconds) {
+        var wrap = new ValueWrap(bytes,System.currentTimeMillis() + expireSeconds* 1000L);
         map.put(cacheKey,wrap);
     }
 }

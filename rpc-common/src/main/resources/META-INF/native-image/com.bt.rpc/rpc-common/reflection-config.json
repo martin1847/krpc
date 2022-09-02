@@ -1,11 +1,21 @@
 [
   {
+    "name": "java.lang.Long",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
     "name" : "java.lang.Integer",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   },
   {
     "name" : "java.lang.String",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.HashMap",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   },
@@ -23,6 +33,10 @@
   },
   {
     "name" : "com.bt.rpc.common.RpcMetaService",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.common.MService",
     "allPublicMethods" : true
   },
   {
@@ -51,7 +65,17 @@
     "allPublicMethods" : true
   },
   {
+  "name" : "com.bt.rpc.common.meta.PropertyType",
+  "allPublicConstructors" : true,
+  "allPublicMethods" : true
+  },
+  {
     "name" : "com.bt.rpc.common.meta.Anno",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.bt.rpc.model.RpcResult",
     "allPublicConstructors" : true,
     "allPublicMethods" : true
   }

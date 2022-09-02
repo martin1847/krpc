@@ -1,0 +1,38 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version '0.11.0'
+}
+
+apply from: "$rootProject.projectDir/upload.gradle"
+
+
+//version = "1.0.0"
+
+dependencies {
+//    compileOnly "javax.annotation:javax.annotation-api:1.2"
+
+
+    api project(':rpc-server')
+//    implementation "io.grpc:grpc-services:${grpcVersion}"
+
+    // just for overridden
+    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
+
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+
+//    implementation platform("io.quarkus:quarkus-bom:2.4.2.Final")
+//    implementation "io.quarkus:quarkus-arc:2.4.2.Final"
+    //this version is the max to support JNI/DrawCaptcha
+    implementation "io.quarkus:quarkus-core:$quarkusMiniSupport"
+
+    api "com.bt.ext:ext-rpc:1.0.0"
+
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+
+}
+
+

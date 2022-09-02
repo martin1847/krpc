@@ -1,5 +1,5 @@
 
-apply from: "$rootProject.projectDir/gradle/upload.gradle"
+apply from: "$rootProject.projectDir/upload.gradle"
 
 
 dependencies {
@@ -13,16 +13,18 @@ dependencies {
 //    implementation "io.grpc:grpc-netty:${grpcVersion}"
 //    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
 
-    implementation "io.quarkus:quarkus-core:$quarkusPlatformVersion"
+//    implementation "io.quarkus:quarkus-core:$quarkusPlatformVersion"
 //    implementation "io.quarkus:quarkus-builder:$quarkusPlatformVersion"
 //
 //    implementation "io.quarkus:quarkus-core-deployment:$quarkusPlatformVersion"
 
 
-    implementation "io.smallrye.config:smallrye-config-core:2.4.4"
+//    implementation "io.smallrye.config:smallrye-config-core:2.4.4"
 
     /// TEST
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
+//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }

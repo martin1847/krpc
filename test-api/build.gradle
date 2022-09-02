@@ -1,25 +1,26 @@
 
-plugins {
-    id 'org.kordamp.gradle.jandex' version '0.11.0'
-}
-apply from: "$rootProject.projectDir/gradle/upload.gradle"
+
+apply from: "$rootProject.projectDir/upload.gradle"
 
 
-//artifactoryPublish.skip = true
-
-group = "com.btyx.test.rpc"
-
-
+group = "com.btyx.example"
 
 dependencies {
 
     api project(':rpc-api')
 
+//    api 'com.btyx.course:partner-admin-api:1.2.0606'
+
+
+    testImplementation project(':test-gen')
+    testImplementation project(':rpc-client')
+    testImplementation "io.grpc:grpc-netty:${grpcVersion}"
+    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
 //    api 'javax.validation:validation-api:2.0.1.Final'
 //    api 'jakarta.validation:jakarta.validation-api:2.0.2'
 //
 //    api "com.bt.common:model:1.0.0"
-
+//    implementation 'org.freemarker:freemarker:2.3.31'
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 

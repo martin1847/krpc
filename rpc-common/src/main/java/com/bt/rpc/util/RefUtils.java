@@ -2,6 +2,7 @@ package com.bt.rpc.util;
 
 //import com.alibaba.fastjson.util.ParameterizedTypeImpl;
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.model.RpcResult;
@@ -10,7 +11,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -109,8 +112,9 @@ public abstract class RefUtils {
     }
 
     public static List<MethodStub> toRpcMethods(String appName,Class clz) {
-        String rpcServiceName = rpcServiceName(appName,clz);
+
         RpcService grpcServive = (RpcService) clz.getDeclaredAnnotation(RpcService.class);
+        String rpcServiceName = rpcServiceName(appName,clz);
 
         return Stream.of(clz.getMethods())
                 .filter(m -> m.getReturnType() == RpcResult.class && m.getParameterCount() <= 1)
@@ -119,20 +123,52 @@ public abstract class RefUtils {
 
     }
 
+    public static final char HIDDEN_SERVICE = '-';
     public static String rpcServiceName(String appName,Class clz) {
+
         //var pac =  clz.getPackageName();
         //if(TRIM_SERVICE_NAME && pac.startsWith("com.")){
         //    pac = pac.substring(4);
         //}
         var name = clz.getSimpleName();
+        int begin = 0 , end = name.length();
         if(name.startsWith("I")){
-            name = name.substring(1);
+            begin = 1;
         }
-        return appName + "/" + name;
+        if(name.endsWith("Service")){
+            end -= "Service".length();
+        }else if(name.endsWith("Rpc")){
+            end -= "Rpc".length();
+        }
+        name = name.substring(begin,end);
+
+        var fullName = appName + "/" + name;
+        if(! clz.isAnnotationPresent(UnsafeWeb.class) ){
+            // use - prefix to hidden the service
+            fullName = HIDDEN_SERVICE + fullName;
+        }
+        return fullName ;
     }
     //
     //public static void main(String[] args) {
     //    toRpcMethods("test", RpcMetaService.class
     //    );
     //}
+
+    public static boolean needValidator(Class dto){
+
+        var clz = dto;
+        do {
+            for (var f : clz.getDeclaredFields()) {
+                for (var anno : f.getAnnotations()) {
+                    if (anno.annotationType().getName().startsWith("javax.validation")) {
+                        return true;
+                    }
+                }
+            }
+            clz = clz.getSuperclass();
+        }while (clz != Object.class);
+
+        return false;
+    }
 }

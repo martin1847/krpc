@@ -1,17 +1,26 @@
 package com.bt.rpc.client;
 
 import java.util.Base64;
+import java.util.function.Consumer;
 
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.util.JsonUtils;
-import com.bt.rpc.common.MethodStub;
 import com.google.protobuf.ByteString;
 import io.grpc.CallOptions;
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener;
 import io.grpc.ManagedChannel;
+import io.grpc.Metadata;
 import io.grpc.stub.ClientCalls;
 
+import static io.grpc.Metadata.BINARY_HEADER_SUFFIX;
+
 /**
+ *
+ * https://github.com/grpc/grpc-java/blob/master/examples/src/main/java/io/grpc/examples/header/HeaderClientInterceptor.java
+ *
  * generalize rpc call
  * 2020-04-28 16:07
  *
@@ -19,13 +28,14 @@ import io.grpc.stub.ClientCalls;
  */
 public class GeneralizeClient {
 
-    // TODO  ManagedChannel may use a simple time-based cache in admin, for example 5 mitunes
-    // ConcurrentMap<Key, Graph>  GuavaMap = new  MapMaker()
-    //   .softKeys()
-    //   .weakValues()
-    //   .maximumSize(10000)
-    //   .expiration(10, TimeUnit.MINUTES)
+
+    static final Consumer<Metadata> EMPTY = metadata -> {};
+
     public static OutputProto call(ManagedChannel channel, String fullRpcMethodName, String inputJson) {
+        return call(channel,fullRpcMethodName,inputJson,EMPTY);
+    }
+
+    public static OutputProto call(ManagedChannel channel, String fullRpcMethodName, String inputJson, Consumer<Metadata> cutomerHeaders) {
 
         assert fullRpcMethodName != null;
         // may use lru cache
@@ -37,7 +47,35 @@ public class GeneralizeClient {
         }
         var call = channel.newCall(md, CallOptions.DEFAULT);
 
-        return ClientCalls.blockingUnaryCall(call, input.build());
+        var headerForwardCall = new SimpleForwardingClientCall<>(call){
+            @Override
+            public void start(Listener<OutputProto> responseListener, Metadata headers) {
+                cutomerHeaders.accept(headers);
+                //super.start(responseListener, headers);
+                super.start(new SimpleForwardingClientCallListener<>(responseListener) {
+                    @Override
+                    public void onHeaders(Metadata resHeader) {
+                        System.out.println();
+                        System.out.println("* header received from server");
+                        for(var key : resHeader.keys()){
+                            System.out.print("< "+key+": ");
+                            String value;
+                            if (key.endsWith(BINARY_HEADER_SUFFIX)) {
+                                value = Base64.getEncoder().encodeToString(
+                                        resHeader.get(Metadata.Key.of(key, Metadata.BINARY_BYTE_MARSHALLER))
+                                );
+                            }else {
+                                value = resHeader.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
+                            }
+                            System.out.println(value);
+                        }
+                        System.out.println();
+                        super.onHeaders(resHeader);
+                    }
+                }, headers);
+            }
+        };
+        return ClientCalls.blockingUnaryCall(headerForwardCall, input.build());
     }
 
     public static String toJson(OutputProto outout) {

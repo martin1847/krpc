@@ -1,10 +1,15 @@
 package com.btyx.test.impl;
 
+import com.bt.model.PagedList;
+import com.bt.model.PagedQuery;
+import com.bt.rpc.server.ServerContext;
 import com.btyx.test.dto.TimeReq;
 import com.btyx.test.dto.TimeResult;
 import com.btyx.test.DemoService;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.util.EnvUtils;
+import com.btyx.test.dto.User;
+import com.btyx.test.dto.UserStatus;
 import io.quarkus.runtime.Startup;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -14,6 +19,7 @@ import java.time.temporal.ChronoField;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * TODO change this comment
@@ -27,9 +33,15 @@ public class DemoServiceImpl implements DemoService {
     @Override
     public RpcResult<TimeResult> hello(TimeReq req) {
         var res = new TimeResult();
-        res.setTime(" from  (" + EnvUtils.hostName() + ") : " + req);
+
+        res.setTime(" from  (" + EnvUtils.hostName() + ", with meta : " + ServerContext.current().getHeaders()+") : " + req);
         res.setTimestamp(System.currentTimeMillis());
         return RpcResult.ok(res);
+    }
+
+    @Override
+    public RpcResult<String> save(User user) {
+        return RpcResult.ok(String.valueOf(user));
     }
 
     @Override
@@ -63,24 +75,54 @@ public class DemoServiceImpl implements DemoService {
     }
 
     @Override
-    public RpcResult<String> str() {
-        return RpcResult.ok("java5678");
+    public RpcResult<String> str(String in) {
+        return RpcResult.ok("java5678:got:" + in);
     }
 
     @Override
-    public RpcResult<Map<String, Integer>> map() {
+    public RpcResult<Map<String, Integer>> testMap() {
         return RpcResult.ok(Collections.singletonMap("key1",123));
     }
 
     @Override
-    public RpcResult<Integer> pingWithRuntimeException() {
-        throw  new RuntimeException("Test Java RuntimeException");
-       //return RpcResult.success(9527);
+    public RpcResult<Integer> inc100(Integer i) {
+        return RpcResult.ok( 100 + i);
     }
 
     @Override
-    public RpcResult<List<Integer>> list() {
-        return RpcResult.ok(List.of(123,456));
+    public RpcResult<Integer> testRuntimeException() {
+        throw  new RuntimeException("Test Java RuntimeException");
+        //return RpcResult.success(9527);
     }
 
+    @Override
+    public RpcResult<List<Integer>> wordLength(List<String> list) {
+        return
+                RpcResult.ok(list.stream().map(String::length).collect(Collectors.toList()));
+    }
+
+    @Override
+    public RpcResult<PagedList<User>> plistUser(PagedQuery<User> query) {
+        return RpcResult.ok(new PagedList<>(query.getPageSize(),Collections.singletonList(query.getQ())));
+    }
+
+    @Override
+    public RpcResult<List<User>> plistUser2(PagedQuery<User> query) {
+        return RpcResult.ok(Collections.singletonList(query.getQ()));
+    }
+
+    @Override
+    public RpcResult<List<User>> listUser(List<User> query) {
+        return RpcResult.ok(query);
+    }
+
+    @Override
+    public RpcResult<PagedList<User>> listUser2(List<User> query) {
+        return RpcResult.ok(new PagedList<>(query.size(),query));
+    }
+
+    @Override
+    public RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query) {
+        return RpcResult.ok(new PagedList<>(query.getPageSize(),Collections.singletonList(query.getQ()  + 10)));
+    }
 }

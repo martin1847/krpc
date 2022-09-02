@@ -43,6 +43,11 @@ dependencies {
     implementation 'info.picocli:picocli:4.6.1'
 
     annotationProcessor 'info.picocli:picocli-codegen:4.6.1'
+
+    testImplementation('io.quarkus:quarkus-junit5'){
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+//        exclude group: 'org.jmock' //by group
+    }
 }
 
 //nativeCompile, which will trigger the generation of a native executable of your application

@@ -1,5 +1,7 @@
 package com.btyx.test.dto;
 
+import java.util.List;
+
 import com.bt.rpc.annotation.Doc;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,6 +16,7 @@ import javax.validation.constraints.Size;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Doc("测试请求")
 public class TimeReq {
 
     @Doc("姓名")
@@ -25,4 +28,17 @@ public class TimeReq {
     @NotNull
     @Min(1)@Max(80)
     private Integer age;
+
+
+    private String test;
+
+
+    private List<Integer> test1;
+
+    private List<User> test2;
+
+
+
+    @Doc(value = "test Hidden", hidden = true)
+    private String hidden;
 }

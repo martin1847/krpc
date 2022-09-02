@@ -17,6 +17,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  *
@@ -31,14 +32,12 @@ public abstract class JsonUtils {
     static {
         MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        //MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 
     public static String stringify(Object obj) {
         try {
             return MAPPER.writeValueAsString(obj);
-
-            //            System.out.println( obj +" to -> " + tr);
-            //            return tr;
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -52,6 +51,9 @@ public abstract class JsonUtils {
     }
 
     public static <T> T parse(String json, Class<T> type) {
+        //if (null == json || json.isEmpty()) {
+        //    return null;
+        //}
         try {
             return (T) MAPPER.readValue(json, type);
         } catch (JsonProcessingException e) {
@@ -59,18 +61,21 @@ public abstract class JsonUtils {
         }
     }
 
-    public static <T> List<T> parseArray(String json, Class<T> type) {
-        //var typeFactory = MAPPER.getTypeFactory();
-        //var listType = typeFactory.constructCollectionType(List.class, type));
-        try {
-            return MAPPER.readValue(json, new TypeReference<List<T>>(){});
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
+    //@Deprecated
+    //public static <T> T parse(String json, TypeReference<T> type) {
+    //    //var typeFactory = MAPPER.getTypeFactory();
+    //    //var listType = typeFactory.constructCollectionType(List.class, type));
+    //    try {
+    //        return MAPPER.readValue(json, type);
+    //    } catch (JsonProcessingException e) {
+    //        throw new RuntimeException(e);
+    //    }
+    //}
 
     public static <T> T parse(String json, ParameterizedType type) {
+        //if (null == json || json.isEmpty()) {
+        //    return null;
+        //}
         JavaType genc = TYPES_MAP.computeIfAbsent(type, t -> {
             var parameterClasses = Stream.of(type.getActualTypeArguments())
                     .map(it -> (Class) it)

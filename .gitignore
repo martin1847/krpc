@@ -8,6 +8,11 @@ out/
 *.pyc
 nupkg/
 
+
+test-api/dart
+test-api/typescript
+
+
 target/
 wrapper/
 generated/
@@ -50,3 +55,4 @@ gradlew*
 /java-grpc/gradle/
 
 
+/test-api/yamltest/

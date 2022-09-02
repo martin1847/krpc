@@ -1,6 +1,6 @@
 package com.bt.rpc.server;
 
-import com.bt.rpc.common.RpcFilter;
+import com.bt.rpc.filter.RpcFilter;
 
 /**
  * 2020-04-07 13:48

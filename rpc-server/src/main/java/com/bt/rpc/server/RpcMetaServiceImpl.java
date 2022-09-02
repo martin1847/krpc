@@ -1,11 +1,18 @@
 package com.bt.rpc.server;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +30,11 @@ import com.bt.rpc.common.meta.ApiMeta;
 import com.bt.rpc.common.meta.Dto;
 import com.bt.rpc.common.meta.Method;
 import com.bt.rpc.common.meta.Property;
+import com.bt.rpc.common.meta.PropertyType;
 import com.bt.rpc.internal.SerialEnum;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
+import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
 import com.bt.rpc.util.EnvUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -45,29 +54,29 @@ class RpcMetaServiceImpl implements RpcMetaService {
         return result;
     }
 
-    @Override
-    public RpcResult<String> v() {
-        return RpcResult.ok(RpcConstants.CI_BUILD_ID+"-"+ EnvUtils.hostName());
-    }
 
     @Override
     public RpcResult<List<String>> serials() {
         return RpcResult.ok(Stream.of(Serial.Instance.supported()).map(SerialEnum::name).collect(Collectors.toList()));
     }
 
-    public void init(List<RpcMetaMethod> methods) {
+    public void init(ApiMeta meta) {
+        this.result = RpcResult.ok(meta);
+    }
 
-        var dtos = new HashMap<Type, Dto>();
+    static ApiMeta buildApiMeta(List<RpcMetaMethod> methods) {
+        var dtos = new HashMap<String, Dto>();
 
         List<Api> apis = new ArrayList<>();
         methods.stream()
                 .collect(Collectors.groupingBy(RpcMetaMethod::getServieName))
                 .forEach((k, v) -> {
                     List<Method> apiMethods = new ArrayList<>();
-                    for (var m : v) {
-                        apiMethods.add(new Method(m.getName(), getOrAdd(dtos, m.getArg()),
-                                getOrAdd(dtos, m.getRes()),
-                               Stream.of(m.getAnnotations()).map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
+                    for (RpcMetaMethod m : v) {
+                        apiMethods.add(new Method(m.getName(),
+                                getOrAdd(dtos, m.getArg(), true),
+                                getOrAdd(dtos, m.getRes(), false),
+                                toAnno(m.getAnnotations())
                         ));
                     }
 
@@ -76,90 +85,127 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
                 });
 
-        var serviceMeta = new ApiMeta(ServerContext.applicationName(),apis, new ArrayList<>(dtos.values()));
-        this.result = RpcResult.ok(serviceMeta);
-
+        return new ApiMeta(ServerContext.applicationName(), apis, new ArrayList<>(dtos.values()));
     }
 
-    static Dto getOrAdd(HashMap<Type, Dto> dic, Type t) {
+    static Dto cls2dto(HashMap<String, Dto> dic, Class fClz, int generics, boolean input) {
+        var fName = fClz.getSimpleName();
+        var dto = dic.get(fName);
+        if (null != dto) {
+            if (input) {
+                dto.setInput(input);
+            }
+            return dto;
+        }
+
+        String doc = fClz.isAnnotationPresent(Doc.class) ? ((Doc) fClz.getAnnotation(Doc.class)).value() : null;
+
+        if (fClz.isEnum()) {
+            //fName = "String";
+
+            return dic.computeIfAbsent(fName, k -> {
+                var d = new Dto(k, generics, input, doc);
+                var fields = Arrays.stream(fClz.getEnumConstants()).map(it -> new Property(it.toString(), null, null))
+                        .collect(Collectors.toList());
+                d.setFields(fields);
+                return d;
+            });
+        }
+        dto = dic.computeIfAbsent(fName, k -> new Dto(k, generics, input, doc));
+
+        // skip Array , use list
+        if (!fClz.isPrimitive() && !fClz.getName().startsWith("java.")) {
+            dto.setFields(clsFields(dic, fClz, input));
+        }
+        return dto;
+    }
+
+    static List<Property> clsFields(HashMap<String, Dto> dic, Class type, boolean input) {
+        List<Field> fields = new ArrayList<>();
+        for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+            fields.addAll(Arrays.asList(c.getDeclaredFields()));
+        }
+        return fields.stream().filter(f -> !Modifier.isStatic(f.getModifiers()))
+                .map(f -> {
+                    var pType = getOrAdd(dic, f.getGenericType(), input);
+                    var name = f.getName();
+                    var annos = toAnno(f.getDeclaredAnnotations());
+                    return new Property(name, pType, annos);
+                })
+                .collect(Collectors.toList());
+    }
+
+    static PropertyType getOrAdd(HashMap<String, Dto> dic, Type t, boolean input) {
+
         if (null == t) {
             return null;
         }
 
-        var dto = dic.get(t);
-
-        if (dto != null) {
-            return dto;
-        }
-        var tp = t;
-
-
-        StringBuilder gen = null;
+        //List<T> field;
         if (t instanceof ParameterizedType) {
-            tp = ((ParameterizedType) t).getRawType();
-            var genType = ((ParameterizedType) t).getActualTypeArguments();
-            if (genType != null && genType.length > 0) {
-                gen = new StringBuilder(30).append('<');
-                for (var genT : genType) {
-                    gen.append(((Class) genT).getSimpleName()).append(',');
-                    getOrAdd(dic, genT);
-                }
-                gen.setCharAt(gen.length() - 1, '>');
+            var genTypes = ((ParameterizedType) t).getActualTypeArguments();
+            List<PropertyType> generics = new ArrayList<>();
+            for (var genType : genTypes) {
+                generics.add(getOrAdd(dic, genType, input));
             }
+
+            Dto rawDto = cls2dto(dic, (Class) ((ParameterizedType) t).getRawType(), generics.size(), input);
+            //System.out.println("Get TypeDto : "+ rawDto.getTypeName());
+            //System.out.println("Get TypeDtoGens : "+ generics.stream()
+            //        .map(it->it.getRawType().getTypeName()).collect(Collectors.toList()));
+
+            return new PropertyType(rawDto, generics);
+        } else if (t instanceof GenericArrayType) {
+            Dto rawDto = dic.computeIfAbsent("List", k -> new Dto(k, 1, input,null));
+            var compType = ((GenericArrayType) t).getGenericComponentType();
+            String typeName = "T";
+            if (compType instanceof TypeVariable) {
+                typeName = ((TypeVariable<?>) compType).getName();
+            }
+            var genericType = new PropertyType(dic.computeIfAbsent(typeName, k -> new Dto(k, 0, input, null,true)));
+            return new PropertyType(rawDto, Collections.singletonList(genericType));
+            // T field;
+        } else if (t instanceof TypeVariable) {
+            String typeName = ((TypeVariable<?>) t).getName();
+            return new PropertyType(dic.computeIfAbsent(typeName, k -> new Dto(k, 0, input, null,true)));
+        } else {
+            Dto rawDto = cls2dto(dic, (Class) t, 0, input);
+            return new PropertyType(rawDto);
         }
-        var clz = (Class) tp;
-        var name = gen == null ? clz.getSimpleName() : clz.getSimpleName() + gen.toString();
-        var ns = clz.getPackageName();
-        var dd = new Dto();
-        dd.setName(name);
-        if (ns == null || !ns.startsWith("java")) {
-
-
-            var fields = Stream.of(clz.getDeclaredFields())
-                    .filter(f-> ! Modifier.isStatic(f.getModifiers()))
-                    .map(f ->
-                            new Property(f.getName()
-                                    , getOrAdd(dic, f.getType())
-                                    , Stream.of(f.getDeclaredAnnotations())
-                                    .map(RpcMetaServiceImpl::toAnno).collect(Collectors.toList())
-                            )
-                    )
-                    .collect(Collectors.toList());
-            dd.setFields(fields);
-        }
-        dic.put(t, dd);
-        return dd;
-
     }
 
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class RpcMetaMethod {
+    public static List<Anno> toAnno(Annotation[] annotations) {
+        List<Anno> annos = new ArrayList<>();
+        for (var annotation : annotations) {
+            Map<String, Object> params = new HashMap<>();
+            for (var param : annotation.annotationType().getMethods()) {
+                if (param.getDeclaringClass() == annotation.annotationType()) { //this filters out built-in methods, like hashCode etc
+                    try {
+                        var val = param.invoke(annotation);
+                        if (val instanceof Collection && ((Collection<?>) val).isEmpty()) {
+                            continue;
+                        }
+                        if (val.getClass().isArray() && Array.getLength(val) == 0) {
+                            continue;
+                        }
+                        if (val instanceof String && ((String) val).isEmpty()) {
+                            continue;
+                        }
 
-        String servieName;
-        String name;
-        Type arg;
-        Type res;
+                        // skip default message
+                        if ("message".equals(param.getName()) && String.valueOf(val).startsWith("{javax.validation")) {
+                            continue;
+                        }
 
-        String description;
-
-        Annotation[] annotations;
-    }
-
-    public static Anno toAnno(Annotation annotation){
-        Map<String, Object> params = new HashMap<>();
-        for (var param : annotation.annotationType().getMethods()) {
-            if (param.getDeclaringClass() == annotation.annotationType()) { //this filters out built-in methods, like hashCode etc
-                try {
-                    params.put(param.getName(), param.invoke(annotation));
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
+                        params.put(param.getName(), val);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
+            annos.add(new Anno(annotation.annotationType().getSimpleName(), params));
         }
-        return new Anno(annotation.annotationType().getSimpleName(), params);
+        return annos.isEmpty() ? null : annos;
     }
-
 
 }

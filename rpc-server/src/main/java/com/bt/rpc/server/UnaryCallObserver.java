@@ -50,13 +50,13 @@ public class UnaryCallObserver
     @Override
     public void onNext(OutputProto response) {
 
-      checkState(!aborted, "Stream was terminated by error, no further calls are allowed");
-      checkState(!completed, "Stream is already completed, no further calls are allowed");
-      if (!sentHeaders) {
-        call.sendHeaders(new Metadata());
-        sentHeaders = true;
-      }
-      call.sendMessage(response);
+        checkState(!aborted, "Stream was terminated by error, no further calls are allowed");
+        checkState(!completed, "Stream is already completed, no further calls are allowed");
+        if (!sentHeaders) {
+            call.sendHeaders(ServerContext.current().getResponseHeaders());
+            sentHeaders = true;
+        }
+        call.sendMessage(response);
     }
 
     @Override

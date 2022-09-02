@@ -1,8 +1,10 @@
 package com.bt.rpc.model;
 
-import lombok.Data;
-
 import java.io.Serializable;
+import java.util.function.Function;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 
 /**
  * 2020-01-02 17:21
@@ -13,6 +15,7 @@ import java.io.Serializable;
 public class RpcResult<DTO> implements Serializable {
 
     public static final int OK = 0;
+    public static final int DATA_LOSS = 15;
 
     /**
      * google.rpc.Code/CommonCode 的超集<br>
@@ -26,9 +29,28 @@ public class RpcResult<DTO> implements Serializable {
     DTO data;
 
 
+    @JsonIgnore
     public boolean isOk(){
         return OK == code;
     }
+
+    @JsonIgnore
+    public <T> RpcResult<T> error() {
+        return (RpcResult<T>) this;
+    }
+
+
+    public <T> RpcResult<T> ifOk(Function<DTO,T> dataHandler) {
+        if( OK == code ){
+            var res = dataHandler.apply(data);
+            if(null != res) {
+                return RpcResult.ok(res);
+            }
+            return RpcResult.error(DATA_LOSS,"call ifOk But got null !!!");
+        }
+        return (RpcResult<T>) this;
+    }
+
 
 
     public static <T> RpcResult<T> ok(T data){
@@ -42,6 +64,10 @@ public class RpcResult<DTO> implements Serializable {
         res.code = code;
         res.message = msg;
         return res;
+    }
+
+    public static <T> RpcResult<T> error(RpcResult<?> error) {
+        return (RpcResult<T>) error;
     }
 
 }

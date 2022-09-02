@@ -7,9 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.bt.rpc.annotation.Cached;
 import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.common.FilterInvokeHelper;
 import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.context.TraceMeta;
+import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
@@ -20,9 +22,12 @@ import com.bt.rpc.serial.ClientReader.Normal;
 import com.bt.rpc.serial.ClientWriter;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.util.RefUtils;
+import io.grpc.CallOptions;
+import io.grpc.ClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.ClientCalls;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 //import  sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
@@ -30,20 +35,20 @@ import lombok.extern.slf4j.Slf4j;
 public class MethodCallProxyHandler<T> implements InvocationHandler {
 
     private final ManagedChannel channel;
-    private final Class<T>       clz;
+    final Class<T>       clz;
 
-    private final Map<Method, ChannelMethodInvoker> stubMap = new HashMap<>();
+    final Map<Method, ChannelMethodInvoker> stubMap = new HashMap<>();
 
     //    private ClientFilter[] filters;
 
     FilterChain<ClientResult, ClientContext> filterChain;
 
-    private final CacheManager cacheManager;
+    final CacheManager cacheManager;
 
-    private final SerialEnum serialEnum;
-    private final String serverName;
+    final SerialEnum serialEnum;
+    final String     serverName;
 
-    public MethodCallProxyHandler(String serverName,ManagedChannel channel, Class<T> clz,
+    public MethodCallProxyHandler(String serverName, ManagedChannel channel, Class<T> clz,
                                   List<ClientFilter> filterList,
                                   CacheManager cacheManager,
                                   SerialEnum serialEnum) {
@@ -61,7 +66,7 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         log.info("[ RPC Client ] Proxy Init {}  methods for {}", stubMap.size(), clz);
     }
 
-    private class ChannelMethodInvoker implements FilterChain<ClientResult, ClientContext> {
+    class ChannelMethodInvoker implements FilterChain<ClientResult, ClientContext> {
         //        ClientCall<InputMessage, OutputMessage> clientCall;
         final MethodStub   stub;
         final ClientReader clientReader;
@@ -71,11 +76,11 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         public ChannelMethodInvoker(MethodStub stub) {
             this.stub = stub;
             //hasInputs = stub.method.getParameterCount() > 0;
-            if(0 == stub.method.getParameterCount() ){
+            if (0 == stub.method.getParameterCount()) {
                 clientWriter = ClientWriter.ZERO_INPUT;
-            }else if (byte[].class == stub.method.getParameterTypes()[0]) {
+            } else if (byte[].class == stub.method.getParameterTypes()[0]) {
                 clientWriter = ClientWriter.BYTES;
-            }else {
+            } else {
                 clientWriter = ClientWriter.BY_USER;
             }
 
@@ -91,20 +96,38 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         @Override
         public ClientResult invoke(ClientContext req) {
-            var serial = Serial.Instance.get(req.getSerial().getNumber());
-
-            var input = InputProto.newBuilder();
-            input.setE(req.getSerial());
-            clientWriter.writeParameters(req.getArg(), input);
-            OutputProto response = rpc(req, input.build());
-            return new ClientResult(response, clientReader, serial);
+            var input = buildInput(req.getSerial(),req.getArg());
+            var response = rpc(req.getCallOptions(), input);
+            return buildResult(req.getSerial(),response);
         }
 
-        protected OutputProto rpc(ClientContext req, InputProto input) {
-            var option = req.getCallOptions();
-            var call = channel.newCall(stub.methodDescriptor, option);
+        ClientResult buildResult(SerialEnum se,OutputProto response){
+            return new ClientResult(response, clientReader, Serial.Instance.get(se.getNumber()));
+        }
+
+        InputProto buildInput(SerialEnum se,Object[] args){
+            var input = InputProto.newBuilder();
+            input.setE(se);
+            clientWriter.writeParameters(args, input);
+            return input.build();
+        }
+
+
+        protected OutputProto rpc(CallOptions options, InputProto input) {
+            var call = makeCall (options);
             return ClientCalls.blockingUnaryCall(call, input);
         }
+
+        public ClientCall<InputProto,OutputProto> makeCall(CallOptions options){
+            var call = channel.newCall(stub.methodDescriptor, options);
+            var traceId = MDC.get(TraceMeta.X_B3_TRACE_ID);
+            if (null != traceId) {
+                //log.debug("Client Propagate Trace : {}",traceId);
+                return new PropagateTraceCall(call, traceId);
+            }
+            return call;
+        }
+
     }
 
     private class CachedChannelMethodInvoker extends ChannelMethodInvoker {
@@ -114,13 +137,13 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         }
 
         @Override
-        protected OutputProto rpc(ClientContext req, InputProto input) {
+        protected OutputProto rpc(CallOptions options, InputProto input) {
             var cacheKey = cacheManager.cacheKey(stub, input);
             var out = cacheManager.get(stub, cacheKey);
             if (null != out) {
                 return out;
             }
-            out = super.rpc(req, input);
+            out = super.rpc(options, input);
             if (out.getC() == RpcResult.OK) {
                 cacheManager.set(stub, cacheKey, out);
             }
@@ -131,11 +154,12 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
     //(Lcom/bt/rpc/demo/service/HelloBean;Lcom/bt/rpc/demo/service/HelloBean;)
     // Lcom/bt/rpc/model/RpcResult<Lcom/bt/rpc/demo/service/HelloRes;>;
     private void initStub() {
-        for (MethodStub stub : RefUtils.toRpcMethods(serverName,clz)) {
+        for (MethodStub stub : RefUtils.toRpcMethods(serverName, clz)) {
 
-            if (cacheManager != null && stub.cached != null) {
+            if (cacheManager != null && stub.method.isAnnotationPresent(Cached.class)) {
 
-                var expireSeconds = stub.cached.value();
+                var expireSeconds = stub.method.getAnnotation(Cached.class).value();
+
                 if (expireSeconds <= 0) {
                     expireSeconds = stub.rpcService.expireSeconds();
                 }
@@ -163,9 +187,10 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         var cm = stubMap.get(method);
 
-        //        if(null == cm){
-        //            return  "UnSupported Method : " + method;
-        //        }
+        //maybe call toString
+        if (null == cm) {
+            return "UnSupported Method : " + clz + "." + method;
+        }
 
         var reqContext = new ClientContext(clz, method.getName(), cm.stub.returnType
                 , args, cm, serialEnum);

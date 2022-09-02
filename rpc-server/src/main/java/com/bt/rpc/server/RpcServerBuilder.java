@@ -2,27 +2,31 @@ package com.bt.rpc.server;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.common.FilterInvokeHelper;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
-import com.bt.rpc.server.RpcMetaServiceImpl.RpcMetaMethod;
-import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.common.MService;
+import com.bt.rpc.common.meta.ApiMeta;
+import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerServiceDefinition;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -44,6 +48,7 @@ public class RpcServerBuilder {
 		private final int port;
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
 		public static final List<BindableService> PROTO_SERVICE_LIST = new ArrayList<>();
+		Executor executor;
 
 		//public final String applicationName;
 
@@ -61,22 +66,16 @@ public class RpcServerBuilder {
 		}
 		
 		public Builder addService(Object service) {
-//			List<Class> effectiveClassAnnotations = ReflectionHelper.getEffectiveClassAnnotations(service.getClass(), GrpcService.class);
-//			if( effectiveClassAnnotations.size() != 1 ) {
-//				String msg = effectiveClassAnnotations.isEmpty() ? "No Interfaces implementing GrpcService annotation" :
-//					"More than one interface implementing GRPC annotation";
-//				throw new IllegalArgumentException(msg);
-//			}
-//			if(service instanceof  BindableService){
-//				protoServiceList.add((BindableService) service);
-//			}else{
 			return  addService(service,Collections.emptyList());
-//			}
-			//return this;
 		}
 
 		public Builder addService(Object service,List<ServerFilter> filters) {
 			services.put(service,filters);
+			return this;
+		}
+
+		public Builder executor(Executor executor) {
+			this.executor = executor;
 			return this;
 		}
 
@@ -100,11 +99,13 @@ public class RpcServerBuilder {
 	
 	private RpcServerBuilder(Builder builder) throws Exception {
 		this.port = builder.port;
-		this.server = init(builder.services);
+		this.server = init(builder.services,builder.executor);
 	}
 	
-	private  Server init(Map<Object,List<ServerFilter>> services) throws Exception {
+	private  Server init(Map<Object,List<ServerFilter>> services,Executor executor) throws Exception {
 		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
+
+		serverBuilder.executor(executor);
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);
@@ -113,8 +114,11 @@ public class RpcServerBuilder {
 
 
 		var metaService = new RpcMetaServiceImpl();
+		var publicMetaService = new MServiceImpl();
 		var metaMethods = new ArrayList<RpcMetaMethod>();
 		services.put(metaService,Collections.emptyList());
+		services.put(publicMetaService,Collections.emptyList());
+
 
 		var typeSets = new HashSet<Class>();
 		for(var kv : services.entrySet()) {
@@ -136,47 +140,66 @@ public class RpcServerBuilder {
 
 				var attr = (RpcService)clz.getAnnotation(RpcService.class);
 
-				boolean needMeta = clz != RpcMetaService.class;
+				boolean needMeta = clz != RpcMetaService.class && clz != MService.class;
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
-
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
-
 					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
-						var methodArgs = stub.method.getGenericParameterTypes();
-
-						metaMethods.add(new RpcMetaMethod
-										(
-							stub.methodDescriptor.getServiceName(),
-												stub.method.getName(),
-												methodArgs.length == 1 ? methodArgs[0]  : null,
-												stub.returnType
-												,attr.description()
-												, stub.method.getDeclaredAnnotations()
-										));
+						metaMethods.add(toMeta(stub,attr));
 					}
 				}
 				var srv = serviceDefBuilder.build();
 				serverBuilder.addService(srv);
+				var sd = srv.getServiceDescriptor();
 				if(needMeta){
-					var sd = srv.getServiceDescriptor();
 					log.info("[ RpcService Expose: ] {}",  sd.getName());
 					var index = new AtomicInteger();
-					sd.getMethods().forEach(it->
-							log.info("     {}). {}",index.incrementAndGet(), it.getFullMethodName() )
-							);
-
+						sd.getMethods().forEach(it->
+								log.info("     {}). {}",index.incrementAndGet(), it.getFullMethodName() )
+								);
 				}
 
 			}
 
 
 		}
-		metaService.init(metaMethods);
+		metaService.init(buildApiMeta(metaMethods));
 		return serverBuilder.build();
 	}
-	
+
+	public static ApiMeta buildApiMeta(List<RpcMetaMethod> methods){
+		return 	RpcMetaServiceImpl.buildApiMeta(methods);
+	}
+
+	public static  RpcMetaMethod toMeta(MethodStub stub,RpcService attr){
+		var methodArgs = stub.method.getGenericParameterTypes();
+		return new RpcMetaMethod
+				(
+						stub.methodDescriptor.getServiceName(),
+						stub.method.getName(),
+						methodArgs.length == 1 ? methodArgs[0]  : null,
+						stub.returnType
+						,attr.description()
+						, stub.method.getDeclaredAnnotations()
+				);
+	}
+
+	@Data
+	@AllArgsConstructor
+	@NoArgsConstructor
+	public static class RpcMetaMethod {
+
+		String servieName;
+		String name;
+		Type   arg;
+		Type   res;
+
+		String description;
+
+		Annotation[] annotations;
+	}
+
 	public Server startServer() throws IOException {
 		return server.start();
 	}

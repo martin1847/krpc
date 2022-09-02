@@ -13,6 +13,14 @@ import com.bt.rpc.serial.ServerWriter;
  */
 public class ServerResult extends ResultWrapper {
 
+    public ServerResult(OutputProto Output) {
+        super(Output);
+    }
+
+    public ServerResult(int code, String message) {
+        super(code, message);
+    }
+
     public <DTO> ServerResult(RpcResult<DTO> result, ServerWriter serverSerial)
     {
         if (null != result)

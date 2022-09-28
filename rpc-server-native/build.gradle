@@ -18,6 +18,9 @@ dependencies {
     api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 
+    api "com.bt.ext:ext-rpc:1.0.0"
+
+
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
@@ -27,11 +30,15 @@ dependencies {
 //    implementation platform("io.quarkus:quarkus-bom:2.4.2.Final")
 //    implementation "io.quarkus:quarkus-arc:2.4.2.Final"
     //this version is the max to support JNI/DrawCaptcha
-    implementation "io.quarkus:quarkus-core:$quarkusMiniSupport"
+    compileOnly "io.quarkus:quarkus-core:$quarkusMiniSupport"
 
-    api "com.bt.ext:ext-rpc:1.0.0"
+    compileOnly "io.netty:netty-common:$nettyGrpcVersion"
+    compileOnly "io.netty:netty-handler:$nettyGrpcVersion"
 
     runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+
+
+
 
 }
 

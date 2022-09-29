@@ -28,9 +28,9 @@ dependencies {
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
 
 //    implementation platform("io.quarkus:quarkus-bom:2.4.2.Final")
-//    implementation "io.quarkus:quarkus-arc:2.4.2.Final"
+    compileOnly "io.quarkus:quarkus-arc:$quarkusMiniSupport"
     //this version is the max to support JNI/DrawCaptcha
-    compileOnly "io.quarkus:quarkus-core:$quarkusMiniSupport"
+//    compileOnly "io.quarkus:quarkus-core:$quarkusMiniSupport"
 
     compileOnly "io.netty:netty-common:$nettyGrpcVersion"
     compileOnly "io.netty:netty-handler:$nettyGrpcVersion"

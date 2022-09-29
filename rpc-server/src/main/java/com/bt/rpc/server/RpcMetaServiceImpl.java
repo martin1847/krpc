@@ -39,12 +39,14 @@ import com.bt.rpc.util.EnvUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 2020-04-08 11:03
  *
  * @author Martin.C
  */
+@Slf4j
 class RpcMetaServiceImpl implements RpcMetaService {
 
     private RpcResult<ApiMeta> result;
@@ -199,7 +201,8 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
                         params.put(param.getName(), val);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        //ignore
+                        log.warn("ignore  param  of  " + annotation,e);
                     }
                 }
             }

@@ -10,6 +10,8 @@ build:
   extends: .gradle
   variables:
     SONAR_HOST_URL: "http://sonarqube-sonarqube.gitlab:9000"
+    LANG: en_US.UTF-8
+    LC_ALL: en_US.UTF-8
   script:
     #  -Dquarkus.package.type=native  -Dquarkus.native.additional-build-args=-Ob
     - gradle build -x test

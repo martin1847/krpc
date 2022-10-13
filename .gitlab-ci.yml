@@ -3,8 +3,8 @@ include:
     #    ref: v1.0.211130
     file:
       - '.gradle.yml'
-      - '.junit.yml'
-      - '.docker.yml'
+#      - '.junit.yml'
+#      - '.docker.yml'
 
 build:
   extends: .gradle
@@ -17,7 +17,7 @@ build:
     - gradle build -x test
 #    - gradle $publish
     - gradle clean $publish
-    - gradle sonarqube -Dsonar.qualitygate.wait=true
+    - gradle test sonarqube -Dsonar.qualitygate.wait=true
 
 #
 #docker:

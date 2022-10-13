@@ -1,6 +1,7 @@
 
 plugins {
     id 'java-library'
+    id "jacoco"
     id 'io.quarkus'  version "$quarkusVersion" apply false
     id "org.sonarqube" version "3.4.0.2513"
 //    id "io.quarkus.extension"  version "$quarkusPluginVersion"// apply false
@@ -31,20 +32,35 @@ allprojects {
 }
 
 subprojects {
-
     apply plugin: 'java-library'
+    apply plugin: 'jacoco'
 
     group = "$group"
     version = "$version"
-    
+
     sourceCompatibility = "11"
     targetCompatibility = "11"
+    //JavaVersion.VERSION_17
 
     compileJava {
         options.encoding = 'UTF-8'
         options.compilerArgs << '-parameters'
     }
 
+    test {
+        //        useJUnitPlatform()
+//        systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+        systemProperty "jdbc.host" , "mysql-junit.infra"
+        systemProperty "quarkus.log.level","DEBUG"
+
+        finalizedBy jacocoTestReport
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.required = true
+//            html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+        }
+    }
+
 }
-//sourceCompatibility = JavaVersion.VERSION_17
-//targetCompatibility = JavaVersion.VERSION_17

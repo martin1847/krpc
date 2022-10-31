@@ -109,7 +109,7 @@ public class RpcServerBuilder {
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);
-			log.info("[ Origin RpcService Expose: ] {}" , it.bindService().getServiceDescriptor());
+			log.info("[ Origin RpcService Expose ] : {}" , it.bindService().getServiceDescriptor());
 		});
 
 
@@ -153,7 +153,7 @@ public class RpcServerBuilder {
 				serverBuilder.addService(srv);
 				var sd = srv.getServiceDescriptor();
 				if(needMeta){
-					log.info("[ RpcService Expose: ] {}",  sd.getName());
+					log.info("[ RpcService Expose ] : {}",  sd.getName());
 					var index = new AtomicInteger();
 						sd.getMethods().forEach(it->
 								log.info("     {}). {}",index.incrementAndGet(), it.getFullMethodName() )

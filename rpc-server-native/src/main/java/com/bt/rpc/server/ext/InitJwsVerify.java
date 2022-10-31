@@ -7,7 +7,7 @@ package com.bt.rpc.server.ext;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.spi.CDI;
+import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.bt.rpc.server.ServerContext;
@@ -49,23 +49,32 @@ public class InitJwsVerify {
     boolean bindClient;
 
 
+    @Inject
+    ExtVerify extVerify;
+
     void init(){
         if(jwks.isEmpty()){
             log.info("No Jwks Url Set, Skip.");
             return;
         }
         var url = jwks.get();
-        ExtVerify ext = ExtVerify.EMPTY;
-        var extVerifies = CDI.current().select(ExtVerify.class);
-        if (extVerifies.isResolvable()) {
-            ext = extVerifies.get();
-        }
+        //ExtVerify ext = ExtVerify.EMPTY;
+        //var extVerifies = CDI.current().select(ExtVerify.class);
+        //if (extVerifies.isResolvable()) {
+        //    ext = extVerifies.get();
+        //}
         var cookieName = jwsCookie;//rpcConfig.jwtCookie().orElse(JwsVerify.DEFAULT_COOKIE_NAME);
         log.info("Init Credential JwsVerify: {} ,cookieName: {} , bindClient: {}", url, cookieName, bindClient);
-        if (ext != ExtVerify.EMPTY) {
-            log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
+        //if (ext != ExtVerify.EMPTY) {
+        //    log.info("Reg Customer ExtVerify AfterJwsSignCheck :  {} ", ext);
+        //}
+        if (extVerify instanceof EmptyExtVerify) {
+            log.debug("Skip ExtVerify...");
+        }else {
+            log.info("[ Reg ExtVerify ] :  {}", extVerify);
         }
-        var jwks = new JwsVerify(url, cookieName, ext,bindClient);
+
+        var jwks = new JwsVerify(url, cookieName, extVerify,bindClient);
         try {
             jwks.loadJwks();
             ServerContext.regCredentialVerify(jwks);

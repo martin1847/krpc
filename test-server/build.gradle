@@ -38,8 +38,8 @@ dependencies {
 //    implementation "com.bt.ext:ext-rpc:1.0.0"
 
     //1.5.2.Final  1.5.0.Beta1
-    implementation 'org.mapstruct:mapstruct:1.5.2.Final'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.2.Final'
+    implementation 'org.mapstruct:mapstruct:1.5.3.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.3.Final'
 
 //    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
@@ -49,7 +49,13 @@ dependencies {
         exclude module: 'quarkus-bootstrap-maven-resolver'
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
-    testImplementation 'org.mockito:mockito-core:4.0.0'
+    testImplementation 'org.mockito:mockito-core:4.8.1'
+    testImplementation 'com.btyx.demo:demo-api:1.0.0'
+
+    // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
+    testImplementation 'org.openjdk.jmh:jmh-core:1.35'
+    testImplementation 'org.openjdk.jmh:jmh-generator-annprocess:1.35'
+
 
 //    testImplementation 'org.freemarker:freemarker:2.3.31'
 

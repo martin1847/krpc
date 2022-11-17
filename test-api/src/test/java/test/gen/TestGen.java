@@ -11,7 +11,7 @@ import com.btyx.rpc.gen.Gen;
  * @author Martin.C
  * @version 2021/12/30 6:08 PM
  */
-public class TestFtl {
+public class TestGen {
 
 
     public static void main(String[] args) {
@@ -19,6 +19,7 @@ public class TestFtl {
         //Gen.basePkg = "com.btyx.course.partner.admin.service";
 
         Gen.genTypescript("demo-java-server");
+        Gen.genMiniprogram("demo-java-server");
         Gen.genDart("demo-java-server");
         Gen.genYamltest("demo-java-server");
     }

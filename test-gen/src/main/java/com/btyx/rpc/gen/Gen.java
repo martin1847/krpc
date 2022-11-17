@@ -30,7 +30,6 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 
 /**
@@ -66,6 +65,10 @@ public class Gen {
         genTypescript(appName,defaultFolder(LangEnum.Typescript));
     }
 
+    public static void genMiniprogram(String appName){
+        gen(appName,LangEnum.Miniprogram,defaultFolder(LangEnum.Miniprogram));
+    }
+
     public static void genDart(String appName){
         genDart(appName,defaultFolder(LangEnum.Dart));
     }
@@ -93,13 +96,18 @@ public class Gen {
             throw new RuntimeException(e);
         }
     }
-    static void gen(String appName, LangEnum template, File outFolder) throws IOException, TemplateException {
+    static void gen(String appName, LangEnum template, File outFolder)  {
 
         //Set<ClassInfo> classesInPackage = ClassPath.from(cl).getTopLevelClassesRecursive("com.btyx");
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));
-        var metas =  scan(appName,basePkg);
+        ApiMetaRoot metas ;
+        try {
+            metas = scan(appName,basePkg);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         /* Create and adjust the configuration singleton */
         Configuration cfg = new Configuration(Configuration.VERSION_2_3_31);
@@ -115,12 +123,18 @@ public class Gen {
         /* Create a data-model */
         var root = new HashMap<String,Object>();
         root.put("app", metas.getApp());
+        root.put("lang", template.name());
         var dtos = metas.getDtos().stream().filter(Dto::hasChild).collect(Collectors.toList());
         //JSON dtos;
         dtos.forEach(template.remapping::remapping);
         root.put("dtos",dtos );
 
-        Template dtoTemp = cfg.getTemplate(template.dto);
+        Template dtoTemp ;
+        try {
+            dtoTemp = cfg.getTemplate(template.dto);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         var dtoFileName = template.dtoFileName(metas.getApp());
 
@@ -128,21 +142,25 @@ public class Gen {
         System.out.println("---------- gen to : "+ outFolder);
         System.out.println("---------- gen : "+ dtoFileName);
 
-        dtoTemp.process(root, toWriter(outFolder,dtoFileName));
-
-        Template serviceTemp = cfg.getTemplate(template.serive);
-        for (var api :metas.getApis()) {
-            root.put("service",api );
-            api.getMethods().forEach(m->{
-                template.remapping.remapping(m.getArg());
-                template.remapping.remapping(m.getRes());
-            });
-            Collections.sort(api.getMethods());
-            var serviceFile = template.serviceFileName(api.getName());
-            root.put("serviceFile",serviceFile );
-            System.out.println("---------- gen : "+ serviceFile);
-            serviceTemp.process(root, toWriter(outFolder,serviceFile));
+        try {
+            dtoTemp.process(root, toWriter(outFolder,dtoFileName));
+            Template serviceTemp = cfg.getTemplate(template.serive);
+            for (var api :metas.getApis()) {
+                root.put("service",api );
+                api.getMethods().forEach(m->{
+                    template.remapping.remapping(m.getArg());
+                    template.remapping.remapping(m.getRes());
+                });
+                Collections.sort(api.getMethods());
+                var serviceFile = template.serviceFileName(api.getName());
+                root.put("serviceFile",serviceFile );
+                System.out.println("---------- gen : "+ serviceFile);
+                serviceTemp.process(root, toWriter(outFolder,serviceFile));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+
     }
 
     static Writer toWriter(File outFolder,String fileName) throws IOException {

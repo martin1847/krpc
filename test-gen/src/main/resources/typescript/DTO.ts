@@ -3,8 +3,11 @@
 * ${dtoFile}  ${.now?iso_local}
 */
 
-import {RpcResult,RpcService,Headers} from '@btyx/rpc';
+<#assign isTs = (lang == 'Typescript')>
 
+import {RpcResult,RpcService,Headers} from ${isTs?then("'@btyx/rpc'","'../utils/rpc'")};
+
+<#if isTs>
 import {
   IsInt,
   Length,
@@ -24,6 +27,7 @@ import {
   IsPositive,
   IsNegative,
 } from 'class-validator';
+</#if>
 
 export const APP = '${app}';
 
@@ -42,12 +46,11 @@ export ${dto.input?then('class','interface')}  ${dto.typeName} {
 
 
     <#list (f.annotations![])?filter(a->a.name?has_content) as anno>
-    <#if anno?is_last && dto.input && !f.required>
-    <#-- if f.type?starts_with("Array")>@IsArray()//</#if -->
+    <#if anno?is_last && dto.input && !f.required && isTs>
     ${anno.name}
     @IsOptional()
     <#else>
-    ${dto.input?then('','//')}${anno.name}
+    ${ ( dto.input && isTs )?then('','//')}${anno.name}
     </#if>
     </#list>
     ${f.name}${(dto.input && !f.required)?then('?','')}: ${f.type};

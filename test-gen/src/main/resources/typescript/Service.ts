@@ -3,7 +3,8 @@
 * ${serviceFile}  ${.now?iso_local}
 */
 
-import {RpcResult,RpcService,Headers} from ${(lang == 'Typescript')?then("'@btyx/rpc'","'../utils/rpc'")};
+import {RpcResult,RpcService,Headers} from '@btyx/rpc-base';
+<#-- ${(lang == 'Typescript')?then("'@btyx/rpc'","'../utils/rpc'")}; -->
 
 <#if service.customerDtos?has_content>
 import {<#list service.customerDtos as f>${f}${f?has_next?then(',','')}</#list>} from './${dtoFile?replace(".ts","")}';

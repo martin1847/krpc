@@ -5,7 +5,8 @@
 
 <#assign isTs = (lang == 'Typescript')>
 
-import {RpcResult,RpcService,Headers} from ${isTs?then("'@btyx/rpc'","'../utils/rpc'")};
+import {RpcResult,RpcService,Headers} from '@btyx/rpc-base';
+<#-- ${isTs?then("'@btyx/rpc'","'../utils/rpc'")}; -->
 
 <#if isTs>
 import {

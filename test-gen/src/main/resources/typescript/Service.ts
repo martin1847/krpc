@@ -3,7 +3,7 @@
 * ${serviceFile}  ${.now?iso_local}
 */
 
-import {RpcResult,RpcService,Headers} from '@btyx/rpc-base';
+import {R,RpcService,Meta as M} from '@btyx/rpc-base';
 <#-- ${(lang == 'Typescript')?then("'@btyx/rpc'","'../utils/rpc'")}; -->
 
 <#if service.customerDtos?has_content>
@@ -15,13 +15,13 @@ import {<#list service.customerDtos as f>${f}${f?has_next?then(',','')}</#list>}
 </#if>
 export class ${service.name}Service{
 
-	readonly pre = "${service.name}/";
+	readonly s = "${service.name}/";
 
-	constructor(readonly rpcService: RpcService) {}
+	constructor(readonly r: RpcService) {}
 <#list service.methods?filter(f->! f.hidden)  as m>
 	${m.doc}
-	${m.name}(<#if m.arg??>req:${m.arg}, </#if>header?: Headers): Promise<RpcResult<${m.res}>>{
-		return this.rpcService.async(this.pre+"${m.name}",${m.arg?has_content?then('req','null')},header);
+	${m.name}(<#if m.arg??>d:${m.arg}, </#if>m?: M): R<${m.res}>{
+		return this.r.async(this.s+"${m.name}",${m.arg?has_content?then('d','null')},m);
 	}
 </#list>
 

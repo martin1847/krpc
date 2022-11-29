@@ -7,6 +7,7 @@ package com.btyx.rpc.gen.meta;
 import java.util.Map;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -18,6 +19,7 @@ import lombok.Setter;
  */
 @AllArgsConstructor
 @NoArgsConstructor
+//@Data
 public class Anno {
 
     @Getter

@@ -76,6 +76,7 @@ public class NameRemapping {
                 anno.setName(mapping.apply(anno,type));
             } else {
                 //default as a comment
+                //System.out.println("find comment /// anno : "+ anno);
                 anno.setName("/// " + anno.originName + anno.getProperties());
             }
         }

@@ -32,8 +32,12 @@ import {
 
 export const APP = '${app}';
 
-<#list dtos as dto>
-<#if dto.doc?has_content>/// ${dto.doc}</#if>
+<#list dtos?filter(x -> x.name != 'PagedQuery' &&  x.name != 'PagedList') as dto>
+<#if dto.doc?has_content>
+/**
+ *${dto.doc}
+ */
+</#if>
 <#if dto.enum>
 export const enum ${dto.typeName} {
 	<#list dto.fields as f>

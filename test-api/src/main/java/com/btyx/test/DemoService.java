@@ -63,6 +63,7 @@ public interface DemoService {
     // 用来测试范型
     RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query);
 
+    RpcResult<Integer> sleep(Integer i);
 
     default RpcResult<Integer> saveImg(Img img){
         return null;

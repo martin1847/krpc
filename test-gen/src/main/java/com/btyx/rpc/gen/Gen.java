@@ -42,9 +42,9 @@ public class Gen {
 
     public static String basePkg ="com.btyx";
 
-    static final char FC = File.separatorChar;
+    //static final String FC = File.separator;
 
-    static final String CLS_FOLDER_SUF = FC+"out"+FC+"test"+FC+"classes"+FC;
+    static final String[] CLS_FOLDERS ={ "/out/test/classes/","/build/classes/java/"};
 
     public static File defaultFolder(LangEnum lan){
         var url = Gen.class.getResource("/");
@@ -52,12 +52,17 @@ public class Gen {
             return null;
         }
         var path = url.getPath();
-        if(path.endsWith(CLS_FOLDER_SUF)){
-            var f =  new File(path.substring(0,path.length() - CLS_FOLDER_SUF.length()));
-            var subLang =  new File(f,lan.name().toLowerCase(Locale.US));
-            subLang.mkdir();
-            return subLang;
+        for (var suf : CLS_FOLDERS) {
+            int i;
+            if ( (i =path.lastIndexOf(suf)) > 0) {
+                var f = new File(path.substring(0, i));
+                var subLang = new File(f, lan.name().toLowerCase(Locale.US));
+                System.out.println("use folder : " + subLang);
+                subLang.mkdir();
+                return subLang;
+            }
         }
+        System.out.println("unknow path : "+ path);
         return null;
     }
 

@@ -50,11 +50,9 @@ message InputProto {
 message OutputProto {
   //google.rpc.Code  see https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
   int32 c = 1;
-  //detail  message if there is a error ,otherwise  null 
-  string m = 2;
-  // payload data , oneof  string or bytes
   oneof data {
-	string utf8 = 3;////for json , txt like serial
- 	bytes bs = 4; // ByteString, others Serialization transfer by protobuf
+    string m = 2; //detail  message if there is a error ,otherwise  null
+	string utf8 = 3;// for json , txt like serial
+ 	bytes bs = 4;  // ByteString, others Serialization transfer by protobuf
   }
 }

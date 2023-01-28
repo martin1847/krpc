@@ -22,4 +22,6 @@ public class TestRef {
         System.out.println(RefUtils.needValidator(Img.class));
         System.out.println(RefUtils.needValidator(SubImg.class));
     }
+
+
 }

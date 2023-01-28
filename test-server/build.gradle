@@ -70,6 +70,11 @@ dependencies {
 //    sourceCompatibility = JavaVersion.VERSION_11
 //    targetCompatibility = JavaVersion.VERSION_11
 //}
+compileTestJava {
+    options.compilerArgs += [
+            '--add-exports', "java.base/jdk.internal.vm.annotation=ALL-UNNAMED",
+    ]
+}
 
 compileJava {
     options.encoding = 'UTF-8'

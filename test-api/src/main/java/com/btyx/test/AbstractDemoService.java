@@ -19,14 +19,6 @@ import com.btyx.test.dto.User;
  */
 
 public abstract class AbstractDemoService implements DemoService {
-    //@Override
-    //public RpcResult<TimeResult> hello(TimeReq req) {
-    //    var res = new TimeResult();
-    //
-    //    res.setTime(" from  (" + EnvUtils.hostName() + ", with meta : " + ServerContext.current().getHeaders()+") : " + req);
-    //    res.setTimestamp(System.currentTimeMillis());
-    //    return RpcResult.ok(res);
-    //}
 
     @Override
     public RpcResult<String> save(User user) {

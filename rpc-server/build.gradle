@@ -7,9 +7,11 @@ dependencies {
     api project(':rpc-api')
     api project(':rpc-common')
     implementation "io.grpc:grpc-stub:${grpcVersion}"
+//    implementation "io.grpc:grpc-xds:${grpcVersion}"
 
 
-   // implementation'jakarta.enterprise:jakarta.enterprise.cdi-api:2.0.2'
+
+    // implementation'jakarta.enterprise:jakarta.enterprise.cdi-api:2.0.2'
 //    implementation "io.grpc:grpc-netty:${grpcVersion}"
 //    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
 

@@ -1,5 +1,10 @@
 
-apply plugin:  'io.quarkus'
+//apply plugin:  'io.quarkus'
+
+plugins {
+    id 'io.quarkus'  version "$quarkusTestServerVersion"
+}
+
 
 group = "com.btyx.test.rpc"
 dependencies {
@@ -16,7 +21,7 @@ dependencies {
     runtimeOnly "io.quarkus:quarkus-hibernate-validator"
 
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusVersion}")
+    implementation platform("io.quarkus:quarkus-bom:${quarkusTestServerVersion}")
     implementation "io.quarkus:quarkus-arc"
     implementation "io.quarkus:quarkus-netty"
     implementation  "io.quarkus:quarkus-hibernate-validator"

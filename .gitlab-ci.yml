@@ -15,42 +15,7 @@ build:
   script:
     #  -Dquarkus.package.type=native  -Dquarkus.native.additional-build-args=-Ob
     - gradle build -x test
-#    - gradle $publish
-    - gradle clean $publish
+#    - gradle clean $publish
+    - gradle clean publish
     - gradle test sonarqube -Dsonar.qualitygate.wait=true
-
-#
-#docker:
-#  variables:
-#    DOCKER_TAG: latest
-#    APP_NAME: "rpcurl"
-#    APP_NAMESPACE: common
-#  extends: .docker
-#  rules:
-#  - if: '$CI_COMMIT_BRANCH == "dev"'
-#    when: manual
-#
-
-#
-#.helm:
-#  extends: .helm-java
-
-
-# anchors
-# reference-tags
-# extend
-
-# https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#reference-tags
-# https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#anchors
-
-
-#.helm:
-#  extends:
-#    - .helm-java
-#    - .only-changes
-
-
-# deploy
-# helm repo add charts https://jcr.botaoyx.com/artifactory/api/helm/charts \
-#--username <USERNAME> --password <PASSWORD>
 

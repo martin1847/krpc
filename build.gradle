@@ -2,7 +2,7 @@
 plugins {
     id 'java-library'
     id "jacoco"
-    id 'io.quarkus'  version "$quarkusVersion" apply false
+//    id 'io.quarkus'  version "$quarkusVersion" apply false
     id "org.sonarqube" version "3.4.0.2513"
 //    id "io.quarkus.extension"  version "$quarkusPluginVersion"// apply false
 //    id 'maven-publish' //apply false
@@ -62,5 +62,8 @@ subprojects {
 //            html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
         }
     }
+
+//  gradle allDeps > dep.txt
+    task allDeps(type: DependencyReportTask) {}
 
 }

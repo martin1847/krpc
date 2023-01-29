@@ -52,8 +52,8 @@ public class TsNameMap {
     final static Map<Class, BiFunction<Anno, PropertyType,String>> annoMapping = new HashMap<>();
 
     static {
-        annoMapping.put(Doc.class, (it,t)->"/// "+it.getProperties().get("value"));
-        annoMapping.put(Deprecated.class,(it,t)->"/// Deprecated");
+        annoMapping.put(Doc.class, (it,t)-> "// "+String.valueOf(it.getProperties().get("value")));
+        annoMapping.put(Deprecated.class,(it,t)->"Deprecated");
         annoMapping.put(Null.class, (it,t)->"@IsOptional()");
         annoMapping.put(NotNull.class, (it,t)->"@IsDefined()");
         annoMapping.put(NotEmpty.class, (it,t)->"@IsNotEmpty()");

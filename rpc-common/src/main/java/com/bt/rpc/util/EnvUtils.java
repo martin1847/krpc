@@ -43,8 +43,9 @@ public abstract class EnvUtils {
         try {
             return InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            // ignore
+            return "UnknownHostException";
         }
-        return "UnknownHostException";
     }
 }

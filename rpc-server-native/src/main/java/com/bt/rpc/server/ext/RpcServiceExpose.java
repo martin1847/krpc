@@ -189,7 +189,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         if (validator instanceof EmptyValidator) {
             log.warn("EmptyValidator Found, All Rpc Validator will Skip, Are you Sure?");
         }else {
-            log.info("Reg GlobalValidator :  {}", validator);
+            log.info("[ Reg GlobalValidator ] :  {}", validator);
             ServerContext.regValidator(validator);
         }
     }
@@ -207,7 +207,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             }
         });
         map.forEach((k, v) -> {
-            log.info("Reg GlobalFilter :  {}", k);
+            log.info("[ Reg GlobalFilter ] :  {}", k);
             ServerContext.regGlobalFilter(v);
         });
     }

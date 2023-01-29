@@ -167,7 +167,7 @@ public abstract class RefUtils {
                 }
             }
             clz = clz.getSuperclass();
-        }while (clz != Object.class);
+        }while (clz != null && !clz.isInterface() &&  clz != Object.class);
 
         return false;
     }

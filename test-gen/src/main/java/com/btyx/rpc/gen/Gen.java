@@ -30,7 +30,6 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 
 /**
@@ -43,9 +42,9 @@ public class Gen {
 
     public static String basePkg ="com.btyx";
 
-    static final char FC = File.separatorChar;
+    //static final String FC = File.separator;
 
-    static final String CLS_FOLDER_SUF = FC+"out"+FC+"test"+FC+"classes"+FC;
+    static final String[] CLS_FOLDERS ={ "/out/test/classes/","/build/classes/java/"};
 
     public static File defaultFolder(LangEnum lan){
         var url = Gen.class.getResource("/");
@@ -53,17 +52,26 @@ public class Gen {
             return null;
         }
         var path = url.getPath();
-        if(path.endsWith(CLS_FOLDER_SUF)){
-            var f =  new File(path.substring(0,path.length() - CLS_FOLDER_SUF.length()));
-            var subLang =  new File(f,lan.name().toLowerCase(Locale.US));
-            subLang.mkdir();
-            return subLang;
+        for (var suf : CLS_FOLDERS) {
+            int i;
+            if ( (i =path.lastIndexOf(suf)) > 0) {
+                var f = new File(path.substring(0, i));
+                var subLang = new File(f, lan.name().toLowerCase(Locale.US));
+                System.out.println("use folder : " + subLang);
+                subLang.mkdir();
+                return subLang;
+            }
         }
+        System.out.println("unknow path : "+ path);
         return null;
     }
 
     public static void genTypescript(String appName){
         genTypescript(appName,defaultFolder(LangEnum.Typescript));
+    }
+
+    public static void genMiniprogram(String appName){
+        gen(appName,LangEnum.Miniprogram,defaultFolder(LangEnum.Miniprogram));
     }
 
     public static void genDart(String appName){
@@ -93,13 +101,18 @@ public class Gen {
             throw new RuntimeException(e);
         }
     }
-    static void gen(String appName, LangEnum template, File outFolder) throws IOException, TemplateException {
+    static void gen(String appName, LangEnum template, File outFolder)  {
 
         //Set<ClassInfo> classesInPackage = ClassPath.from(cl).getTopLevelClassesRecursive("com.btyx");
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));
-        var metas =  scan(appName,basePkg);
+        ApiMetaRoot metas ;
+        try {
+            metas = scan(appName,basePkg);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         /* Create and adjust the configuration singleton */
         Configuration cfg = new Configuration(Configuration.VERSION_2_3_31);
@@ -115,12 +128,18 @@ public class Gen {
         /* Create a data-model */
         var root = new HashMap<String,Object>();
         root.put("app", metas.getApp());
+        root.put("lang", template.name());
         var dtos = metas.getDtos().stream().filter(Dto::hasChild).collect(Collectors.toList());
         //JSON dtos;
         dtos.forEach(template.remapping::remapping);
         root.put("dtos",dtos );
 
-        Template dtoTemp = cfg.getTemplate(template.dto);
+        Template dtoTemp ;
+        try {
+            dtoTemp = cfg.getTemplate(template.dto);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         var dtoFileName = template.dtoFileName(metas.getApp());
 
@@ -128,21 +147,25 @@ public class Gen {
         System.out.println("---------- gen to : "+ outFolder);
         System.out.println("---------- gen : "+ dtoFileName);
 
-        dtoTemp.process(root, toWriter(outFolder,dtoFileName));
-
-        Template serviceTemp = cfg.getTemplate(template.serive);
-        for (var api :metas.getApis()) {
-            root.put("service",api );
-            api.getMethods().forEach(m->{
-                template.remapping.remapping(m.getArg());
-                template.remapping.remapping(m.getRes());
-            });
-            Collections.sort(api.getMethods());
-            var serviceFile = template.serviceFileName(api.getName());
-            root.put("serviceFile",serviceFile );
-            System.out.println("---------- gen : "+ serviceFile);
-            serviceTemp.process(root, toWriter(outFolder,serviceFile));
+        try {
+            dtoTemp.process(root, toWriter(outFolder,dtoFileName));
+            Template serviceTemp = cfg.getTemplate(template.serive);
+            for (var api :metas.getApis()) {
+                root.put("service",api );
+                api.getMethods().forEach(m->{
+                    template.remapping.remapping(m.getArg());
+                    template.remapping.remapping(m.getRes());
+                });
+                Collections.sort(api.getMethods());
+                var serviceFile = template.serviceFileName(api.getName());
+                root.put("serviceFile",serviceFile );
+                System.out.println("---------- gen : "+ serviceFile);
+                serviceTemp.process(root, toWriter(outFolder,serviceFile));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+
     }
 
     static Writer toWriter(File outFolder,String fileName) throws IOException {

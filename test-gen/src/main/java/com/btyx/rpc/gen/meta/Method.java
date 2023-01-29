@@ -25,7 +25,7 @@ public class Method implements Comparable<Method>{
         }
         return annotations.stream().filter(it ->
                 DOC_ANNO.equals(it.originName)
-        ).findFirst().map(it->"/// " +it.properties.get("value")).orElse("");
+        ).findFirst().map(it->"// "+(String)it.properties.get("value")).orElse("");
     }
 
     public boolean isHidden() {

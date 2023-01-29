@@ -1,5 +1,8 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version '0.13.2'
+}
 
-
+apply plugin: 'org.kordamp.gradle.jandex'
 apply from: "$rootProject.projectDir/upload.gradle"
 
 

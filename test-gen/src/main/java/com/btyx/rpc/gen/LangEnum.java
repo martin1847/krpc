@@ -19,6 +19,7 @@ import com.google.common.base.Function;
 public enum LangEnum {
 
     Typescript("typescript/DTO.ts","typescript/Service.ts",TsNameMap.nameMapping,TsNameMap.annoMapping),
+    Miniprogram("typescript/DTO.ts","typescript/Service.ts",TsNameMap.nameMapping,TsNameMap.annoMapping),
     Yamltest("yamltest/DTO.yaml","yamltest/Service.yaml",TsNameMap.nameMapping,TsNameMap.annoMapping),
     Dart("dart/DTO.dart","dart/Service.dart",DartNameMap.nameMapping,DartNameMap.annoMapping);
 

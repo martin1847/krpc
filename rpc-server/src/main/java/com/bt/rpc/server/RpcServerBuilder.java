@@ -13,10 +13,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.common.MService;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
-import com.bt.rpc.common.MService;
 import com.bt.rpc.common.meta.ApiMeta;
 import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.util.RefUtils;
@@ -104,12 +104,14 @@ public class RpcServerBuilder {
 	
 	private  Server init(Map<Object,List<ServerFilter>> services,Executor executor) throws Exception {
 		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
+		//	XdsServerBuilder.forPort(port, InsecureServerCredentials.create());
+		//System.out.println("========XDS======XDS======XDS=====");
 
 		serverBuilder.executor(executor);
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);
-			log.info("[ Origin RpcService Expose: ] {}" , it.bindService().getServiceDescriptor());
+			log.info("[ Origin RpcService Expose ] : {}" , it.bindService().getServiceDescriptor());
 		});
 
 
@@ -153,7 +155,7 @@ public class RpcServerBuilder {
 				serverBuilder.addService(srv);
 				var sd = srv.getServiceDescriptor();
 				if(needMeta){
-					log.info("[ RpcService Expose: ] {}",  sd.getName());
+					log.info("[ RpcService Expose ] : {}",  sd.getName());
 					var index = new AtomicInteger();
 						sd.getMethods().forEach(it->
 								log.info("     {}). {}",index.incrementAndGet(), it.getFullMethodName() )

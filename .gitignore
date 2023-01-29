@@ -58,3 +58,4 @@ gradlew*
 /test-api/yamltest/
 /test-api/miniprogram/
 /dep.txt
+/proto/js/

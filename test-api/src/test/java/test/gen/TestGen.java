@@ -18,11 +18,15 @@ public class TestGen {
         //Gen.basePkg = "com.btyx.test";
         ////Gen.basePkg = "com.btyx.course.partner.admin.service";
         //
-        //Gen.genTypescript("demo-java-server");
-        //Gen.genMiniprogram("demo-java-server");
+        Gen.genTypescript("demo-java-server");
+        Gen.genMiniprogram("demo-java-server");
         //Gen.genDart("demo-java-server");
         //Gen.genYamltest("demo-java-server");
 
+        testEmojiChar();
+    }
+
+    static void testEmojiChar(){
         char c = '1';
         var str = "\uD83D\uDE08";
         String s = "😈";

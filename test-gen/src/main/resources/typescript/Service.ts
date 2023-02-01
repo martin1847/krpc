@@ -4,13 +4,13 @@
 */
 <#assign pageDto = (service.customerDtos?seq_contains('PagedQuery')?string(",PagedQuery", ""))>
 <#assign pageDto = pageDto+(service.customerDtos?seq_contains('PagedList')?string(",PagedList", ""))>
-import {R,RpcService,Meta as M${pageDto}} from '@btyx/rpc-base';
+import type {R,RpcService,Meta as M${pageDto}} from '@btyx/rpc-base';
 <#-- ${(lang == 'Typescript')?then("'@btyx/rpc'","'../utils/rpc'")}; -->
 
 <#assign dtos = service.customerDtos?filter(x -> x != 'PagedQuery' &&  x != 'PagedList') >
 
 <#if dtos?has_content>
-import {<#list dtos as f>${f}${f?has_next?then(',','')}</#list>} from './${dtoFile?replace(".ts","")}';
+import type {<#list dtos as f>${f}${f?has_next?then(',','')}</#list>} from './${dtoFile?replace(".ts","")}';
 </#if>
 
 <#if service.description?has_content>

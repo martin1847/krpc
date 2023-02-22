@@ -5,6 +5,8 @@
 package test.gen;
 
 import com.btyx.rpc.gen.Gen;
+import com.btyx.test.DemoRpc;
+import com.btyx.test.DemoService;
 
 /**
  *
@@ -18,12 +20,13 @@ public class TestGen {
         //Gen.basePkg = "com.btyx.test";
         ////Gen.basePkg = "com.btyx.course.partner.admin.service";
         //
-        Gen.genTypescript("demo-java-server");
-        Gen.genMiniprogram("demo-java-server");
-        //Gen.genDart("demo-java-server");
-        //Gen.genYamltest("demo-java-server");
-
-        testEmojiChar();
+        Gen.genSingleTypescript("-test", DemoRpc.class);
+        //Gen.genTypescript("demo-java-server");
+        //Gen.genMiniprogram("demo-java-server");
+        ////Gen.genDart("demo-java-server");
+        ////Gen.genYamltest("demo-java-server");
+        //
+        //testEmojiChar();
     }
 
     static void testEmojiChar(){

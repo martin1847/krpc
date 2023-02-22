@@ -70,6 +70,15 @@ public class Gen {
         genTypescript(appName,defaultFolder(LangEnum.Typescript));
     }
 
+    public static void genSingleTypescript(String appName,Class singleRpc) {
+        try {
+            genApiMetaRoot(scanSingle(appName,singleRpc),LangEnum.Typescript,defaultFolder(LangEnum.Typescript));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
     public static void genMiniprogram(String appName){
         gen(appName,LangEnum.Miniprogram,defaultFolder(LangEnum.Miniprogram));
     }
@@ -101,18 +110,24 @@ public class Gen {
             throw new RuntimeException(e);
         }
     }
-    static void gen(String appName, LangEnum template, File outFolder)  {
+
+
+
+    static void gen(String appName, LangEnum template, File outFolder) {
 
         //Set<ClassInfo> classesInPackage = ClassPath.from(cl).getTopLevelClassesRecursive("com.btyx");
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));
-        ApiMetaRoot metas ;
+        ApiMetaRoot metas;
         try {
-            metas = scan(appName,basePkg);
+            metas = scan(appName, basePkg);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        genApiMetaRoot(metas,template,outFolder);
+    }
+    static void genApiMetaRoot( ApiMetaRoot metas,LangEnum template,File outFolder) {
 
         /* Create and adjust the configuration singleton */
         Configuration cfg = new Configuration(Configuration.VERSION_2_3_31);
@@ -201,4 +216,19 @@ public class Gen {
         return JsonUtils.parse(json,ApiMetaRoot.class);
     }
 
+    static ApiMetaRoot scanSingle(String appName , Class clz) throws IOException {
+        var metaMethods = new ArrayList<RpcMetaMethod>();
+        if(clz.isInterface()){
+            var rpcAnno = (RpcService)clz.getAnnotation(RpcService.class);
+            System.out.println("---------- Found RpcService : " + clz.getName() );
+            for(MethodStub stub : RefUtils.toRpcMethods(appName,clz)){
+                metaMethods.add(RpcServerBuilder.toMeta(stub,rpcAnno));
+            }
+        }
+        var api = RpcServerBuilder.buildApiMeta(metaMethods);
+        api.setApp(appName);
+        var json = JsonUtils.stringify(api);
+
+        return JsonUtils.parse(json,ApiMetaRoot.class);
+    }
 }

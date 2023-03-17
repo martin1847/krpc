@@ -13,17 +13,18 @@ import type { R, RpcService, MethodConfig as M${pageDto} } from '@btyx/rpc-base'
 import type { <#list dtos as f>${f}${f?has_next?then(", ",' ')}</#list>} from './${dtoFile?replace(".ts","")}';
 </#if>
 
+const _ = '${service.name}/';
+
 <#if service.description?has_content>
 ///  ${service.description}
 </#if>
 export class ${service.name}Service {
-  readonly s = '${service.name}/';
 
   constructor(readonly r: RpcService) {}
 <#list service.methods?filter(f->! f.hidden)  as m>
   ${m.doc}
   ${m.name}(<#if m.arg??>d:${m.arg}, </#if>m?: M): R<${m.res}>{
-    return this.r.async(this.s + '${m.name}', ${m.arg?has_content?then('d','undefined')}, m);
+    return this.r.async(_ + '${m.name}', ${m.arg?has_content?then('d','undefined')}, m);
   }
 </#list>
 }

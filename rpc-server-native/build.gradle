@@ -18,7 +18,7 @@ dependencies {
     api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 
-    api "com.bt.ext:ext-rpc:1.0.0"
+    api "com.bt.ext:ext-rpc:$globalRpcVersion"
 
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
@@ -37,9 +37,9 @@ dependencies {
 
     runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
 
-
-
-
 }
 
+compileTestJava {
+    dependsOn('jandex')
+}
 

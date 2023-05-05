@@ -1,6 +1,6 @@
 package test.btyx;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import com.btyx.test.UserService;
 import com.btyx.test.dto.User;

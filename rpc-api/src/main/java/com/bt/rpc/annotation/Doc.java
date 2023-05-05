@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 
 /**
  * RPC 字段、DTO的文档说明。
- * 说清楚字段含有，是否必须通过javax.validation-api自动识别。
+ * 说清楚字段含有，是否必须通过jakarta.validation-api自动识别。
  *
  * @author Martin.C
  * @version 2021/11/02 2:57 PM

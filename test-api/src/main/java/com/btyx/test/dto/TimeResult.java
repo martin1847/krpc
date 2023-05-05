@@ -3,7 +3,7 @@ package com.btyx.test.dto;
 
 import java.util.Date;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import com.bt.rpc.annotation.Doc;
 import lombok.Data;

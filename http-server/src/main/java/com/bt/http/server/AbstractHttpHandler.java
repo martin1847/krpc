@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.validation.Validator;
+import jakarta.validation.Validator;
 
 import com.bt.rpc.util.JsonUtils;
 import io.netty.buffer.ByteBuf;

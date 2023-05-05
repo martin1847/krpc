@@ -6,7 +6,7 @@ package com.bt.rpc.server.invoke;
 
 import java.util.stream.Collectors;
 
-import javax.validation.Validator;
+import jakarta.validation.Validator;
 
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;

@@ -6,9 +6,9 @@ package com.bt.rpc.server.ext;
 
 import java.util.Optional;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.jws.ExtVerify;

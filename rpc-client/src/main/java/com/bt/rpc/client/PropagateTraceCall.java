@@ -4,7 +4,7 @@
  */
 package com.bt.rpc.client;
 
-import javax.validation.constraints.NotNull;
+//import jakarta.validation.constraints.NotNull;
 
 import com.bt.rpc.context.TraceMeta;
 import com.bt.rpc.internal.InputProto;
@@ -25,7 +25,9 @@ class PropagateTraceCall extends ForwardingClientCall<InputProto, OutputProto> {
     final String                              traceId, spanId, parentSpanId,requestId;
     final String  sampled,debugFlag;
 
-    PropagateTraceCall(ClientCall<InputProto, OutputProto> delegate,@NotNull String traceId) {
+    PropagateTraceCall(ClientCall<InputProto, OutputProto> delegate,
+                       //@NotNull
+        String traceId) {
         this.delegate = delegate;
         this.traceId = traceId;
         spanId = MDC.get(TraceMeta.X_B3_SPAN_ID);

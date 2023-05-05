@@ -8,12 +8,12 @@ plugins {
 
 group = "com.btyx.test.rpc"
 dependencies {
-//    compileOnly "javax.annotation:javax.annotation-api:1.2"
-
 
     implementation project(':test-api')
     implementation project(':rpc-server-native')
     implementation project(':rpc-client')
+
+//    implementation "com.btyx.example:test-api:$globalRpcVersion"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
@@ -36,11 +36,8 @@ dependencies {
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-    implementation "com.bt.ext:ext-mybatis:1.0.0"
-    implementation "com.bt.common:mybatis:1.0.0"
-
-//
-//    implementation "com.bt.ext:ext-rpc:1.0.0"
+    implementation "com.bt.ext:ext-mybatis:$globalRpcVersion"
+    implementation "com.bt.common:mybatis:$globalRpcVersion"
 
     //1.5.2.Final  1.5.0.Beta1
     implementation 'org.mapstruct:mapstruct:1.5.3.Final'

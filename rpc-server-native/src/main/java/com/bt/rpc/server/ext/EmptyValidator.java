@@ -9,12 +9,12 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Set;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Named;
-import javax.validation.ConstraintViolation;
-import javax.validation.Validator;
-import javax.validation.executable.ExecutableValidator;
-import javax.validation.metadata.BeanDescriptor;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import jakarta.validation.executable.ExecutableValidator;
+import jakarta.validation.metadata.BeanDescriptor;
 
 import io.quarkus.arc.DefaultBean;
 import lombok.extern.slf4j.Slf4j;

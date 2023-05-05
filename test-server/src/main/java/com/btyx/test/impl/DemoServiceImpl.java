@@ -1,6 +1,6 @@
 package com.btyx.test.impl;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;

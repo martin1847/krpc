@@ -1,6 +1,6 @@
 package com.bt.http.server;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 
 import com.bt.rpc.util.EnvUtils;
 import io.netty.bootstrap.ServerBootstrap;

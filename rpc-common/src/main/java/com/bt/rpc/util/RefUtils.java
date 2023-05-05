@@ -1,21 +1,19 @@
 package com.bt.rpc.util;
 
 //import com.alibaba.fastjson.util.ParameterizedTypeImpl;
-import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.annotation.UnsafeWeb;
-import com.bt.rpc.common.MethodStub;
-import com.bt.rpc.common.RpcMetaService;
-import com.bt.rpc.model.RpcResult;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.annotation.UnsafeWeb;
+import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.model.RpcResult;
 
 /**
  * 2020-01-09 15:01
@@ -161,7 +159,9 @@ public abstract class RefUtils {
         do {
             for (var f : clz.getDeclaredFields()) {
                 for (var anno : f.getAnnotations()) {
-                    if (anno.annotationType().getName().startsWith("javax.validation")) {
+                    var fullName = anno.annotationType().getName();
+                    // || fullName.startsWith("javax.validation")
+                    if (fullName.startsWith("jakarta.validation")) {
                         return true;
                     }
                 }

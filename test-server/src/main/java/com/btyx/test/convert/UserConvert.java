@@ -8,7 +8,7 @@ import com.bt.mybatis.PagedQueryHelper;
 import org.mapstruct.Mapper;
 //import org.mapstruct.Mapper;
 
-@Mapper(componentModel = "cdi")
+@Mapper(componentModel = "jakarta")
 public interface UserConvert extends PagedQueryHelper<User> {
     //UserConvert INSTANCE = org.mapstruct.factory.Mappers.getMapper(UserConvert.class);
 

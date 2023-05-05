@@ -4,7 +4,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.validation.Validator;
+import jakarta.validation.Validator;
 
 import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;

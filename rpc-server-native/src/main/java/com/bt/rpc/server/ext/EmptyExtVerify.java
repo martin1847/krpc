@@ -4,8 +4,8 @@
  */
 package com.bt.rpc.server.ext;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Named;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 
 import com.bt.rpc.server.jws.ExtVerify;
 import com.bt.rpc.server.jws.JwsCredential;

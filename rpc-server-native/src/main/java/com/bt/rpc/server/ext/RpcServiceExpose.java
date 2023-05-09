@@ -153,6 +153,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         for (Bean<?> bean : beans) {
 
             // jandex 1.0 changed, now return all class include external jars.
+            // 3 : interface + Object + Impl
             var otherAppOrNotRpcBean = bean.getTypes().size() < 3 || bean.getQualifiers().stream().anyMatch(an -> {
                 if (an instanceof Named) {
                     var oth = ((Named) an).value();

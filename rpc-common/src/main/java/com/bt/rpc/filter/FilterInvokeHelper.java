@@ -6,13 +6,14 @@ import java.util.List;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.common.RpcContext;
-import com.bt.rpc.filter.RpcFilter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 2020-04-03 15:42
  *
  * @author Martin.C
  */
+@Slf4j
 public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContext<Res>> {
 
 
@@ -43,7 +44,9 @@ public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContex
 
 
     public FilterChain<Res, Ctx> buildFilterChain() {
+
         int len = Filters.length;
+        log.info("Build FilterChain with {} Filters",len);
         switch (len) {
             case 0: // reduce a wait
                 //return  req -> new ValueTask<ResponseContext>(req.Invoker(req));

@@ -19,7 +19,9 @@ build:
     #  gradle clean build -x test  -Dquarkus.package.type=native  -Dquarkus.native.additional-build-args=-Ob
     # ci use the GRADLE_OPTS to build native
     - gradle build -x test
+    - strings test-server/build/*-runner | grep GraalVM
 #    - gradle clean $publish
     - gradle clean publish
     - gradle test sonarqube -Dsonar.qualitygate.wait=true
+    - echo 'OK,ignore sonarqube error'
 

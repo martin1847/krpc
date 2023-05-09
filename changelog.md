@@ -1,4 +1,10 @@
 
+# 1.1.0 , 2023-05-05
+
+* `javax.` -> `jakarta.`
+* quarkus -> 3.0
+* grpc -> 1.54.1
+
 # 1.0.0 , 2020-12-02
 
 * add client final message support

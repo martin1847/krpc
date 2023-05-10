@@ -26,9 +26,9 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.literal.InjectLiteral;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.CDI;
-import jakarta.enterprise.util.AnnotationLiteral;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.validation.Validator;
@@ -148,7 +148,10 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         proxyServerBuilder.executor(executor);
 
         var bm = CDI.current().getBeanManager();
-        Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});
+        //new AnnotationLiteral<Any>() {}
+        Set<Bean<?>> beans = bm.getBeans(Object.class, Any.Literal.INSTANCE);
+
+        //Set<Bean<?>> beans = bm.getBeans(Object.class, InjectLiteral.INSTANCE);
         int i = 0;
         for (Bean<?> bean : beans) {
 
@@ -190,9 +193,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
             proxyServerBuilder.addService(instance.get(), filterList);
             i++;
             if (filterList.size() > 0) {
-                log.info("Found Rpc Service :=> {} , with filters {} ", bean.getBeanClass(), filterList);
-            }else {
-                log.debug("Found Rpc Service :=> {} no filters.", bean.getBeanClass());
+                log.info("Found RpcService :=> {}  has Filters {} ", bean.getBeanClass(), filterList);
             }
         }
         server = proxyServerBuilder.build().startServer();

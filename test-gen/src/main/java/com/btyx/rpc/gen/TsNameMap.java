@@ -45,6 +45,7 @@ public class TsNameMap {
 
         nameMapping.put("List","Array");
         nameMapping.put("Map","Record");
+        nameMapping.put("String[]","string[]");
         nameMapping.put("byte[]","Array<number>");
         nameMapping.put("int[]","Array<number>");
     }

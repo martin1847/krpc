@@ -41,6 +41,7 @@ public class DartNameMap {
         nameMapping.put("Boolean","bool");
         //nameMapping.put("byte[]","List<int>");
         nameMapping.put("int[]","List<int>");
+        nameMapping.put("String[]","List<String>");
         //   @JsonKey(fromJson: BaseService.jsonToU8, toJson: BaseService.u8ToJson)
         nameMapping.put("byte[]","Uint8List");
         nameMapping.put("Date","int");

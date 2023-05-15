@@ -4,6 +4,9 @@
  */
 package test.gen;
 
+import java.util.HashMap;
+
+import com.bt.rpc.util.JsonUtils;
 import com.btyx.rpc.gen.Gen;
 import com.btyx.test.DemoRpc;
 import com.btyx.test.DemoService;
@@ -20,6 +23,11 @@ public class TestGen {
         //Gen.basePkg = "com.btyx.test";
         ////Gen.basePkg = "com.btyx.course.partner.admin.service";
         //
+        //var json  = "{\"1-1-1\":[\"1000-01-01\",\"2081-05-08\"]}";
+        //
+        //var map = JsonUtils.parse(json, HashMap.class);
+        //System.out.println(map);
+
         Gen.genSingleTypescript("-test", DemoRpc.class);
         //Gen.genTypescript("demo-java-server");
         //Gen.genMiniprogram("demo-java-server");

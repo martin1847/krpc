@@ -7,7 +7,7 @@ package com.btyx.test.dto;
 import java.util.List;
 import java.util.Map;
 
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Size;
 
 import com.bt.rpc.annotation.Doc;
 import lombok.Data;

@@ -8,16 +8,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.Negative;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Null;
-import javax.validation.constraints.Positive;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Negative;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Null;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import com.bt.rpc.annotation.Doc;
 import com.btyx.rpc.gen.meta.Anno;
@@ -41,6 +41,7 @@ public class DartNameMap {
         nameMapping.put("Boolean","bool");
         //nameMapping.put("byte[]","List<int>");
         nameMapping.put("int[]","List<int>");
+        nameMapping.put("String[]","List<String>");
         //   @JsonKey(fromJson: BaseService.jsonToU8, toJson: BaseService.u8ToJson)
         nameMapping.put("byte[]","Uint8List");
         nameMapping.put("Date","int");

@@ -4,7 +4,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -19,10 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.validation.constraints.Size;
-
 import com.bt.rpc.annotation.Doc;
-import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.common.meta.Anno;
 import com.bt.rpc.common.meta.Api;
@@ -35,10 +31,6 @@ import com.bt.rpc.internal.SerialEnum;
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
-import com.bt.rpc.util.EnvUtils;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -195,7 +187,7 @@ class RpcMetaServiceImpl implements RpcMetaService {
                         }
 
                         // skip default message
-                        if ("message".equals(param.getName()) && String.valueOf(val).startsWith("{javax.validation")) {
+                        if ("message".equals(param.getName()) && String.valueOf(val).startsWith("{jakarta.validation")) {
                             continue;
                         }
 

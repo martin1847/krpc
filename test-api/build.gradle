@@ -1,5 +1,5 @@
 plugins {
-    id 'org.kordamp.gradle.jandex' version '0.13.2'
+    id 'org.kordamp.gradle.jandex' version '1.1.0'
 }
 
 apply plugin: 'org.kordamp.gradle.jandex'
@@ -11,8 +11,6 @@ group = "com.btyx.example"
 dependencies {
 
     api project(':rpc-api')
-
-//    api 'com.btyx.course:partner-admin-api:1.2.0606'
 
 
     testImplementation project(':test-gen')
@@ -27,4 +25,7 @@ dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
+}
+compileTestJava {
+    dependsOn('jandex')
 }

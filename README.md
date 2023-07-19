@@ -71,7 +71,7 @@ public class TimeReq {
 ```
 
 Convention & Limit  about the service define : 
-* 字段使用 `javax.validation` 进行验证，默认采用 `hibernate-validator` 实现。
+* 字段使用 `jakarta.validation` 进行验证，默认采用 `hibernate-validator` 实现。
   * RPC框架自动验证，开发时标准好即可
 * API即文档，请使用`Doc`加以说明字段含义
   * 使用框架自动生成前端`TypeScript`调用代码

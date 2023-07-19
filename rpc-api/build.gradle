@@ -1,4 +1,4 @@
-version = '1.0.0'
+//version = '1.0.0'
 apply from: "$rootProject.projectDir/upload.gradle"
 
 sourceCompatibility = '11'
@@ -7,8 +7,12 @@ targetCompatibility = "11"
 
 dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
-    api 'jakarta.validation:jakarta.validation-api:2.0.2'
-    api "com.bt.common:model:1.0.0"
+
+
+    // just for Transitive Dependency，most sub project need below two lib.
+    api 'jakarta.validation:jakarta.validation-api:3.0.2'
+    // just for PageList/PageQuery , in bt-mybatis project.
+    api "com.bt.common:model:1.1.0"
 
     compileOnly "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

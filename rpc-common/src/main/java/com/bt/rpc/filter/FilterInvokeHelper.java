@@ -6,48 +6,51 @@ import java.util.List;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.common.RpcContext;
-import com.bt.rpc.filter.RpcFilter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 2020-04-03 15:42
  *
  * @author Martin.C
  */
+@Slf4j
 public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContext<Res>> {
-
 
     final RpcFilter<Res, Ctx>[] Filters;
 
-//    public final FilterChain<Res, Ctx> filterChain;
+    //    public final FilterChain<Res, Ctx> filterChain;
 
     public FilterInvokeHelper(RpcFilter<Res, Ctx>[] filters) {
         this.Filters = filters;
-//        this.filterChain = BuildFilterChain(filters.length);
+        //        this.filterChain = BuildFilterChain(filters.length);
     }
 
-    public <F extends RpcFilter<Res, Ctx>>  FilterInvokeHelper(List<F> global,List<F> filterList) {
+    public <F extends RpcFilter<Res, Ctx>> FilterInvokeHelper(List<F> global, List<F> filterList) {
 
-        var flist  =  global;
+        var flist = global;
 
-        if(null != filterList && filterList.size() > 0){
+        if (null != filterList && filterList.size() > 0) {
             var list = new ArrayList<F>(flist.size() + filterList.size());
             list.addAll(flist);
             list.addAll(filterList);
             flist = list;
         }
         this.Filters = flist.toArray(new RpcFilter[0]);
-//        this.filterChain = BuildFilterChain(filters.length);
+        //        this.filterChain = BuildFilterChain(filters.length);
     }
 
-
-
-
     public FilterChain<Res, Ctx> buildFilterChain() {
+
         int len = Filters.length;
+        if (len == 0) {
+            return Ctx::underlyCall;
+        }
+
+        log.info("Build FilterChain with {} Filters", len);
         switch (len) {
-            case 0: // reduce a wait
-                //return  req -> new ValueTask<ResponseContext>(req.Invoker(req));
-                return Ctx::underlyCall;
+            //case 0: // reduce a wait
+            //    //return  req -> new ValueTask<ResponseContext>(req.Invoker(req));
+
             case 1:
                 return this::InvokeWithFilter1;
             case 2:
@@ -67,16 +70,16 @@ public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContex
         }
     }
 
-    private Res InvokeWithFilter1(Ctx context) throws  Throwable{
+    private Res InvokeWithFilter1(Ctx context) throws Throwable {
         return Filters[0].Invoke(context, Ctx::underlyCall);
     }
 
-    Res InvokeWithFilter2(Ctx context) throws Throwable{
+    Res InvokeWithFilter2(Ctx context) throws Throwable {
         return Filters[0].Invoke(context,
                 x1 -> Filters[1].Invoke(x1, Ctx::underlyCall));
     }
 
-    Res InvokeWithFilter3(Ctx context) throws Throwable{
+    Res InvokeWithFilter3(Ctx context) throws Throwable {
         return Filters[0].Invoke(context,
                 x1 -> Filters[1].Invoke(x1,
                         x2 -> Filters[2].Invoke(x2, Ctx::underlyCall)));
@@ -89,7 +92,7 @@ public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContex
                                 x3 -> Filters[3].Invoke(x3, Ctx::underlyCall))));
     }
 
-    Res InvokeWithFilter5(Ctx context) throws Throwable{
+    Res InvokeWithFilter5(Ctx context) throws Throwable {
         return Filters[0].Invoke(context,
                 x1 -> Filters[1].Invoke(x1,
                         x2 -> Filters[2].Invoke(x2,
@@ -97,7 +100,7 @@ public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContex
                                         x4 -> Filters[4].Invoke(x4, Ctx::underlyCall)))));
     }
 
-    Res InvokeWithFilter6(Ctx context) throws Throwable{
+    Res InvokeWithFilter6(Ctx context) throws Throwable {
         return Filters[0].Invoke(context,
                 x1 -> Filters[1].Invoke(x1,
                         x2 -> Filters[2].Invoke(x2,
@@ -106,7 +109,7 @@ public class FilterInvokeHelper<Res extends ResultWrapper, Ctx extends RpcContex
                                                 x5 -> Filters[5].Invoke(x5, Ctx::underlyCall))))));
     }
 
-    Res InvokeWithFilter7(Ctx context) throws Throwable{
+    Res InvokeWithFilter7(Ctx context) throws Throwable {
         return Filters[0].Invoke(context,
                 x1 -> Filters[1].Invoke(x1,
                         x2 -> Filters[2].Invoke(x2,

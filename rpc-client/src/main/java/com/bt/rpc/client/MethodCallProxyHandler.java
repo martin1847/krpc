@@ -63,7 +63,8 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         this.serialEnum = serialEnum;
 
         initStub();
-        log.info("[ RPC Client ] Proxy Init {}  methods for {}", stubMap.size(), clz);
+        log.info("[ RPC Client ] Proxy Init {}  methods for {}:{}."
+                , stubMap.size(), serverName,clz);
     }
 
     class ChannelMethodInvoker implements FilterChain<ClientResult, ClientContext> {

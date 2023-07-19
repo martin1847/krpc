@@ -4,7 +4,7 @@
  */
 package com.bt.rpc.server.invoke;
 
-import javax.validation.Validator;
+import jakarta.validation.Validator;
 
 import com.bt.rpc.server.ServerContext;
 

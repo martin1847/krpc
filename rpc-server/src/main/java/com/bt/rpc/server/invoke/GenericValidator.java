@@ -6,11 +6,8 @@ package com.bt.rpc.server.invoke;
 
 import java.lang.reflect.ParameterizedType;
 
-import javax.validation.Validator;
-
-import com.bt.rpc.model.RpcResult;
-import com.bt.rpc.serial.Serial;
 import com.bt.rpc.server.ServerContext;
+import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -28,8 +25,8 @@ public class GenericValidator<DTO> extends ValidatorInvoke<DTO> {
     public GenericValidator(Validator validator, MethodCall<DTO> caller, ParameterizedType genericType) {
         super(validator,caller);
         this.genericType = genericType;
-        log.debug("found GenericValidator : {}" , genericType.getRawType());
-        log.debug("found GenericValidator TypeArguments : {}" , genericType.getActualTypeArguments()[0]);
+        log.debug("Found GenericValidator : {}" , genericType.getRawType());
+        log.debug("Found GenericValidator TypeArguments : {}" , genericType.getActualTypeArguments()[0]);
     }
 
     @Override

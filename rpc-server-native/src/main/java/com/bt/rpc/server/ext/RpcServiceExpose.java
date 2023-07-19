@@ -8,17 +8,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Any;
-import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.spi.Bean;
-import javax.enterprise.inject.spi.CDI;
-import javax.enterprise.util.AnnotationLiteral;
-import javax.inject.Inject;
-import javax.validation.Validator;
-
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.filter.GlobalFilter;
@@ -32,6 +21,17 @@ import com.bt.rpc.server.exe.ThreadPool;
 import com.bt.rpc.util.EnvUtils;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.literal.InjectLiteral;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.CDI;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -148,36 +148,53 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         proxyServerBuilder.executor(executor);
 
         var bm = CDI.current().getBeanManager();
-        Set<Bean<?>> beans = bm.getBeans(Object.class, new AnnotationLiteral<Any>() {});
+        //new AnnotationLiteral<Any>() {}
+        Set<Bean<?>> beans = bm.getBeans(Object.class, Any.Literal.INSTANCE);
+
+        //Set<Bean<?>> beans = bm.getBeans(Object.class, InjectLiteral.INSTANCE);
         int i = 0;
         for (Bean<?> bean : beans) {
 
-            List<Class> effectiveClassAnnotations = ReflectionHelper.getEffectiveClassAnnotations(bean.getBeanClass(), RpcService.class);
-
-            if (effectiveClassAnnotations != null && effectiveClassAnnotations.size() > 0) {
-
-                var fa = bean.getBeanClass().getAnnotation(Filters.class);
-                var filterList = new ArrayList<ServerFilter>();
-                if (null != fa) {
-                    for (var f : fa.value()) {
-                        var fins = CDI.current().select(f);
-                        if (fins.isResolvable()) {
-                            filterList.add((ServerFilter) fins.get());
-                        } else if (fa.ignoreNotFound()) {
-                            log.warn("Filters For Service {} Not Found :  {}", bean.getBeanClass(), f);
-                        } else {
-                            throw new RuntimeException("Filters Not Found :  " + f);
-                        }
-                    }
+            // jandex 1.0 changed, now return all class include external jars.
+            // 3 : interface + Object + Impl
+            var otherAppOrNotRpcBean = bean.getTypes().size() < 3 || bean.getQualifiers().stream().anyMatch(an -> {
+                if (an instanceof Named) {
+                    var oth = ((Named) an).value();
+                    return oth != null && !oth.equals(app);
                 }
-                Instance<?> instance = CDI.current().select(bean.getBeanClass());
-                proxyServerBuilder.addService(instance.get(), filterList);
-                i++;
-                if (filterList.size() > 0) {
-                    log.info("Found Rpc Service :=> {} , with filters {} ", bean.getBeanClass(), filterList);
-                }
+                return false;
+            });
+
+            if(otherAppOrNotRpcBean){
+                continue;
             }
 
+            List<Class> effectiveClassAnnotations = ReflectionHelper.getEffectiveClassAnnotations(bean.getBeanClass(), RpcService.class);
+
+            if(null == effectiveClassAnnotations || effectiveClassAnnotations.isEmpty()){
+                continue;
+            }
+
+            var fa = bean.getBeanClass().getAnnotation(Filters.class);
+            var filterList = new ArrayList<ServerFilter>();
+            if (null != fa) {
+                for (var f : fa.value()) {
+                    var fins = CDI.current().select(f);
+                    if (fins.isResolvable()) {
+                        filterList.add((ServerFilter) fins.get());
+                    } else if (fa.ignoreNotFound()) {
+                        log.warn("Filters For Service {} Not Found :  {}", bean.getBeanClass(), f);
+                    } else {
+                        throw new RuntimeException("Filters Not Found :  " + f);
+                    }
+                }
+            }
+            Instance<?> instance = CDI.current().select(bean.getBeanClass());
+            proxyServerBuilder.addService(instance.get(), filterList);
+            i++;
+            if (filterList.size() > 0) {
+                log.info("Found RpcService :=> {}  has Filters {} ", bean.getBeanClass(), filterList);
+            }
         }
         server = proxyServerBuilder.build().startServer();
         return i;

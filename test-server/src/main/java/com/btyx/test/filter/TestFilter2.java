@@ -1,6 +1,6 @@
 package com.btyx.test.filter;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.server.ServerContext;

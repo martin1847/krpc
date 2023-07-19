@@ -7,10 +7,10 @@
 //import java.io.IOException;
 //import java.net.URISyntaxException;
 //
-//import javax.enterprise.context.ApplicationScoped;
-//import javax.enterprise.event.Observes;
-//import javax.inject.Inject;
-//import javax.validation.Validator;
+//import jakarta.enterprise.context.ApplicationScoped;
+//import jakarta.enterprise.event.Observes;
+//import jakarta.inject.Inject;
+//import jakarta.validation.Validator;
 //
 //import io.quarkus.runtime.StartupEvent;
 //import lombok.extern.slf4j.Slf4j;

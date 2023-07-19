@@ -4,7 +4,7 @@
  */
 package com.btyx.test;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import com.bt.rpc.server.jws.ExtVerify;
 import com.bt.rpc.server.jws.JwsCredential;

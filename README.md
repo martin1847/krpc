@@ -1,5 +1,5 @@
 
-Latest version : https://jcr.botaoyx.com/ui/artifactSearchResults?name=rpc&type=artifacts
+Latest version : `1.0.0`
 
 ```gradle
 //implementation "com.bt.rpc:rpc-server:1.0.0"
@@ -22,7 +22,7 @@ There is a  [demo-rpc](/example/demo-rpc) project.
 ```gradle
 
 plugins {
-    id 'org.kordamp.gradle.jandex' version '0.11.0'
+    id 'org.kordamp.gradle.jandex' version '1.1.0'
 }
 
 dependencies {

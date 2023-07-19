@@ -1,0 +1,14 @@
+[
+  {
+    "name" : "com.bt.model.PagedList",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "com.bt.model.PagedQuery",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  }
+]

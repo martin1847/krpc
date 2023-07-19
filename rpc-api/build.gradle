@@ -12,7 +12,7 @@ dependencies {
     // just for Transitive Dependency，most sub project need below two lib.
     api 'jakarta.validation:jakarta.validation-api:3.0.2'
     // just for PageList/PageQuery , in bt-mybatis project.
-    api "com.bt.common:model:1.1.0"
+//    api "com.bt.common:model:1.0.0"
 
     compileOnly "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

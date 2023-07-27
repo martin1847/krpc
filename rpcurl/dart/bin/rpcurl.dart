@@ -8,7 +8,7 @@ import 'dart:core';
 
 /**
  * 
- * rpcurl https://example.testbtyxapi.com/demo-java-server/Demo/hello 
+ * rpcurl https://example.btapi.com/demo-java-server/Demo/hello
  * rest test the data
  *  dart compile exe  src/rpcurl.dart    
  * 
@@ -31,7 +31,7 @@ void main(List<String> arguments) async {
 
   final String LOCAL = 'http://127.0.0.1:50051';
 
-  final String VERSION = 'rpcurl-1.0 2022.06.13';
+  final String VERSION = 'rpcurl-1.0 2023.07.27';
 
   final String DEFAULT_CID = 'drpcurl-${Platform.localHostname}';
 
@@ -44,7 +44,7 @@ void main(List<String> arguments) async {
     ..addOption('url',
         abbr: 'u',
         help:
-            '服务地址,默认参数,必传,也可通过环境变量`$ENV_URL`传递,如: https://example.testbtyxapi.com/demo-java-server/Demo/hello')
+            '服务地址,默认参数,必传,也可通过环境变量`$ENV_URL`传递,如: https://example.grpcapi.com/demo-java-server/Demo/hello')
     ..addOption('app',
         abbr: 'a', help: '服务项目名,也可通过环境变量`$ENV_APP`传递,如 demo-java-server')
     ..addOption('service', abbr: 's', help: '服务名', defaultsTo: META_SERVICE)
@@ -159,7 +159,7 @@ void main(List<String> arguments) async {
 
 void showUsage(ArgParser parser) {
   print(
-      'Usage: rpcurl https://demo.btyxapi.com/appName/Demo/methodName -f param.json');
+      'Usage: rpcurl https://demo.btyxapi.com/appName/DemoService/methodName -d \'{"param":1}\' [ or  -f param.json ] ');
   print('测试rpc服务\r\n');
   print(parser.usage);
 }

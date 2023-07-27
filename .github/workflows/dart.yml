@@ -14,33 +14,40 @@ jobs:
     strategy:
       matrix:
         include:
-#           - runs-on: ubuntu-latest
-#             binary-name: mycli_linux_amd64
-          - runs-on: macos-latest
-            binary-name: rpcurl_macos_amd64
-          - runs-on: windows-latest
-            binary-name: rpcurl.exe
+        - runs-on: ubuntu-latest
+          binary-name: rpcurl_linux_amd64
+        - runs-on: macos-latest
+          binary-name: rpcurl_macos_amd64
+        - runs-on: windows-latest
+          binary-name: rpcurl.exe
+
     runs-on: ${{ matrix.runs-on }}
 #     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      # Note: This workflow uses the latest stable version of the Dart SDK.
-      # You can specify other versions if desired, see documentation here:
-      # https://github.com/dart-lang/setup-dart/blob/main/README.md
-      # - uses: dart-lang/setup-dart@v1
+      - name: Checkout rpc-dart-client repo
+        uses: actions/checkout@v3
+        with:
+          repository: martin2038/rpc-dart-client
+          path: ./rpcurl/dart/rpc-dart-client
+
       - uses: dart-lang/setup-dart@9a04e6d73cca37bd455e0608d7e5092f881fd603
-      
+
+#      - name: webfactory/ssh-agent
+#        uses: webfactory/ssh-agent@v0.8.0
+#        with:
+#          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: compile
         working-directory: ./rpcurl/dart/
         run: |
           dart pub get
-          mkdir ${{ matrix.runs-on }}
-          dart compile exe bin/rpcurl.dart  -o ${{ matrix.runs-on }}/${{ matrix.binary-name }}
+          dart compile exe bin/rpcurl.dart  -o ${{ matrix.binary-name }}
     
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.binary-name }}
-          path: ./rpcurl/dart/${{ matrix.runs-on }}
+          name: bin-${{ matrix.runs-on }}
+          path: ./rpcurl/dart/${{ matrix.binary-name }}
       

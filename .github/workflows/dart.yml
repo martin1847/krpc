@@ -1,0 +1,46 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Dart
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: dart compile exe
+    strategy:
+      matrix:
+        include:
+#           - runs-on: ubuntu-latest
+#             binary-name: mycli_linux_amd64
+          - runs-on: macos-latest
+            binary-name: rpcurl_macos_amd64
+          - runs-on: windows-latest
+            binary-name: rpcurl.exe
+    runs-on: ${{ matrix.runs-on }}
+#     runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Note: This workflow uses the latest stable version of the Dart SDK.
+      # You can specify other versions if desired, see documentation here:
+      # https://github.com/dart-lang/setup-dart/blob/main/README.md
+      # - uses: dart-lang/setup-dart@v1
+      - uses: dart-lang/setup-dart@9a04e6d73cca37bd455e0608d7e5092f881fd603
+      
+      - name: compile
+        working-directory: ./rpcurl/dart/
+        run: |
+          dart pub get
+          mkdir ${{ matrix.runs-on }}
+          dart compile exe bin/rpcurl.dart  -o ${{ matrix.runs-on }}/${{ matrix.binary-name }}
+    
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.binary-name }}
+          path: ./rpcurl/dart/${{ matrix.runs-on }}
+      

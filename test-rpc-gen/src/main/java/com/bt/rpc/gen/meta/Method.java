@@ -1,4 +1,4 @@
-package com.btyx.rpc.gen.meta;
+package com.bt.rpc.gen.meta;
 
 import java.util.List;
 
@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import static com.btyx.rpc.gen.meta.Property.DOC_ANNO;
+import static com.bt.rpc.gen.meta.Property.DOC_ANNO;
 
 @Data
 @AllArgsConstructor

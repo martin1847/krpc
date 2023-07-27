@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.rpc.gen.meta;
+package com.bt.rpc.gen.meta;
 
 import java.util.Map;
 

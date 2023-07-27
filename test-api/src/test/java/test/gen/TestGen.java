@@ -4,12 +4,8 @@
  */
 package test.gen;
 
-import java.util.HashMap;
-
-import com.bt.rpc.util.JsonUtils;
-import com.btyx.rpc.gen.Gen;
+import com.bt.rpc.gen.Gen;
 import com.btyx.test.DemoRpc;
-import com.btyx.test.DemoService;
 
 /**
  *

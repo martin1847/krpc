@@ -2,14 +2,13 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.rpc.gen;
+package com.bt.rpc.gen;
 
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import com.btyx.rpc.gen.meta.Anno;
-import com.btyx.rpc.gen.meta.PropertyType;
-import com.google.common.base.Function;
+import com.bt.rpc.gen.meta.Anno;
+import com.bt.rpc.gen.meta.PropertyType;
 
 /**
  *

@@ -2,12 +2,14 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.rpc.gen;
+package com.bt.rpc.gen;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+import com.bt.rpc.gen.meta.Anno;
+import com.bt.rpc.gen.meta.PropertyType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -20,9 +22,6 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import com.bt.rpc.annotation.Doc;
-import com.btyx.rpc.gen.meta.Anno;
-import com.btyx.rpc.gen.meta.PropertyType;
-import com.google.common.base.Function;
 
 /**
  *

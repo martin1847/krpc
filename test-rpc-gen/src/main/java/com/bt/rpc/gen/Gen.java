@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.rpc.gen;
+package com.bt.rpc.gen;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -20,12 +20,12 @@ import java.util.stream.Collectors;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.common.MethodStub;
+import com.bt.rpc.gen.meta.ApiMetaRoot;
+import com.bt.rpc.gen.meta.Dto;
 import com.bt.rpc.server.RpcServerBuilder;
 import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
 import com.bt.rpc.util.JsonUtils;
 import com.bt.rpc.util.RefUtils;
-import com.btyx.rpc.gen.meta.ApiMetaRoot;
-import com.btyx.rpc.gen.meta.Dto;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import freemarker.template.Configuration;

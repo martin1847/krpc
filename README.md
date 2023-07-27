@@ -34,7 +34,7 @@ for example :
 
 
 ```java
-package com.btyx.course.xxxx;
+package com.xxxx;
 
 @RpcService
 public interface DemoService {
@@ -82,7 +82,7 @@ Convention & Limit  about the service define :
     - 不要直接使用`date/time`, use [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
     - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
     - 除非必要，禁止使用Map做为出入参
-    - 其余参考 [命名规范](https://redmine.botaoyx.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
+    - 其余参考 [命名规范](https://redmine.btrpc.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
 * 入参不多于一个 
 * 标记 `RpcService` annotation
 
@@ -100,7 +100,7 @@ apply from: "$rootProject.projectDir/gradle/upload.gradle"
     sourceCompatibility = "11"
     targetCompatibility = "11"
 ```
-Then publish this API package to  https://jcr.botaoyx.com  for the client side to reference.
+Then publish this API package to  https://jcr.btrpc.com  for the client side to reference.
 
 
 # 2. Setup the Server
@@ -141,10 +141,32 @@ public class DemoServiceImpl implements DemoService {
 ## 3.1 使用rpcurl
 
 ```bash
-docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -L -a demo-java-server -s DemoService -m hello -d '{"name":"rpc","age":123}' 
-```
-[rpcurl用法说明](https://redmine.botaoyx.com/projects/bt/wiki/RPC%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7#%E4%BD%BF%E7%94%A8-rpcurl)
+Usage: rpcurl https://demo.api.com/appName/Demo/methodName -f param.json
+测试rpc服务
 
+-L, --no-url          本机测试，本机测试 url=http://127.0.0.1:50051
+-W, --no-web          测试非 UnsafeWeb 服务
+-P, --no-pretty       NO pretty json
+-h, --help            show usage
+-u, --url             服务地址,默认参数,必传,也可通过环境变量`RPC_URL`传递,如: https://example.testapi.com/demo-java-server/Demo/hello
+-a, --app             服务项目名,也可通过环境变量`RPC_APP`传递,如 demo-java-server
+-s, --service         服务名
+                      (defaults to "RpcMeta")
+-m, --method          方法名
+                      (defaults to "listApis")
+-d, --data            入参json,优先级高于file,如 -d '{"name":"rpcurl"}'
+-f, --file            入参jsonFile,如 -f test.json
+-t, --token           authorization: Bearer <accessToken>,也可通过环境变量`RPC_TOKEN`传递
+-i, --clientId        设置c-id,或者环境变量 `RPC_CID`
+-M, --clientMeta      设置 c-meta(json),或者环境变量 `RPC_CMETA`
+-V, --[no-]version    打印版本号 rpcurl-1.0 2022.02.24
+
+
+
+# 比如
+rpcurl https://example.testapi.com/demo-java-server/Demo/inc100 -d 90
+rpcurl.exe https://example.testapi.com/demo-java-server/Demo/hello  -d '{"name":"rpc","age":123}' 
+```
 
 ## 3.2 生成ts代码，前端调用测试
 
@@ -154,7 +176,7 @@ docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -L -a demo-java-server -s 
 # Exception Handler
 
 ## 使用错误码/Soft Exception
-* 约定错误码 ： https://redmine.botaoyx.com/projects/bt/wiki/%E5%85%A8%E5%B1%80%E9%94%99%E8%AF%AF%E7%A0%81
+* 约定错误码 ： https://redmine.btrpc.com/projects/bt/wiki/%E5%85%A8%E5%B1%80%E9%94%99%E8%AF%AF%E7%A0%81
 * ServerSide : Just return a RpcResult with non-OK  Code and a error message(left data null)
 * ClientSide : Check IsOk Before Use Data
 
@@ -165,19 +187,19 @@ docker run --rm -ti jcr.botaoyx.com/img/common/rpcurl -L -a demo-java-server -s 
 
 # 各种客户端
 
-[Dart](https://gitlab.botaoyx.com/middleware/btyx-rpc-dart-client)
+[Dart](https://gitlab.btrpc.com/middleware/btyx-rpc-dart-client)
 
-[TypeScript](https://gitlab.botaoyx.com/middleware/btyx-rpc-ts-client)
+[TypeScript](https://gitlab.btrpc.com/middleware/btyx-rpc-ts-client)
 
-[Python](https://gitlab.botaoyx.com/middleware/btyx-rpc-python-client)
+[Python](https://gitlab.btrpc.com/middleware/btyx-rpc-python-client)
 
-[go/k6](https://gitlab.botaoyx.com/middleware/xk6-btrpc)
+[go/k6](https://gitlab.btrpc.com/middleware/xk6-btrpc)
 
 [rpcurl](./rpcurl/dart)
 
 # CI & CD
 
-[ ci demo](https://gitlab.botaoyx.com/example/demo-rpc/-/pipelines)
+[ ci demo](https://gitlab.btrpc.com/example/demo-rpc/-/pipelines)
 
 
 

@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.rpc.gen;
+package com.bt.rpc.gen;
 
 import java.util.List;
 import java.util.Locale;
@@ -11,10 +11,9 @@ import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import com.btyx.rpc.gen.meta.Anno;
-import com.btyx.rpc.gen.meta.Dto;
-import com.btyx.rpc.gen.meta.PropertyType;
-import com.google.common.base.Function;
+import com.bt.rpc.gen.meta.Anno;
+import com.bt.rpc.gen.meta.Dto;
+import com.bt.rpc.gen.meta.PropertyType;
 
 /**
  *

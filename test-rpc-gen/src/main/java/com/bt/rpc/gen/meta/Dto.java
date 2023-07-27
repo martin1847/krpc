@@ -1,4 +1,4 @@
-package com.btyx.rpc.gen.meta;
+package com.bt.rpc.gen.meta;
 
 import java.util.List;
 

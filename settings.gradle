@@ -1,9 +1,6 @@
 pluginManagement {
     repositories {
-//        maven {
-            // must auth
-//            url "https://jcr.botaoyx.com/artifactory/gradle-plugins/"
-//        }
+
         maven{
             url "$MAVEN_REPO"
             credentials(HttpHeaderCredentials) {
@@ -18,7 +15,7 @@ pluginManagement {
     }
 }
 
-include 'test-api','test-gen','test-server'
+include 'test-api','test-rpc-gen','test-server'
 
 include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-native','http-server'
 //include 'rpcurl'

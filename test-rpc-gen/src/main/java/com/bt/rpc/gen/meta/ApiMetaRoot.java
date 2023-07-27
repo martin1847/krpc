@@ -1,8 +1,7 @@
-package com.btyx.rpc.gen.meta;
+package com.bt.rpc.gen.meta;
 
 import java.util.List;
 
-import com.bt.rpc.common.RpcConstants;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

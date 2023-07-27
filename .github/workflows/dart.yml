@@ -14,12 +14,13 @@ jobs:
     strategy:
       matrix:
         include:
-#           - runs-on: ubuntu-latest
-#             binary-name: mycli_linux_amd64
-          - runs-on: macos-latest
-            binary-name: rpcurl_macos_amd64
-          - runs-on: windows-latest
-            binary-name: rpcurl.exe
+        - runs-on: ubuntu-latest
+          binary-name: rpcurl_linux_amd64
+        - runs-on: macos-latest
+          binary-name: rpcurl_macos_amd64
+        - runs-on: windows-latest
+          binary-name: rpcurl.exe
+
     runs-on: ${{ matrix.runs-on }}
 #     runs-on: ubuntu-latest
 
@@ -47,6 +48,6 @@ jobs:
     
       - uses: actions/upload-artifact@v3
         with:
-#          name: bin-${{ matrix.binary-name }}
+          name: bin-${{ matrix.runs-on }}
           path: ./rpcurl/dart/${{ matrix.binary-name }}
       

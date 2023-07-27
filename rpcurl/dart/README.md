@@ -11,7 +11,7 @@ $ dart pub get
 更新依赖
 ```bash
 dart run
-dart compile exe  bin/rpcurl.dart    
+dart compile exe  bin/rpcurl.dart  -o rpcurl
 ```
 
 ## alpline build

@@ -6,7 +6,7 @@ plugins {
 }
 
 
-group = "com.btyx.test.rpc"
+group = "com.bttest.test.rpc"
 dependencies {
 
     implementation project(':test-api')
@@ -52,7 +52,6 @@ dependencies {
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
     testImplementation 'org.mockito:mockito-core:4.8.1'
-    testImplementation 'com.btyx.demo:demo-api:1.0.0'
 
     // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
     testImplementation 'org.openjdk.jmh:jmh-core:1.35'

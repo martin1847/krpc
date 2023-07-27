@@ -42,14 +42,11 @@ jobs:
       - name: compile
         working-directory: ./rpcurl/dart/
         run: |
-          pwd
-          ls -lah
           dart pub get
-          mkdir ${{ matrix.runs-on }}
-          dart compile exe bin/rpcurl.dart  -o ${{ matrix.runs-on }}/${{ matrix.binary-name }}
+          dart compile exe bin/rpcurl.dart  -o ${{ matrix.binary-name }}
     
       - uses: actions/upload-artifact@v3
         with:
-          name: bin-${{ matrix.binary-name }}
-          path: ./rpcurl/dart/${{ matrix.runs-on }}/
+#          name: bin-${{ matrix.binary-name }}
+          path: ./rpcurl/dart/${{ matrix.binary-name }}
       

@@ -17,8 +17,9 @@ dev_dependencies:
 dependencies: 
   args: ^2.3.0
   btrpc:
-    git:
-#      url: https://gitlab.zhulinkeji.com/middleware/rpc-dart-client.git
-      url: git@github.com:martin2038/rpc-dart-client.git
-      ref: 1.0.0
+    path: ./rpc-dart-client
+#    git:
+##      url: https://gitlab.zhulinkeji.com/middleware/rpc-dart-client.git
+#      url: git@github.com:martin2038/rpc-dart-client.git
+#      ref: 1.0.0
       #ref: master

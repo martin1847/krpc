@@ -4,8 +4,8 @@
 */
 <#assign pageDto = (service.customerDtos?seq_contains('PagedQuery')?string(", PagedQuery", ""))>
 <#assign pageDto = pageDto+(service.customerDtos?seq_contains('PagedList')?string(", PagedList", ""))>
-import type { R, RpcService, MethodConfig as M${pageDto} } from '@zlkj/rpc-base';
-<#-- ${(lang == 'Typescript')?then("'@zlkj/rpc'","'../utils/rpc'")}; -->
+import type { R, RpcService, MethodConfig as M${pageDto} } from 'bt-rpc-base';
+<#-- ${(lang == 'Typescript')?then("'bt-rpc-web'","'bt-rpc-mini'")}; -->
 
 <#assign dtos = service.customerDtos?filter(x -> x != 'PagedQuery' &&  x != 'PagedList') >
 

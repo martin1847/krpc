@@ -25,7 +25,7 @@ generated/
 
 # User-specific files
 *.suo
-*.user
+*.book
 *.userosscache
 *.sln.docstates
 

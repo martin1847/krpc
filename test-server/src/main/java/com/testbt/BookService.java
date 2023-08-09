@@ -8,7 +8,7 @@ import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
-import com.testbt.dto.User;
+import com.testbt.dto.Book;
 
 /**
  *
@@ -17,12 +17,12 @@ import com.testbt.dto.User;
  */
 @RpcService
 //@UnsafeWeb
-public interface UserService {
+public interface BookService {
 
-    RpcResult<User> getUser(Integer id);
+    RpcResult<Book> getBook(Integer id);
 
-    RpcResult<PagedList<User>> listUser(PagedQuery<User> query);
+    RpcResult<PagedList<Book>> listBook(PagedQuery<Book> query);
 
-    RpcResult<Integer> saveUser(User u);
+    RpcResult<Integer> saveBook(Book u);
 
 }

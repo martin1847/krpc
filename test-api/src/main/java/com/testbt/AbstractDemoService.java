@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.model.RpcResult;
-import com.testbt.dto.User;
+import com.testbt.dto.Book;
 
 /**
  * 2020-01-06 15:52
@@ -21,8 +21,8 @@ import com.testbt.dto.User;
 public abstract class AbstractDemoService implements DemoService {
 
     @Override
-    public RpcResult<String> save(User user) {
-        return RpcResult.ok(String.valueOf(user));
+    public RpcResult<String> save(Book book) {
+        return RpcResult.ok(String.valueOf(book));
     }
 
     @Override
@@ -83,22 +83,22 @@ public abstract class AbstractDemoService implements DemoService {
     }
 
     @Override
-    public RpcResult<PagedList<User>> plistUser(PagedQuery<User> query) {
+    public RpcResult<PagedList<Book>> plistBk(PagedQuery<Book> query) {
         return RpcResult.ok(new PagedList<>(query.getPageSize(),Collections.singletonList(query.getQ())));
     }
 
     @Override
-    public RpcResult<List<User>> plistUser2(PagedQuery<User> query) {
+    public RpcResult<List<Book>> plistBk2(PagedQuery<Book> query) {
         return RpcResult.ok(Collections.singletonList(query.getQ()));
     }
 
     @Override
-    public RpcResult<List<User>> listUser(List<User> query) {
+    public RpcResult<List<Book>> listBk(List<Book> query) {
         return RpcResult.ok(query);
     }
 
     @Override
-    public RpcResult<PagedList<User>> listUser2(List<User> query) {
+    public RpcResult<PagedList<Book>> listBk2(List<Book> query) {
         return RpcResult.ok(new PagedList<>(query.size(),query));
     }
 

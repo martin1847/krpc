@@ -5,14 +5,14 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class User {
+public class Book {
     private Integer id;
     private String name;
 
 
-    UserStatus stat;
+    BookStatus stat;
 
-    public User(Integer id, String name) {
+    public Book(Integer id, String name) {
         this.id = id;
         this.name = name;
     }

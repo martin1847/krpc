@@ -11,7 +11,7 @@ import com.bt.rpc.model.RpcResult;
 import com.testbt.DemoService;
 import com.testbt.dto.TimeReq;
 import com.testbt.dto.TimeResult;
-import com.testbt.dto.User;
+import com.testbt.dto.Book;
 
 /**
  *
@@ -28,8 +28,8 @@ public class TestDemoService {
         System.out.println(demoService.bytesTime());
 
         var asyncClient = new AsyncClient<>(demoService);
-        testAsync(asyncClient,"save",new User(11,"async"));
-        testAsync(asyncClient,"save",new User(22,"async"));
+        testAsync(asyncClient,"save",new Book(11,"async"));
+        testAsync(asyncClient,"save",new Book(22,"async"));
         testAsync(asyncClient,"inc100",100);
 
         AsyncMethod<DemoService, TimeReq, TimeResult> hello = AsyncMethod.from(demoService,"hello");

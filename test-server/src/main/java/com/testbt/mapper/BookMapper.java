@@ -3,10 +3,10 @@ package com.testbt.mapper;
 import java.util.List;
 import java.util.Map;
 
-import com.testbt.dto.User;
+import com.testbt.dto.Book;
 import com.bt.mybatis.DbBounds;
 
-public interface UserMapper {
+public interface BookMapper {
 
     //单个用get/多个用list
     //获取统计值用count* 插入用save
@@ -14,7 +14,7 @@ public interface UserMapper {
     //修改用update
     //
 
-    User getUser(Integer id);
+    Book getUser(Integer id);
 
     // return rows
     Integer save(Integer id,String name);
@@ -24,7 +24,7 @@ public interface UserMapper {
 
 
     // 分页查询接口
-    List<User> listBy(Map<String,Object> query, DbBounds bounds);
+    List<Book> listBy(Map<String,Object> query, DbBounds bounds);
 
     //default PagedList<User> listBy(PagedQuery<User> query){
     //    var bounds = DbBounds.fromPage(query.getPage(), query.getPageSize());

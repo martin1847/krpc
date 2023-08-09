@@ -6,10 +6,10 @@ import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
+import com.testbt.dto.Book;
 import com.testbt.dto.Img;
 import com.testbt.dto.TimeReq;
 import com.testbt.dto.TimeResult;
-import com.testbt.dto.User;
 
 import java.util.List;
 import java.util.Map;
@@ -26,7 +26,7 @@ public interface DemoService {
     //    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
 
-    RpcResult<String> save(User user);
+    RpcResult<String> save(Book book);
 
     RpcResult<byte[]> bytesTime();
 
@@ -49,16 +49,16 @@ public interface DemoService {
     RpcResult<List<Integer>> wordLength(List<String> list);
 
     // 用来测试范型
-    RpcResult<PagedList<User>> plistUser(PagedQuery<User> query);
+    RpcResult<PagedList<Book>> plistBk(PagedQuery<Book> query);
 
     // 用来测试范型
-    RpcResult<List<User>> plistUser2(PagedQuery<User> query);
+    RpcResult<List<Book>> plistBk2(PagedQuery<Book> query);
 
     // 用来测试范型
-    RpcResult<List<User>> listUser(List<User> query);
+    RpcResult<List<Book>> listBk(List<Book> query);
 
     // 用来测试范型
-    RpcResult<PagedList<User>> listUser2(List<User> query);
+    RpcResult<PagedList<Book>> listBk2(List<Book> query);
 
     // 用来测试范型
     RpcResult<PagedList<Integer>> listInt(PagedQuery<Integer> query);

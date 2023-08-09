@@ -4,9 +4,9 @@ import java.util.List;
 
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
+import com.testbt.dto.Book;
 import com.testbt.dto.TimeReq;
 import com.testbt.dto.TimeResult;
-import com.testbt.dto.User;
 
 /**
  * 2020-01-06 15:51
@@ -19,7 +19,7 @@ public interface DemoRpc {
     //    @Cached
     RpcResult<TimeResult> hello(TimeReq req);
 
-    RpcResult<String> save(User user);
+    RpcResult<String> save(Book book);
 
-    RpcResult<List<User>> listUser(List<User> query);
+    RpcResult<List<Book>> listUser(List<Book> query);
 }

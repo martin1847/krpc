@@ -35,7 +35,7 @@ public class TimeReq {
 
     private List<Integer> test1;
 
-    private List<User> test2;
+    private List<Book> test2;
 
 
 

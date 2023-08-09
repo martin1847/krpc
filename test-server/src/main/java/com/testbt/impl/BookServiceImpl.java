@@ -4,6 +4,8 @@
  */
 package com.testbt.impl;
 
+import com.testbt.convert.BookConvert;
+import com.testbt.dto.Book;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -12,11 +14,9 @@ import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.server.Filters;
 import com.bt.rpc.model.RpcResult;
-import com.testbt.UserService;
-import com.testbt.convert.UserConvert;
-import com.testbt.dto.User;
+import com.testbt.BookService;
 import com.testbt.filter.TestFilter2;
-import com.testbt.mapper.UserMapper;
+import com.testbt.mapper.BookMapper;
 import io.quarkus.runtime.Startup;
 
 /**
@@ -27,27 +27,27 @@ import io.quarkus.runtime.Startup;
 @ApplicationScoped
 @Startup
 @Filters(TestFilter2.class)
-public class UserServiceImpl implements UserService {
+public class BookServiceImpl implements BookService {
 
     @Inject //by the ext
-    UserMapper userMapper;
+    BookMapper bookMapper;
 
     @Inject
-    UserConvert userConvert;
+    BookConvert bookConvert;
 
 
 
     @Override
-    public RpcResult<User> getUser(Integer id) {
-        return RpcResult.ok(userMapper.getUser(id));
+    public RpcResult<Book> getBook(Integer id) {
+        return RpcResult.ok(bookMapper.getUser(id));
     }
 
 
     @Override
-    public RpcResult<PagedList<User>> listUser(PagedQuery<User> query) {
+    public RpcResult<PagedList<Book>> listBook(PagedQuery<Book> query) {
         //var list = Mappers.pager(query.getPage(), query.getPageSize(), query.getQ(), userMapper::listBy);
         //return RpcResult.ok(list);
-        var list  = userConvert.pager(query,userMapper::listBy);
+        var list  = bookConvert.pager(query, bookMapper::listBy);
 
 
         //var pl = ((PageQueryHelper<User>) dto -> {
@@ -72,10 +72,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional//(REQUIRED) (default):
-    public RpcResult<Integer> saveUser(User u) {
-        var del = userMapper.remove(u.getId());
+    public RpcResult<Integer> saveBook(Book u) {
+        var del = bookMapper.remove(u.getId());
         System.out.println("del : " + del);
-        var id = userMapper.save(u.getId(),u.getName());
+        var id = bookMapper.save(u.getId(),u.getName());
         return RpcResult.ok(id);
     }
 

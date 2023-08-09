@@ -9,7 +9,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 
 import com.bt.model.PagedQuery;
-import com.btyx.test.dto.TimeReq;
+import com.testbt.dto.TimeReq;
 
 /**
  *

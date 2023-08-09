@@ -34,8 +34,8 @@
         <!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2LongList" alias="Json2LongList"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
-        <package name="com.btyx.test.dto"/>
-        <package name="com.btyx.test.typehandler"/>
+        <package name="com.testbt.dto"/>
+        <package name="com.testbt.typehandler"/>
     </typeAliases>
 
 <!--    <typeHandlers>-->
@@ -68,7 +68,7 @@ SqlXmlFolder
     <mappers>
 <!--
 <mapper resource="mapper/*UserMapper.xml"/>-->
-        <package name="com.btyx.test.mapper"/>
+        <package name="com.testbt.mapper"/>
     </mappers>
 
 

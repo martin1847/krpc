@@ -1,9 +1,9 @@
-package com.btyx.test.mapper;
+package com.testbt.mapper;
 
 import java.util.List;
 import java.util.Map;
 
-import com.btyx.test.dto.User;
+import com.testbt.dto.User;
 import com.bt.mybatis.DbBounds;
 
 public interface UserMapper {

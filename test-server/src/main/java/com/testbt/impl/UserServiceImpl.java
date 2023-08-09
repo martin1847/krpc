@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.test.impl;
+package com.testbt.impl;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -12,11 +12,11 @@ import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.server.Filters;
 import com.bt.rpc.model.RpcResult;
-import com.btyx.test.UserService;
-import com.btyx.test.convert.UserConvert;
-import com.btyx.test.dto.User;
-import com.btyx.test.filter.TestFilter2;
-import com.btyx.test.mapper.UserMapper;
+import com.testbt.UserService;
+import com.testbt.convert.UserConvert;
+import com.testbt.dto.User;
+import com.testbt.filter.TestFilter2;
+import com.testbt.mapper.UserMapper;
 import io.quarkus.runtime.Startup;
 
 /**

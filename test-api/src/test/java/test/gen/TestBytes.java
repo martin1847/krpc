@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Date;
 
 import com.bt.rpc.util.JsonUtils;
-import com.btyx.test.dto.Img;
-import com.btyx.test.dto.TimeResult;
+import com.testbt.dto.Img;
+import com.testbt.dto.TimeResult;
 
 /**
  *

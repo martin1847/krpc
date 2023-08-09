@@ -8,10 +8,10 @@ import com.bt.rpc.client.AsyncClient;
 import com.bt.rpc.client.AsyncMethod;
 import com.bt.rpc.client.AsyncMethod.ResultObserver;
 import com.bt.rpc.model.RpcResult;
-import com.btyx.test.DemoService;
-import com.btyx.test.dto.TimeReq;
-import com.btyx.test.dto.TimeResult;
-import com.btyx.test.dto.User;
+import com.testbt.DemoService;
+import com.testbt.dto.TimeReq;
+import com.testbt.dto.TimeResult;
+import com.testbt.dto.User;
 
 /**
  *

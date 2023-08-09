@@ -1,13 +1,13 @@
-package com.btyx.test.impl;
+package com.testbt.impl;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
 import com.bt.rpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.util.EnvUtils;
-import com.btyx.test.AbstractDemoService;
-import com.btyx.test.dto.TimeReq;
-import com.btyx.test.dto.TimeResult;
+import com.testbt.AbstractDemoService;
+import com.testbt.dto.TimeReq;
+import com.testbt.dto.TimeResult;
 import io.quarkus.runtime.Startup;
 
 /**

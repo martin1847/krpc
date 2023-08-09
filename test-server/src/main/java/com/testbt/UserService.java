@@ -2,13 +2,13 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.test;
+package com.testbt;
 
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.model.RpcResult;
-import com.btyx.test.dto.User;
+import com.testbt.dto.User;
 
 /**
  *

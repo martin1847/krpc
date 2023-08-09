@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package com.btyx.test.dto;
+package com.testbt.dto;
 
 import java.util.List;
 import java.util.Map;

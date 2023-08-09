@@ -2,9 +2,9 @@ package test.btyx;
 
 import jakarta.inject.Inject;
 
-import com.btyx.test.UserService;
-import com.btyx.test.dto.User;
-import com.btyx.test.mapper.UserMapper;
+import com.testbt.UserService;
+import com.testbt.dto.User;
+import com.testbt.mapper.UserMapper;
 import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;

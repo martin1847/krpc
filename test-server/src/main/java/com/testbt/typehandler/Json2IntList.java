@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.btyx.test.typehandler;
+package com.testbt.typehandler;
 
 import com.bt.mybatis.type.AbstractJsonListHandler;
 

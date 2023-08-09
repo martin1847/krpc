@@ -1,4 +1,4 @@
-package com.btyx.test;
+package com.testbt;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import com.bt.model.PagedList;
 import com.bt.model.PagedQuery;
 import com.bt.rpc.model.RpcResult;
-import com.btyx.test.dto.User;
+import com.testbt.dto.User;
 
 /**
  * 2020-01-06 15:52

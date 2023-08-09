@@ -1,18 +1,12 @@
-package com.btyx.test;
+package com.testbt;
 
 import java.util.List;
-import java.util.Map;
 
-import com.bt.model.PagedList;
-import com.bt.model.PagedQuery;
-import com.bt.rpc.annotation.Doc;
 import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.annotation.UnsafeWeb;
 import com.bt.rpc.model.RpcResult;
-import com.btyx.test.dto.Img;
-import com.btyx.test.dto.TimeReq;
-import com.btyx.test.dto.TimeResult;
-import com.btyx.test.dto.User;
+import com.testbt.dto.TimeReq;
+import com.testbt.dto.TimeResult;
+import com.testbt.dto.User;
 
 /**
  * 2020-01-06 15:51

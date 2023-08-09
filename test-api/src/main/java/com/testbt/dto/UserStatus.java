@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package com.btyx.test.dto;
+package com.testbt.dto;
 
 import com.bt.rpc.annotation.Doc;
 

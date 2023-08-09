@@ -5,8 +5,8 @@
 package test.btyx;
 
 import com.bt.rpc.util.RefUtils;
-import com.btyx.test.dto.Img;
-import com.btyx.test.dto.SubImg;
+import com.testbt.dto.Img;
+import com.testbt.dto.SubImg;
 import org.junit.jupiter.api.Test;
 
 /**

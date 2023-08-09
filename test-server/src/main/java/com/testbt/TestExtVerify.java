@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package com.btyx.test;
+package com.testbt;
 
 import jakarta.enterprise.context.ApplicationScoped;
 

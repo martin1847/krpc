@@ -5,7 +5,7 @@
 package test.gen;
 
 import com.bt.rpc.gen.Gen;
-import com.btyx.test.DemoRpc;
+import com.testbt.DemoRpc;
 
 /**
  *

@@ -15,6 +15,12 @@ public abstract class StringUtils {
         return null != str && !str.isEmpty();
     }
 
+    public static boolean isEmpty(String str) {
+        return null == str  || str.isEmpty();
+    }
+    public static boolean isBlank(String str) {
+        return null == str || str.isBlank();
+    }
     public static boolean isNotBlank(String str) {
         return null != str && !str.isBlank();
     }

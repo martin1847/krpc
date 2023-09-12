@@ -66,6 +66,13 @@ public class RpcResult<DTO> implements Serializable {
         return res;
     }
 
+    public static <T> RpcResult<T> error(CommonCode it) {
+        RpcResult<T> res = new RpcResult<>();
+        res.code = it.value;
+        res.msg = it.name();
+        return res;
+    }
+
     public static <T> RpcResult<T> error(RpcResult<?> error) {
         return (RpcResult<T>) error;
     }

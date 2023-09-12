@@ -33,7 +33,7 @@ public class ClientResult extends ResultWrapper {
     {
         var res = new RpcResult<DTO>();
         res.setCode(output.getC());
-        res.setMessage(output.getM());
+        res.setMsg(output.getM());
         if(res.isOk()) {
             res.setData((DTO) clientReader.readOutput(serial, output));
         }

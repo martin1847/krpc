@@ -3,7 +3,6 @@ package com.bt.rpc.server;
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.model.RpcResult;
-import com.bt.rpc.serial.Serial;
 import com.bt.rpc.serial.ServerWriter;
 
 /**
@@ -27,7 +26,7 @@ public class ServerResult extends ResultWrapper {
         {
             var output = OutputProto.newBuilder();
             output.setC(result.getCode());
-            var msg = result.getMessage();
+            var msg = result.getMsg();
             if (null != msg)
             {
                 output.setM(msg);

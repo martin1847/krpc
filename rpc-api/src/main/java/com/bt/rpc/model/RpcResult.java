@@ -24,7 +24,7 @@ public class RpcResult<DTO> implements Serializable {
      */
     int code = 0 ;
 
-    String message;
+    String msg;
 
     DTO data;
 
@@ -62,7 +62,7 @@ public class RpcResult<DTO> implements Serializable {
     public static <T> RpcResult<T> error(int code, String msg) {
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
-        res.message = msg;
+        res.msg = msg;
         return res;
     }
 

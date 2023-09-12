@@ -26,6 +26,7 @@ void main(List<String> arguments) async {
   final String ENV_URL = "RPC_URL";
   final String ENV_APP = "RPC_APP";
   final String ENV_TOKEN = "RPC_TOKEN";
+  final String ENV_COOKIE = "RPC_COOKIE";
   final String ENV_CID = "RPC_CID";
   final String ENV_CMETA = "RPC_CMETA";
 
@@ -58,6 +59,9 @@ void main(List<String> arguments) async {
     ..addOption('token',
         abbr: 't',
         help: 'authorization: Bearer <accessToken>,也可通过环境变量`$ENV_TOKEN`传递')
+    ..addOption('cookie',
+        abbr: 'c',
+        help: 'cookie ,也可通过环境变量`$ENV_COOKIE`传递')
     ..addOption('clientId',
         abbr: 'i', help: '设置c-id,或者环境变量 `$ENV_CID`,默认 $DEFAULT_CID')
     ..addOption('clientMeta',
@@ -126,7 +130,7 @@ void main(List<String> arguments) async {
           clientMeta:
               args['clientMeta'] ?? envVarMap[ENV_CMETA] ?? '{"os":4}'));
   if(verbose && tk != null){
-    print('tk 22 :  $tk');
+    print('tk  :  $tk');
   }
 
   String? param = args['data'];
@@ -142,9 +146,9 @@ void main(List<String> arguments) async {
     if (null != param) {
       print('${jsonDecode(param)}');
     }
-
+	var ck = args['cookie'] ?? envVarMap[ENV_COOKIE];
     final response = await baseService.call0(mName, param,
-        headers: parseHeaders(args), toJson: (String p0) => p0);
+        headers: parseHeaders(args,ck), toJson: (String p0) => p0);
 
     print('');
     var jsonRes = {'code': response.code, 'data': response.data};
@@ -172,7 +176,7 @@ void showUsage(ArgParser parser) {
   print(parser.usage);
 }
 
-Map<String, String> parseHeaders(ArgResults args) {
+Map<String, String> parseHeaders(ArgResults args,String? ck) {
   List<String> headList = args['header'];
   Map<String, String> headerMap = {};
   if (headList.isNotEmpty) {
@@ -181,6 +185,11 @@ Map<String, String> parseHeaders(ArgResults args) {
       headerMap[kvs[0].trim()] = kvs[1].trim();
     }
     print('custom header(s) -> $headerMap');
+  }
+
+
+  if(null != ck){
+    headerMap['cookie'] = ck;
   }
 
   return headerMap;

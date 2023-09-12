@@ -17,20 +17,21 @@ public class TestRpcUrl {
 
     @Test
     public void testUrl() throws Exception {
-        if("yyc".equals(System.getenv("LOGNAME"))) {
+        //if("yyc".equals(System.getenv("LOGNAME"))) {
             RpcUrl url = new RpcUrl();
             //url.localhost = true;
 
-            url.url = new URL("https://backoffice-api.botaoyx.com");
+            url.url = new URL("https://idemo.wangyuedaojia.com/demo-java-server/M/h");
 
-            url.app = "admin-auth";
-            url.service = "Oauth";
-            url.method = "user";
+            //url.app = "demo-java-server";
+            //url.service = "M";
+            //url.method = "h";
 
             url.cookie = "c-token=eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMDAxIiwiYWRtIjoxLCJleHAiOjE2MzcyMDExNTh9.xBtc8IcAp7rQcIkAVlhLz5u6dbN2WRnANQOyam6qKWBy0YvyDU0WcvnaEA5k2KzVhnLylqIQY4F5GJSy3aTaRQ";
 
+            url.token = "1234test";
             url.run();
-        }
+        //}
 
     }
 }

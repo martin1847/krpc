@@ -7,7 +7,12 @@
 //apply plugin: 'java'
 //
 
-apply plugin:  'io.quarkus'
+//apply plugin:  'io.quarkus'
+
+plugins {
+    id 'io.quarkus'  version "$quarkusTestServerVersion"
+}
+
 
 dependencies {
 
@@ -34,15 +39,15 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
     implementation "io.grpc:grpc-netty:${grpcVersion}"
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+    implementation platform("io.quarkus:quarkus-bom:${quarkusTestServerVersion}")
     implementation "io.quarkus:quarkus-arc"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
-    implementation 'info.picocli:picocli:4.6.1'
+    implementation 'info.picocli:picocli:4.7.5'
 
-    annotationProcessor 'info.picocli:picocli-codegen:4.6.1'
+    annotationProcessor 'info.picocli:picocli-codegen:4.7.5'
 
     testImplementation('io.quarkus:quarkus-junit5'){
         exclude module: 'quarkus-bootstrap-maven-resolver'

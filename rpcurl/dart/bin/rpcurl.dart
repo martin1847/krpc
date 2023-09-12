@@ -31,11 +31,13 @@ void main(List<String> arguments) async {
 
   final String LOCAL = 'http://127.0.0.1:50051';
 
-  final String VERSION = 'rpcurl-1.0 2023.07.27';
+  final String VERSION = 'rpcurl-1.0 2023.09.12';
 
   final String DEFAULT_CID = 'drpcurl-${Platform.localHostname}';
 
   final parser = ArgParser()
+    ..addFlag('verbose',
+          negatable: false, abbr: 'v',help: 'Verbose')
     ..addFlag('no-url',
         negatable: false, abbr: 'L', help: '本机测试，本机测试 url=$LOCAL')
     ..addFlag('no-web', negatable: false, abbr: 'W', help: '测试非 UnsafeWeb 服务')
@@ -72,6 +74,8 @@ void main(List<String> arguments) async {
   }
   // final paths = argResults.rest;
   final envVarMap = Platform.environment;
+
+  bool verbose = args['verbose'];
 
   bool local = args['no-url'];
   String? url;
@@ -111,15 +115,19 @@ void main(List<String> arguments) async {
 
   final channel = ClientChannel(uri.host, port: uri.port, options: options);
 
+  var tk = args['token'] ?? envVarMap[ENV_TOKEN];
   final baseService = BaseService(
       channel,
       app,
       sName,
       ServiceConfig(
-          accessToken: args['token'] ?? envVarMap[ENV_TOKEN],
+          accessToken: tk,
           clientId: args['clientId'] ?? envVarMap[ENV_CID] ?? DEFAULT_CID,
           clientMeta:
               args['clientMeta'] ?? envVarMap[ENV_CMETA] ?? '{"os":4}'));
+  if(verbose && tk != null){
+    print('tk 22 :  $tk');
+  }
 
   String? param = args['data'];
   String? file = args['file'];
@@ -142,7 +150,7 @@ void main(List<String> arguments) async {
     var jsonRes = {'code': response.code, 'data': response.data};
     var msg = response.message;
     if (null != msg && msg.isNotEmpty) {
-      jsonRes['message'] = msg;
+      jsonRes['msg'] = msg;
     }
     print(args['no-pretty']
         ? jsonEncode(jsonRes)

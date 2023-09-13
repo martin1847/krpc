@@ -29,11 +29,15 @@ public interface CredentialVerify {
     Key<String> AUTHORIZATION = Metadata.Key.of(HttpConst.AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
 
 
+    int TOKEN_INDEX = BEARER_FLAG.length() + 1;
+
     static String bearerToken(Metadata headers) {
         var tokenPlace = headers.get(AUTHORIZATION);
         String token = null;
-        if (null != tokenPlace && tokenPlace.startsWith(BEARER_FLAG)) {
-            token = tokenPlace.substring(BEARER_FLAG.length() + 1);
+        if (null != tokenPlace
+                && tokenPlace.length() > TOKEN_INDEX
+                && tokenPlace.startsWith(BEARER_FLAG)) {
+            token = tokenPlace.substring(TOKEN_INDEX);
         }
         return token;
     }

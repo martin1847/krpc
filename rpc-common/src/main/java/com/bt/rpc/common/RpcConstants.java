@@ -2,6 +2,7 @@ package com.bt.rpc.common;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -22,9 +23,10 @@ public interface RpcConstants {
     String VENDOR = "java";
 
     //利用graalVM特性，缓存构建信息
-    String CI_BUILD_ID = "v"+System.getenv("CI_PIPELINE_ID")+"-"+System.getenv("BTSP")
-            +"-"+ LocalDate.now()+'T'+ LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-            +"-"+ System.getenv("CI_COMMIT_SHORT_SHA");
+    String CI_BUILD_ID = System.getProperty("ci.build")+"-"+ LocalDate.now(ZoneId.of("Asia/Shanghai"))+' '
+            + LocalTime.now(ZoneId.of("Asia/Shanghai")).format(DateTimeFormatter.ofPattern("HH:mm"));
+            //+"-"+ System.getenv("CI_COMMIT_SHORT_SHA");
+    //+"-"+;
 
     int DEFAULT_PORT = 50051;
 

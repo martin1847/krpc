@@ -171,7 +171,7 @@ void main(List<String> arguments) async {
 
 void showUsage(ArgParser parser) {
   print(
-      'Usage: rpcurl https://demo.btyxapi.com/appName/DemoService/methodName -d \'{"param":1}\' [ or  -f param.json ] ');
+      'Usage: rpcurl https://demo.zlkjapi.com/appName/DemoService/methodName -d \'{"param":1}\' [ or  -f param.json ] ');
   print('测试rpc服务\r\n');
   print(parser.usage);
 }

@@ -1,6 +1,6 @@
-//package test.btyx;
+//package test.zlkj;
 //
-//import com.btyx.test.impl.DemoServiceImpl;
+//import com.zlkj.test.impl.DemoServiceImpl;
 //import com.bt.rpc.common.RpcConstants;
 //import com.bt.rpc.server.RpcServerBuilder;
 //import io.grpc.Server;

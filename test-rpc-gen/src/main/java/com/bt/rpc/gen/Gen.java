@@ -40,7 +40,7 @@ import freemarker.template.TemplateExceptionHandler;
 public class Gen {
 
 
-    public static String basePkg ="com.btyx";
+    public static String basePkg ="com.zlkj";
 
     //static final String FC = File.separator;
 
@@ -115,7 +115,7 @@ public class Gen {
 
     static void gen(String appName, LangEnum template, File outFolder) {
 
-        //Set<ClassInfo> classesInPackage = ClassPath.from(cl).getTopLevelClassesRecursive("com.btyx");
+        //Set<ClassInfo> classesInPackage = ClassPath.from(cl).getTopLevelClassesRecursive("com.zlkj");
         //classesInPackage.forEach(it->
         //
         //        System.out.println(it.load()));

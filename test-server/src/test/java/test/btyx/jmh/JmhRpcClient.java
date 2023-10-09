@@ -2,12 +2,12 @@
 // * Martin.Cong
 // * Copyright (c) 2021-2022 All Rights Reserved.
 // */
-//package test.btyx.jmh;
+//package test.zlkj.jmh;
 //
 //import java.util.concurrent.TimeUnit;
 //
 //import com.bt.rpc.client.RpcClientFactory;
-//import com.btyx.demo.service.DemoService;
+//import com.zlkj.demo.service.DemoService;
 //import io.grpc.ManagedChannelBuilder;
 //import org.openjdk.jmh.annotations.Benchmark;
 //import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -114,7 +114,7 @@
 //
 //    static DemoService makeService(boolean directExecutor){
 //        var builder =
-//                ManagedChannelBuilder.forAddress("example.testbtyxapi.com",443)
+//                ManagedChannelBuilder.forAddress("example.testzlkjapi.com",443)
 //                        .useTransportSecurity();
 //        if(directExecutor){
 //            builder.directExecutor();

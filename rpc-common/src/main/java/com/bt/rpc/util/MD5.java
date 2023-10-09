@@ -31,16 +31,42 @@ public abstract class MD5 {
         try {
             var md5 =  MessageDigest.getInstance(MD5);
             var data = md5.digest(bytes);
-            final int l = data.length;
-            final char[] out = new char[l << 1];
-            // two characters form the hex value.
-            for (int i = 0, j = 0; i < l; i++) {
-                out[j++] = digitChars[(0xF0 & data[i]) >>> 4];
-                out[j++] = digitChars[0x0F & data[i]];
-            }
-            return new String(out);
+            //final int l = data.length;
+            //final char[] out = new char[l << 1];
+            //// two characters form the hex value.
+            //for (int i = 0, j = 0; i < l; i++) {
+            //    out[j++] = digitChars[(0xF0 & data[i]) >>> 4];
+            //    out[j++] = digitChars[0x0F & data[i]];
+            //}
+            return toStrting(data,digitChars);
         } catch (final NoSuchAlgorithmException e) {
             throw new IllegalArgumentException(e);
         }
     }
+
+    public static String toLowerStrting(byte[] digested){
+        return toStrting(digested,DIGITS_LOWER);
+    }
+    public static String toStrting(byte[] digested,char[] digitChars){
+        final int l = digested.length;
+        final char[] out = new char[l << 1];
+        //var digitChars = DIGITS_LOWER;
+        // two characters form the hex value.
+        for (int i = 0, j = 0; i < l; i++) {
+            out[j++] = digitChars[(0xF0 & digested[i]) >>> 4];
+            out[j++] = digitChars[0x0F & digested[i]];
+        }
+        return new String(out);
+    }
+
+    //
+    //public static void main(String[] args) {
+    //    for (int i = 0; i < 32; i++) {
+    //        //echo -n 1 | md5
+    //        // c4ca4238a0b923820dcc509a6f75849b
+    //        System.out.println( i +"\t" + md5(Integer.valueOf(i).toString().getBytes()));
+    //
+    //    }
+    //}
 }
+

@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package test.btyx;
+package test.zlkj;
 
 import com.bt.rpc.util.RefUtils;
 import com.testbt.dto.Img;

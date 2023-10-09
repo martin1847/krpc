@@ -16,7 +16,7 @@
 //
 //public class TsClientBulider {
 //
-//    private static String importLine = "import {RpcResult,RpcService,Headers} from '@btyx/rpc';\n\n";
+//    private static String importLine = "import {RpcResult,RpcService,Headers} from '@zlkj/rpc';\n\n";
 //    private static String importValidator = "import {\n" +
 //            "  IsInt,\n" +
 //            "  Length,\n" +

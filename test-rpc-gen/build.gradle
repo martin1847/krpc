@@ -9,7 +9,7 @@ dependencies {
     implementation project(':rpc-api')
     implementation project(':rpc-server')
 
-//    implementation 'com.btyx.common:cdn-api:1.1.1220'
+//    implementation 'com.zlkj.common:cdn-api:1.1.1220'
 //    api 'javax.validation:validation-api:2.0.1.Final'
 //    api 'jakarta.validation:jakarta.validation-api:2.0.2'
 //

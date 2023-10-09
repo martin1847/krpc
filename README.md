@@ -187,11 +187,11 @@ rpcurl.exe https://example.testapi.com/demo-java-server/Demo/hello  -d '{"name":
 
 # 各种客户端
 
-[Dart](https://gitlab.btrpc.com/middleware/btyx-rpc-dart-client)
+[Dart](https://gitlab.btrpc.com/middleware/zlkj-rpc-dart-client)
 
-[TypeScript](https://gitlab.btrpc.com/middleware/btyx-rpc-ts-client)
+[TypeScript](https://gitlab.btrpc.com/middleware/zlkj-rpc-ts-client)
 
-[Python](https://gitlab.btrpc.com/middleware/btyx-rpc-python-client)
+[Python](https://gitlab.btrpc.com/middleware/zlkj-rpc-python-client)
 
 [go/k6](https://gitlab.btrpc.com/middleware/xk6-btrpc)
 

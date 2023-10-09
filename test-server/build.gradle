@@ -13,7 +13,7 @@ dependencies {
     implementation project(':rpc-server-native')
     implementation project(':rpc-client')
 
-//    implementation "com.btyx.example:test-api:$globalRpcVersion"
+//    implementation "com.zlkj.example:test-api:$globalRpcVersion"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

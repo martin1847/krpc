@@ -16,8 +16,8 @@ public class TestGen {
 
 
     public static void main(String[] args) {
-        //Gen.basePkg = "com.btyx.test";
-        ////Gen.basePkg = "com.btyx.course.partner.admin.service";
+        //Gen.basePkg = "com.zlkj.test";
+        ////Gen.basePkg = "com.zlkj.course.partner.admin.service";
         //
         //var json  = "{\"1-1-1\":[\"1000-01-01\",\"2081-05-08\"]}";
         //

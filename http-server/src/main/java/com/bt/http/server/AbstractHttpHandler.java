@@ -86,7 +86,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
              }
         }
 
-        writeNotFound(ctx);
+        writeNotFound(ctx,uri);
 
     }
     <ParamDTO> void  writeHandler(ChannelHandlerContext ctx, Handler<ParamDTO> handler, ParamDTO dto, HttpHeaders requestHeaders){
@@ -155,11 +155,11 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         ctx.close();
     }
 
-    private static void writeNotFound( ChannelHandlerContext ctx) {
+    private static void writeNotFound( ChannelHandlerContext ctx,String uri) {
 
         var status = HttpResponseStatus.NOT_FOUND;
         writeResponse(ctx, status, TYPE_PLAIN,
-                ("{\"code\":404,\"message\":\""+status.reasonPhrase()+"\"}").getBytes(StandardCharsets.UTF_8)
+                ("{\"code\":404,\"message\":\""+uri+" , "+ status.reasonPhrase()+"\"}").getBytes(StandardCharsets.UTF_8)
                 ,null);
     }
 

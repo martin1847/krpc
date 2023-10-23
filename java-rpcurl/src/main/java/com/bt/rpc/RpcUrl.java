@@ -23,7 +23,7 @@ public class RpcUrl implements Runnable{
     static final String META_SERVICE = "RpcMeta";
     static final String DEFAULT_METHOD = "listApis";
 
-    //@Option(names = {"-u", "--url"}, description = "服务地址，如: https://example-api.botaoyx.com")
+    //@Option(names = {"-u", "--url"}, description = "服务地址，如: https://example-api.btrpc.com")
     //URL url;
 
     @Parameters(index = "0")

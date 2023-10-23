@@ -2,7 +2,7 @@
  * Zhulinkeji.com Inc.
  * Copyright (c) 2021-2023 All Rights Reserved.
  */
-package test.btyx.jmh;
+package test.btrpc.jmh;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

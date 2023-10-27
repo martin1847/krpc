@@ -134,6 +134,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         if(String.class == post.getParamClass()){
             return (ParamDTO)jsonBody;
         }
+        log.debug("Parse Post Json : {}",jsonBody);
         var input = JsonUtils.parse(jsonBody,post.getParamClass());
         if(post.useValidator()){
             var violationSet = getValidator().validate(input);

@@ -73,18 +73,17 @@ public class HttpHandlerExpose extends AbstractHttpHandler {
             return;
         }
 
-
         httpServer = new HttpServer(this, port);
         try {
             httpServer.start();
-            if(getHanlderMap.size()>0) {
+            if (!getHanlderMap.isEmpty()) {
                 log.info(" GET {}", getHanlderMap.keySet());
             }
-            if(postMap.size()>0) {
+            if (!postMap.isEmpty()) {
                 log.info(" POST {}", postMap.keySet());
             }
             log.info("***** 【 {} 】 HTTP Server {} endpoints  on {}",
-                    EnvUtils.current(),g+p,port);
+                    EnvUtils.current(), g + p, port);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

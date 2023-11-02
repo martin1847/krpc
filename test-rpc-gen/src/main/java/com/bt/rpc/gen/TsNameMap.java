@@ -43,6 +43,7 @@ public class TsNameMap {
         nameMapping.put("Date","number");
 
         nameMapping.put("List","Array");
+        nameMapping.put("Set","Array");
         nameMapping.put("Map","Record");
         nameMapping.put("String[]","string[]");
         nameMapping.put("byte[]","Array<number>");

@@ -27,6 +27,7 @@ public class DartNameMap {
         nameMapping.put("Float","int");
         nameMapping.put("Double","int");
         nameMapping.put("Boolean","bool");
+        nameMapping.put("Set","List");
         //nameMapping.put("byte[]","List<int>");
         nameMapping.put("int[]","List<int>");
         nameMapping.put("String[]","List<String>");

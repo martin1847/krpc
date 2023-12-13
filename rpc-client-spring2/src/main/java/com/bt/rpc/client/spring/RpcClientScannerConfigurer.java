@@ -9,8 +9,6 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.bt.rpc.annotation.RpcService;
 import com.bt.rpc.client.CacheManager;
@@ -24,34 +22,29 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 
 /**
- *
  * @author martin
  * @version 2023/12/12 16:00
  */
 
 @Slf4j
-public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostProcessor, InitializingBean, ApplicationContextAware{
+public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostProcessor, InitializingBean {
+    //, ApplicationContextAware{
 
     /**
      * rpc
-     *   clients:
-     *     common-cdn:
-     *       url: root
-     *       scan: rootpass
-     *     xxx:
-     *       url: guest
-     *       scan: guestpass
+     * clients:
+     * common-cdn:
+     * url: root
+     * scan: rootpass
+     * xxx:
+     * url: guest
+     * scan: guestpass
      */
     //@Autowired
     //RpcClientConfig clientConfig;
@@ -60,9 +53,10 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
 
     @Setter
     //@Autowired
-    Map<String, RpcCfg> clients;
+            Map<String, RpcCfg> clients;
 
-    @Setter@Autowired
+    @Setter
+    @Autowired
     CacheManager cacheManager;
 
     //@Override
@@ -78,10 +72,11 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
         //log.info("*******************RpcClientScannerConfigurer******************************* ");
         Objects.requireNonNull(this.clients, "clients不能为空");
         //log.info("begin to inject rpc.clients {}", rpcClientProperties);
-        log.info("begin to inject rpc.clients {} / {}", cacheManager, clients);
+        log.debug("begin to inject rpc.clients {} / {}", cacheManager, clients);
     }
 
-    @Override@SneakyThrows
+    @Override
+    @SneakyThrows
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
 
         //var scanner = new ClassPathBeanDefinitionScanner(registry);
@@ -94,18 +89,18 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
             var pkgs = cfg.scan.split(",");
 
             var clzSet = new HashSet<Class>();
-            for(var pkg:pkgs) {
+            for (var pkg : pkgs) {
                 ClassPath.from(ClassLoader.getSystemClassLoader())
                         .getAllClasses()
                         .stream()
-                        .filter(ci -> ci.isTopLevel() && ci.getPackageName().equalsIgnoreCase(pkg)  )
+                        .filter(ci -> ci.isTopLevel() && ci.getPackageName().equalsIgnoreCase(pkg))
                         .map(ClassInfo::load)
-                        .filter(it-> it.isInterface() &&  it.isAnnotationPresent(RpcService.class) )
+                        .filter(it -> it.isInterface() && it.isAnnotationPresent(RpcService.class))
                         .forEach(clzSet::add);
 
             }
-            if(clzSet.isEmpty()){
-                log.warn("found NONE RpcService for {}/{} , skip",appName,cfg);
+            if (clzSet.isEmpty()) {
+                log.warn("found NONE RpcService for {}/{} , skip", appName, cfg);
                 continue;
             }
 
@@ -121,14 +116,14 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
 
             var fac = new RpcClientFactory(appName, channelBuilder.build());
             fac.setCacheManager(cacheManager);
-            log.info("build RpcClientFactory {}/{}",appName,fac);
+            log.info("build RpcClientFactory {}/{}", appName, fac);
 
             for (var clz : clzSet) {
                 var bd = new RootBeanDefinition(clz, () -> fac.get(clz));
                 //AnnotationBeanNameGenerator.buildDefaultBeanName
                 var name = Introspector.decapitalize(clz.getSimpleName());
                 registry.registerBeanDefinition(name, bd);
-                log.info("registry bean  {} -> {}", name, clz);
+                log.info("registry Rpc Client bean  {} -> {}", name, clz);
             }
         }
     }
@@ -137,9 +132,9 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 
     }
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-
-    }
+    //
+    //@Override
+    //public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    //
+    //}
 }

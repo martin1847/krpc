@@ -4,9 +4,9 @@
  */
 package com.bt.rpc.client.spring;
 
-import java.util.HashMap;
 import java.util.Map;
 
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -41,6 +41,13 @@ public class RpcClientAutoConfigure implements InitializingBean {
     //public Map<String, RpcClientProperties> clients() {
     //    return new HashMap<>();
     //}
+    public static final String PREFIX = "rpc";
+
+    @Data
+    @ConfigurationProperties(prefix = PREFIX)
+    public static class RpcClientProperties {
+        private Map<String, RpcCfg> clients;
+    }
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -80,9 +87,9 @@ public class RpcClientAutoConfigure implements InitializingBean {
         //log.info("*******************RpcClientScannerConfigurerNotFoundConfiguration******************************* ");
         //log.info("*******************RpcClientScannerConfigurerNotFoundConfiguration******************************* ");
         Binder binder = Binder.get(environment);
-        var properties = binder.bind(RpcClientProperties.PREFIX, RpcClientProperties.class).get();
+        var properties = binder.bind(PREFIX, RpcClientProperties.class).get();
 
-        log.info("Not found configuration for RpcClientScannerConfigurer ,build from yaml {}",properties);
+        log.info("RpcClientScannerConfigurer Not found ,build from yaml {}",properties);
         var cfg = new RpcClientScannerConfigurer();
         cfg.setClients(properties.getClients());
         return cfg;

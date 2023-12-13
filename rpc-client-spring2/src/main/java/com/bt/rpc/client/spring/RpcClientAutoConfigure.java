@@ -51,7 +51,7 @@ public class RpcClientAutoConfigure implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        log.info("*******************rpc.enable RpcClientAutoConfigure*******************************");
+        log.debug("*******************rpc.enable RpcClientAutoConfigure*******************************");
         //log.info("*******************RpcClientAutoConfigure*******************************");
         //log.info("*******************RpcClientAutoConfigure*******************************");
         //log.info("*******************RpcClientAutoConfigure*******************************");
@@ -89,7 +89,7 @@ public class RpcClientAutoConfigure implements InitializingBean {
         Binder binder = Binder.get(environment);
         var properties = binder.bind(PREFIX, RpcClientProperties.class).get();
 
-        log.info("RpcClientScannerConfigurer Not found ,build from yaml {}",properties);
+        log.debug("RpcClientScannerConfigurer Not found ,build from yaml {}",properties);
         var cfg = new RpcClientScannerConfigurer();
         cfg.setClients(properties.getClients());
         return cfg;

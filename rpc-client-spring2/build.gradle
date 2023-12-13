@@ -3,14 +3,21 @@ apply from: "$rootProject.projectDir/upload.gradle"
 
 
 dependencies {
+
+    api(project(':rpc-api')){
+        exclude(module:"jakarta.validation-api")
+    }
+
     api(project(':rpc-client')){
         exclude(module:"jakarta.validation-api")
         exclude(module:"slf4j-api")
     }
+
     compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 //    implementation 'org.springframework:spring-context:5.3.31'
-//    api "io.grpc:grpc-netty-shaded:${grpcVersion}"
-//    api "io.grpc:grpc-stub:${grpcVersion}"
+    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
+//    api "io.grpc:grpc-netty:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
 
     // https://mvnrepository.com/artifact/org.springframework/spring-context
     implementation 'org.springframework:spring-context:5.3.31'

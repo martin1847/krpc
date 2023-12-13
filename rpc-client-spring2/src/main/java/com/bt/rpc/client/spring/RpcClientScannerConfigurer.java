@@ -4,18 +4,35 @@
  */
 package com.bt.rpc.client.spring;
 
+import java.beans.Introspector;
+import java.net.URL;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.client.CacheManager;
+import com.bt.rpc.client.RpcClientFactory;
+import com.google.common.reflect.ClassPath;
+import com.google.common.reflect.ClassPath.ClassInfo;
+import io.grpc.ManagedChannelBuilder;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.GenericBeanDefinition;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 
 /**
  *
@@ -45,6 +62,9 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
     //@Autowired
     Map<String, RpcCfg> clients;
 
+    @Setter@Autowired
+    CacheManager cacheManager;
+
     //@Override
     //public void setBeanName(String name) {
     //
@@ -58,12 +78,59 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
         //log.info("*******************RpcClientScannerConfigurer******************************* ");
         Objects.requireNonNull(this.clients, "clients不能为空");
         //log.info("begin to inject rpc.clients {}", rpcClientProperties);
-        log.info("begin to inject rpc.clients {}", clients);
+        log.info("begin to inject rpc.clients {} / {}", cacheManager, clients);
     }
 
-    @Override
+    @Override@SneakyThrows
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        log.info("begin to postProcessBeanDefinitionRegistry rpc.clients {}", registry);
+
+        //var scanner = new ClassPathBeanDefinitionScanner(registry);
+
+        for (var kv : clients.entrySet()) {
+
+            var appName = kv.getKey();
+            var cfg = kv.getValue();
+
+            var pkgs = cfg.scan.split(",");
+
+            var clzSet = new HashSet<Class>();
+            for(var pkg:pkgs) {
+                ClassPath.from(ClassLoader.getSystemClassLoader())
+                        .getAllClasses()
+                        .stream()
+                        .filter(ci -> ci.isTopLevel() && ci.getPackageName().equalsIgnoreCase(pkg)  )
+                        .map(ClassInfo::load)
+                        .filter(it-> it.isInterface() &&  it.isAnnotationPresent(RpcService.class) )
+                        .forEach(clzSet::add);
+
+            }
+            if(clzSet.isEmpty()){
+                log.warn("found NONE RpcService for {}/{} , skip",appName,cfg);
+                continue;
+            }
+
+            var url = new URL(cfg.getUrl());
+
+            var channelBuilder =
+                    ManagedChannelBuilder.forAddress(url.getHost(), url.getPort());
+            if ("https".equals(url.getProtocol())) {
+                channelBuilder.useTransportSecurity();
+            } else {
+                channelBuilder.usePlaintext();
+            }
+
+            var fac = new RpcClientFactory(appName, channelBuilder.build());
+            fac.setCacheManager(cacheManager);
+            log.info("build RpcClientFactory {}/{}",appName,fac);
+
+            for (var clz : clzSet) {
+                var bd = new RootBeanDefinition(clz, () -> fac.get(clz));
+                //AnnotationBeanNameGenerator.buildDefaultBeanName
+                var name = Introspector.decapitalize(clz.getSimpleName());
+                registry.registerBeanDefinition(name, bd);
+                log.info("registry bean  {} -> {}", name, clz);
+            }
+        }
     }
 
     @Override

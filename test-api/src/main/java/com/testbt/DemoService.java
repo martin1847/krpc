@@ -65,6 +65,9 @@ public interface DemoService {
 
     RpcResult<Integer> sleep(Integer i);
 
+    @Doc("软异常：返回逻辑错误，不泡异常")
+    RpcResult<Integer> testLogicError(Integer i);
+
     default RpcResult<Integer> saveImg(Img img){
         return null;
     }

@@ -13,9 +13,9 @@ dependencies {
     // above override grpc-api dependency//
 
 
-    api("io.grpc:grpc-protobuf-lite:${grpcVersion}")
+//    api("io.grpc:grpc-protobuf-lite:${grpcVersion}")
     api "com.google.protobuf:protobuf-java:$protobufVersion"
-    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
+//    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 //    api 'com.alibaba:fastjson:1.2.68'
 //    api 'jakarta.json.bind:jakarta.json.bind-api:2.0.0'
@@ -24,6 +24,8 @@ dependencies {
 //    implementation 'org.yaml:snakeyaml:1.28'
 //    implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+
+    implementation "io.netty:netty-buffer:$nettyGrpcVersion"
 
 
 //    testImplementation 'junit:junit:4.13.1'

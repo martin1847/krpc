@@ -15,7 +15,7 @@ dependencies {
 //    implementation "io.grpc:grpc-services:${grpcVersion}"
 
     // just for overridden
-    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
+//    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 
     api "com.bt.ext:ext-rpc:$globalRpcVersion"

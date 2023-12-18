@@ -3,13 +3,13 @@ package com.bt.rpc.common;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
-import com.bt.rpc.annotation.Cached;
 import com.bt.rpc.annotation.RpcService;
+import com.bt.rpc.common.proto.InputMarshaller;
+import com.bt.rpc.common.proto.OutputMarshaller;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.util.RefUtils;
 import io.grpc.MethodDescriptor;
-import io.grpc.protobuf.lite.ProtoLiteUtils;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,10 +21,13 @@ import lombok.Setter;
 
 public class MethodStub {
 
-    private final static MethodDescriptor.Marshaller<InputProto>  REQUEST_MARSHALLER  =
-            ProtoLiteUtils.marshaller(InputProto.getDefaultInstance());
-    private final static MethodDescriptor.Marshaller<OutputProto> RESPONSE_MARSHALLER =
-            ProtoLiteUtils.marshaller(OutputProto.getDefaultInstance());
+    //private final static MethodDescriptor.Marshaller<InputProto>  REQUEST_MARSHALLER  =
+    //        ProtoLiteUtils.marshaller(InputProto.getDefaultInstance());
+    //private final static MethodDescriptor.Marshaller<OutputProto> RESPONSE_MARSHALLER =
+    //        ProtoLiteUtils.marshaller(OutputProto.getDefaultInstance());
+
+    private final static MethodDescriptor.Marshaller<InputProto>  REQUEST_MARSHALLER  = new InputMarshaller();
+    private final static MethodDescriptor.Marshaller<OutputProto> RESPONSE_MARSHALLER = new OutputMarshaller();
 
     public final Type                                      returnType;
     public final MethodDescriptor<InputProto, OutputProto> methodDescriptor;

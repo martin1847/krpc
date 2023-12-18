@@ -26,6 +26,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.util.ClassUtils;
 
 /**
  * @author martin
@@ -90,17 +91,17 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
 
             var clzSet = new HashSet<Class>();
             for (var pkg : pkgs) {
-                ClassPath.from(ClassLoader.getSystemClassLoader())
+                ClassPath.from(ClassUtils.getDefaultClassLoader())
                         .getAllClasses()
                         .stream()
-                        .filter(ci -> ci.isTopLevel() && ci.getPackageName().equalsIgnoreCase(pkg))
+                        .filter(ci -> ci.isTopLevel() && ci.getName().startsWith(pkg))
                         .map(ClassInfo::load)
                         .filter(it -> it.isInterface() && it.isAnnotationPresent(RpcService.class))
                         .forEach(clzSet::add);
 
             }
             if (clzSet.isEmpty()) {
-                log.warn("found NONE RpcService for {}/{} , skip", appName, cfg);
+                log.warn("found 0 RpcService for {}/{} , skip !!! ", appName, cfg);
                 continue;
             }
 

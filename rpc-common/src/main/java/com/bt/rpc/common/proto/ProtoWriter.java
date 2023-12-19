@@ -76,10 +76,11 @@ public class ProtoWriter {// implements  IProtoWriter
         position += bytes.length;
     }
 
-    static int writeUInt32(byte[] buf,int offset,int value){
+    static int writeUInt32(byte[] buf, int offset, int value) {
         var begin = offset;
-        while ((value & -128) != 0) {
-            buf[offset++] = (byte) (value & 127 | 128);
+        // value > 0x7F
+        while ((value & ~0x7F) != 0) {
+            buf[offset++] = (byte) (value & 0x7F | 0x80);
             value >>>= 7;
         }
         buf[offset++] = (byte) value;

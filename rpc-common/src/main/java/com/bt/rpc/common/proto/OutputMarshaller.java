@@ -4,10 +4,8 @@
  */
 package com.bt.rpc.common.proto;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import com.bt.rpc.internal.OutputProto;
 import io.grpc.MethodDescriptor.Marshaller;
@@ -27,6 +25,9 @@ public class OutputMarshaller implements Marshaller<OutputProto> {
     static final byte[] DATA_3_UTF8_TAG = ProtoWriter.streamTag(3,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
     static final byte[] DATA_4_BYTES_TAG = ProtoWriter.streamTag(4,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
 
+    static final byte[] CODE_1_TAG = ProtoWriter.streamTag(1,ProtoWriter.VARINT_WIRE_TYPE);
+    static final byte[] MSG_2_TAG = ProtoWriter.streamTag(2,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
+
 
     @Override
     public InputStream stream(OutputProto proto) {
@@ -36,13 +37,24 @@ public class OutputMarshaller implements Marshaller<OutputProto> {
         }
 
         if (proto.getC() > 0) { // error
-            var size = proto.getSerializedSize();
-            var writer = new ProtoWriter(size);
-            writer.writeUInt32(1, proto.getC());
-            writer.writeString(2, proto.getM());
-            var buf = writer.buffer;
-            log.debug("error proto code {} , size {}", proto.getC(), size);
-            return new ByteArrayInputStream(buf);
+            //var size = proto.getSerializedSize();
+            var msg = proto.getM();
+            var code1bytes = ProtoWriter.streamUInt32(proto.getC());
+
+            var msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+            var msgLenBytes = ProtoWriter.streamUInt32(msgBytes.length);
+            //
+            //var size = CodedOutputStream.computeInt32Size(1, proto.getC())
+            //        + CodedOutputStream.computeStringSize(2, msg);
+            //var writer = new ProtoWriter(size);
+            //writer.writeUInt32(1, proto.getC());
+            //writer.writeString(2, msg);
+            //var buf = writer.buffer;
+            var buf = Unpooled.wrappedBuffer(CODE_1_TAG,code1bytes,MSG_2_TAG,msgLenBytes,msgBytes);
+            log.debug("error proto code {} , msgBytes {}", proto.getC(), msgBytes.length);
+            return new ByteBufInputStream(buf);
+
+            //return new ByteArrayInputStream(buf);
         }
 
         return tagLengthDelimitedAsStream(DATA_4_BYTES_TAG,proto.getBs().toByteArray());

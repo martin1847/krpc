@@ -7,10 +7,9 @@ package com.bt.rpc.common.proto;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import com.bt.rpc.internal.OutputProto;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedOutputStream;
 import io.grpc.MethodDescriptor.Marshaller;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
@@ -25,18 +24,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class OutputMarshaller implements Marshaller<OutputProto> {
 
-    static final int DATA_3_UTF8_TAG = ProtoWriter.makeTag(3,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
+    static final byte[] DATA_3_UTF8_TAG = ProtoWriter.streamTag(3,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
+    static final byte[] DATA_4_BYTES_TAG = ProtoWriter.streamTag(4,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
 
-    static final int DATA_3_UTF8_TAG_SIZE = CodedOutputStream.computeUInt32SizeNoTag(DATA_3_UTF8_TAG);
-    static final int DATA_4_BYTES_TAG = ProtoWriter.makeTag(4,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
-
-    static final int DATA_4_BYTES_TAG_SIZE = CodedOutputStream.computeUInt32SizeNoTag(DATA_4_BYTES_TAG);
 
     @Override
     public InputStream stream(OutputProto proto) {
 
         if (proto.hasUtf8()) { // most success
-            return data3(proto.getUtf8());
+            return tagLengthDelimitedAsStream(DATA_3_UTF8_TAG,proto.getUtf8().getBytes(StandardCharsets.UTF_8));
         }
 
         if (proto.getC() > 0) { // error
@@ -49,7 +45,7 @@ public class OutputMarshaller implements Marshaller<OutputProto> {
             return new ByteArrayInputStream(buf);
         }
 
-        return data4bytes(proto.getBs());
+        return tagLengthDelimitedAsStream(DATA_4_BYTES_TAG,proto.getBs().toByteArray());
 
         //if (!proto.getMBytes().isEmpty()) {
         //    com.google.protobuf.GeneratedMessageV3.writeString(output, 2, m_);
@@ -89,23 +85,24 @@ public class OutputMarshaller implements Marshaller<OutputProto> {
     //    System.out.println(DATA_4_BYTES_TAG + " ->> " + CodedOutputStream.computeUInt32SizeNoTag(DATA_4_BYTES_TAG));
     //}
 
-    static InputStream data3(String utf8){
-        return dataAsStream(DATA_3_UTF8_TAG,DATA_3_UTF8_TAG_SIZE,utf8.getBytes(StandardCharsets.UTF_8));
-    }
+    //static InputStream data3(String utf8){
+    //    return dataAsStream(DATA_3_UTF8_TAG,DATA_3_UTF8_TAG_SIZE,utf8.getBytes(StandardCharsets.UTF_8));
+    //}
+    //
+    //static InputStream data4bytes(ByteString bytes){
+    //    return dataAsStream(DATA_4_BYTES_TAG,DATA_4_BYTES_TAG_SIZE,bytes.toByteArray());
+    //}
 
-    static InputStream data4bytes(ByteString bytes){
-        return dataAsStream(DATA_4_BYTES_TAG,DATA_4_BYTES_TAG_SIZE,bytes.toByteArray());
-    }
-
-    public static InputStream dataAsStream(int tag, int tagSize, byte[] bytes) {
+    public static InputStream tagLengthDelimitedAsStream(byte[] tag, byte[] bytes) {
         //var bytes = utf8.getBytes(StandardCharsets.UTF_8);
-        var writer = new ProtoWriter(tagSize + CodedOutputStream.computeUInt32SizeNoTag(bytes.length));
-        writer.writeUInt32NoTag(tag);
-        writer.writeUInt32NoTag(bytes.length);
+        //var writer = new ProtoWriter(tagSize + CodedOutputStream.computeUInt32SizeNoTag(bytes.length));
+        //writer.writeUInt32NoTag(tag);
+        //writer.writeUInt32NoTag(bytes.length);
         //var tag = Unpooled.wrappedBuffer(writer.buffer);
         //var value = Unpooled.wrappedBuffer(bytes);
+        //log.debug("use tag {}", Arrays.toString(tag));
 
-        return new ByteBufInputStream(Unpooled.wrappedBuffer(writer.buffer, bytes));
+        return new ByteBufInputStream(Unpooled.wrappedBuffer(tag,ProtoWriter.streamUInt32(bytes.length), bytes));
     }
 
 

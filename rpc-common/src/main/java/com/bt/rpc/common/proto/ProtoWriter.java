@@ -6,6 +6,7 @@ package com.bt.rpc.common.proto;
 
 import java.nio.charset.StandardCharsets;
 
+import com.google.protobuf.CodedOutputStream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -41,11 +42,12 @@ public class ProtoWriter {// implements  IProtoWriter
     public ProtoWriter(int size) {this.buffer = new byte[size];}
 
     void writeUInt32NoTag(int value) {
-        while ((value & -128) != 0) {
-            this.buffer[this.position++] = (byte) (value & 127 | 128);
-            value >>>= 7;
-        }
-        this.buffer[this.position++] = (byte) value;
+        this.position += writeUInt32(this.buffer,this.position,value);
+        //while ((value & -128) != 0) {
+        //    this.buffer[this.position++] = (byte) (value & 127 | 128);
+        //    value >>>= 7;
+        //}
+        //this.buffer[this.position++] = (byte) value;
     }
 
     /**
@@ -72,5 +74,27 @@ public class ProtoWriter {// implements  IProtoWriter
         this.writeUInt32NoTag(bytes.length);
         System.arraycopy(bytes, 0, buffer, position, bytes.length);
         position += bytes.length;
+    }
+
+    static int writeUInt32(byte[] buf,int offset,int value){
+        var begin = offset;
+        while ((value & -128) != 0) {
+            buf[offset++] = (byte) (value & 127 | 128);
+            value >>>= 7;
+        }
+        buf[offset++] = (byte) value;
+        return offset - begin;
+    }
+
+    static byte[] streamTag(final int fieldNumber, final int wireType){
+        var tag =  makeTag(fieldNumber,wireType);
+        return streamUInt32(tag);
+    }
+
+    static byte[] streamUInt32(int value){
+        var size = CodedOutputStream.computeUInt32SizeNoTag(value);
+        var buf = new byte[size];
+        writeUInt32(buf,0,value);
+        return buf;
     }
 }

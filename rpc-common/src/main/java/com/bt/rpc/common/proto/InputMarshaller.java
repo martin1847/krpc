@@ -22,21 +22,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class InputMarshaller implements Marshaller<InputProto> {
 
-    static final int DATA_2_UTF8_TAG = ProtoWriter.makeTag(2,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
-
-    static final int DATA_2_UTF8_TAG_SIZE = CodedOutputStream.computeUInt32SizeNoTag(DATA_2_UTF8_TAG);
-    static final int DATA_3_BYTES_TAG = ProtoWriter.makeTag(3,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
-
-    static final int DATA_3_BYTES_TAG_SIZE = CodedOutputStream.computeUInt32SizeNoTag(DATA_3_BYTES_TAG);
+    static final byte[] DATA_2_UTF8_TAG = ProtoWriter.streamTag(2,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
+    static final byte[] DATA_3_BYTES_TAG = ProtoWriter.streamTag(3,ProtoWriter.LENGTH_DELIMITED_WIRE_TYPE);
 
     @Override
     public InputStream stream(InputProto proto) {
 
         if(proto.getEValue() == 0){//json
             if(proto.hasUtf8()){
-                return OutputMarshaller.dataAsStream(DATA_2_UTF8_TAG,DATA_2_UTF8_TAG_SIZE,proto.getUtf8().getBytes(StandardCharsets.UTF_8));
+                return OutputMarshaller.tagLengthDelimitedAsStream(DATA_2_UTF8_TAG,proto.getUtf8().getBytes(StandardCharsets.UTF_8));
             }
-            return OutputMarshaller.dataAsStream(DATA_3_BYTES_TAG,DATA_3_BYTES_TAG_SIZE,proto.getBs().toByteArray());
+            return OutputMarshaller.tagLengthDelimitedAsStream(DATA_3_BYTES_TAG,proto.getBs().toByteArray());
         }
         var size = proto.getSerializedSize();
         var writer = new ProtoWriter(size);

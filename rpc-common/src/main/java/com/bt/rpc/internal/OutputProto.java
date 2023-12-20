@@ -49,7 +49,7 @@ private static final long serialVersionUID = 0L;
     }
     log.debug("OutputProto from  InputStream size {}",size);
     // proto swell factor
-    try (var input = new StreamDecoder(in, Math.min(size << 1, MiniCodedInputStream.DEFAULT_BUFFER_SIZE))) {
+    try (var input = new StreamDecoder(in, size)) {
     //try (var input = new StreamDecoder(in)){
       boolean done = false;
       while (!done) {
@@ -304,15 +304,15 @@ private static final long serialVersionUID = 0L;
     return MiniCodedInputStream.EMPTY_BYTE_ARRAY;
   }
 
-  private byte memoizedIsInitialized = -1;
-  public final boolean isInitialized() {
-    byte isInitialized = memoizedIsInitialized;
-    if (isInitialized == 1) return true;
-    if (isInitialized == 0) return false;
-
-    memoizedIsInitialized = 1;
-    return true;
-  }
+  //private byte memoizedIsInitialized = -1;
+  //public final boolean isInitialized() {
+  //  byte isInitialized = memoizedIsInitialized;
+  //  if (isInitialized == 1) return true;
+  //  if (isInitialized == 0) return false;
+  //
+  //  memoizedIsInitialized = 1;
+  //  return true;
+  //}
 
   //@Override
   //public void writeTo(com.google.protobuf.CodedOutputStream output)

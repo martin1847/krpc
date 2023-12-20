@@ -20,7 +20,7 @@ public final class InputProto
          implements
     // @@protoc_insertion_point(message_implements:com.bt.rpc.internal.InputProto)
     InputProtoOrBuilder {
-private static final long serialVersionUID = 0L;
+//private static final long serialVersionUID = 0L;
   // Use InputProto.newBuilder() to construct.
   private InputProto() {
     e_ = 0;
@@ -35,7 +35,7 @@ private static final long serialVersionUID = 0L;
     }
     log.debug("InputProto from  InputStream size {}",size);
     //// proto swell factor
-    try (var input = new StreamDecoder(in, Math.min(size << 1, MiniCodedInputStream.DEFAULT_BUFFER_SIZE))) {
+    try (var input = new StreamDecoder(in, size)) {
       boolean done = false;
       while (!done) {
         int tag = input.readTag();

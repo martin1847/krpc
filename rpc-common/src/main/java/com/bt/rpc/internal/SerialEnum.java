@@ -6,8 +6,7 @@ package com.bt.rpc.internal;
 /**
  * Protobuf enum {@code com.bt.rpc.internal.SerialEnum}
  */
-public enum SerialEnum
-    implements com.google.protobuf.ProtocolMessageEnum {
+public enum SerialEnum{
   /**
    * <code>JSON = 0;</code>
    */
@@ -28,7 +27,7 @@ public enum SerialEnum
    * <code>PSR = 4;</code>
    */
   PSR(4),
-  UNRECOGNIZED(-1),
+  UNRECOGNIZED(99),
   ;
 
   /**
@@ -62,14 +61,14 @@ public enum SerialEnum
   }
 
   /**
-   * @param value The numeric wire value of the corresponding enum entry.
-   * @return The enum associated with the given numeric wire value.
-   * @deprecated Use {@link #forNumber(int)} instead.
-   */
-  @Deprecated
-  public static SerialEnum valueOf(int value) {
-    return forNumber(value);
-  }
+  // * @param value The numeric wire value of the corresponding enum entry.
+  // * @return The enum associated with the given numeric wire value.
+  // * @deprecated Use {@link #forNumber(int)} instead.
+  // */
+  //@Deprecated
+  //public static SerialEnum valueOf(int value) {
+  //  return forNumber(value);
+  //}
 
   /**
    * @param value The numeric wire value of the corresponding enum entry.
@@ -86,48 +85,48 @@ public enum SerialEnum
     }
   }
 
-  public static com.google.protobuf.Internal.EnumLiteMap<SerialEnum>
-      internalGetValueMap() {
-    return internalValueMap;
-  }
-  private static final com.google.protobuf.Internal.EnumLiteMap<
-      SerialEnum> internalValueMap =
-        new com.google.protobuf.Internal.EnumLiteMap<SerialEnum>() {
-          public SerialEnum findValueByNumber(int number) {
-            return SerialEnum.forNumber(number);
-          }
-        };
+  //public static com.google.protobuf.Internal.EnumLiteMap<SerialEnum>
+  //    internalGetValueMap() {
+  //  return internalValueMap;
+  //}
+  //private static final com.google.protobuf.Internal.EnumLiteMap<
+  //    SerialEnum> internalValueMap =
+  //      new com.google.protobuf.Internal.EnumLiteMap<SerialEnum>() {
+  //        public SerialEnum findValueByNumber(int number) {
+  //          return SerialEnum.forNumber(number);
+  //        }
+  //      };
+  //
+  //public final com.google.protobuf.Descriptors.EnumValueDescriptor
+  //    getValueDescriptor() {
+  //  if (this == UNRECOGNIZED) {
+  //    throw new IllegalStateException(
+  //        "Can't get the descriptor of an unrecognized enum value.");
+  //  }
+  //  return getDescriptor().getValues().get(ordinal());
+  //}
+  //public final com.google.protobuf.Descriptors.EnumDescriptor
+  //    getDescriptorForType() {
+  //  return getDescriptor();
+  //}
+  //public static final com.google.protobuf.Descriptors.EnumDescriptor
+  //    getDescriptor() {
+  //  return Internal.getDescriptor().getEnumTypes().get(0);
+  //}
 
-  public final com.google.protobuf.Descriptors.EnumValueDescriptor
-      getValueDescriptor() {
-    if (this == UNRECOGNIZED) {
-      throw new IllegalStateException(
-          "Can't get the descriptor of an unrecognized enum value.");
-    }
-    return getDescriptor().getValues().get(ordinal());
-  }
-  public final com.google.protobuf.Descriptors.EnumDescriptor
-      getDescriptorForType() {
-    return getDescriptor();
-  }
-  public static final com.google.protobuf.Descriptors.EnumDescriptor
-      getDescriptor() {
-    return Internal.getDescriptor().getEnumTypes().get(0);
-  }
+  //private static final SerialEnum[] VALUES = values();
 
-  private static final SerialEnum[] VALUES = values();
-
-  public static SerialEnum valueOf(
-      com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
-    if (desc.getType() != getDescriptor()) {
-      throw new IllegalArgumentException(
-        "EnumValueDescriptor is not for this type.");
-    }
-    if (desc.getIndex() == -1) {
-      return UNRECOGNIZED;
-    }
-    return VALUES[desc.getIndex()];
-  }
+  //public static SerialEnum valueOf(
+  //    com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+  //  if (desc.getType() != getDescriptor()) {
+  //    throw new IllegalArgumentException(
+  //      "EnumValueDescriptor is not for this type.");
+  //  }
+  //  if (desc.getIndex() == -1) {
+  //    return UNRECOGNIZED;
+  //  }
+  //  return VALUES[desc.getIndex()];
+  //}
 
   private final int value;
 

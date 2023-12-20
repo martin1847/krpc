@@ -6,7 +6,6 @@ package com.bt.rpc.common.proto;
 
 import java.nio.charset.StandardCharsets;
 
-import com.google.protobuf.CodedOutputStream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -93,9 +92,29 @@ public class ProtoWriter {// implements  IProtoWriter
     }
 
     static byte[] streamUInt32(int value){
-        var size = CodedOutputStream.computeUInt32SizeNoTag(value);
+        var size = computeUInt32SizeNoTag(value);
         var buf = new byte[size];
         writeUInt32(buf,0,value);
         return buf;
+    }
+
+    /**
+     * copy from com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag
+     */
+    /** Compute the number of bytes that would be needed to encode a {@code uint32} field. */
+    public static int computeUInt32SizeNoTag(final int value) {
+        if ((value & (~0 << 7)) == 0) {
+            return 1;
+        }
+        if ((value & (~0 << 14)) == 0) {
+            return 2;
+        }
+        if ((value & (~0 << 21)) == 0) {
+            return 3;
+        }
+        if ((value & (~0 << 28)) == 0) {
+            return 4;
+        }
+        return 5;
     }
 }

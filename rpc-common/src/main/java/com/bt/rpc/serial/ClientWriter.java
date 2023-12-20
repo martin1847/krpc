@@ -5,8 +5,6 @@
 package com.bt.rpc.serial;
 
 import com.bt.rpc.internal.InputProto;
-import com.bt.rpc.internal.OutputProto;
-import com.google.protobuf.ByteString;
 
 /**
  *
@@ -20,7 +18,8 @@ public interface ClientWriter {
     /**
      * only for bare byte[]. ignore the
      */
-    ClientWriter BYTES = (obj, bd) ->  bd.setBs(ByteString.copyFrom((byte[]) obj[0]));
+    //ClientWriter BYTES = (obj, bd) ->  bd.setBs(ByteString.copyFrom((byte[]) obj[0]));
+    ClientWriter BYTES = (obj, bd) ->  bd.setBs((byte[]) obj[0]);
 
     /**
      * only for bare byte[]. ignore the

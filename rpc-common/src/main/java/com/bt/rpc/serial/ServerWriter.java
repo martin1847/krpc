@@ -5,7 +5,6 @@
 package com.bt.rpc.serial;
 
 import com.bt.rpc.internal.OutputProto;
-import com.google.protobuf.ByteString;
 
 /**
  *
@@ -29,5 +28,5 @@ public interface ServerWriter {
     /**
      * only for bare byte[]. ignore the
      */
-    ServerWriter BYTES = (obj, out) ->  out.setBs(ByteString.copyFrom((byte[]) obj));
+    ServerWriter BYTES = (obj, out) ->  out.setBs((byte[]) obj);
 }

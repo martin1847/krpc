@@ -17,10 +17,7 @@ import com.bt.rpc.serial.ServerWriter;
 import com.bt.rpc.server.invoke.DynamicInvoke;
 import com.bt.rpc.server.invoke.GenericValidator;
 import com.bt.rpc.server.invoke.NormalValidator;
-import com.bt.rpc.util.EnvUtils;
 import com.bt.rpc.util.RefUtils;
-import io.grpc.Metadata;
-import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
@@ -93,7 +90,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             } else if(byte[].class == firstInputType){
                 log.debug("Found byte[] input  {} " ,stub.method.getName());
 
-                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, sc.getArg().getBs().toByteArray());
+                invoke = sc -> (RpcResult) stub.method.invoke(serviceToInvoke, (Object) sc.getArg().getBs());
             }else if( firstInputType instanceof Class){
 
                 var type = (Class)firstInputType;
@@ -146,7 +143,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             } else if(byte[].class == firstInputType){
 
                 log.debug("found byte[] input MH {} " ,stub.method.getName());
-                invoke = sc -> (RpcResult) mh.invokeExact(sc.getArg().getBs().toByteArray());
+                invoke = sc -> (RpcResult) mh.invokeExact(sc.getArg().getBs());
             } else if( firstInputType instanceof Class){
 
                 // may has method override issue , int / string  both change to Object Param,

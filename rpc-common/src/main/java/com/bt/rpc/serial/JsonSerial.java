@@ -60,9 +60,9 @@ public class JsonSerial  implements Serial{
 
     @Override
     public void writeOutput(Object obj, OutputProto.Builder out) {
-        if(obj.getClass() == byte[].class) {
-            log.debug("Server write got bytes ....");
-        }
+        //if(obj.getClass() == byte[].class) {
+        //    log.debug("Server write got bytes ....");
+        //}
         out.setUtf8(JsonUtils.stringify(obj));
     }
 }

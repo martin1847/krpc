@@ -9,7 +9,6 @@ import java.lang.reflect.ParameterizedType;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
-import com.google.protobuf.ByteString;
 
 /**
  *

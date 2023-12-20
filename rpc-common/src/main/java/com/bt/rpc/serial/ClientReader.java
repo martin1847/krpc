@@ -46,6 +46,6 @@ public interface ClientReader<T> {
         }
     }
 
-    ClientReader<byte[]> BARE = (serial, proto) -> proto.getBs().toByteArray();
+    ClientReader<byte[]> BARE = (serial, proto) -> proto.getBs();
 
 }

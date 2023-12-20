@@ -3,11 +3,9 @@ package com.bt.rpc.client;
 import java.nio.charset.StandardCharsets;
 
 import com.bt.rpc.annotation.Doc;
+import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
-//import com.bt.rpc.internal.SerEnum;
-import com.google.protobuf.ByteString;
-import com.bt.rpc.common.MethodStub;
 
 /**
  * 2020-08-25 15:27
@@ -34,7 +32,7 @@ public interface CacheManager {
         if(stub.returnType != byte[].class){
             value = message.getUtf8().getBytes(StandardCharsets.UTF_8);
         }else {
-            value = message.getBs().toByteArray();
+            value = message.getBs();//.toByteArray();
         }
         set(cacheKey,value,stub.getExpireSeconds());
     }
@@ -51,7 +49,7 @@ public interface CacheManager {
         if(stub.returnType != byte[].class){
             bd.setUtf8(new String(bs,StandardCharsets.UTF_8));
         }else{
-            bd.setBs(ByteString.copyFrom(bs));
+            bd.setBs(bs);
         }
         return bd.build();
     }

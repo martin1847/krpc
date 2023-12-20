@@ -3,13 +3,9 @@
 
 package com.bt.rpc.internal;
 
-import com.bt.rpc.internal.OutputProtoOrBuilder.OutBuilder;
-
-public interface InputProtoOrBuilder
-    //    extends
-    //// @@protoc_insertion_point(interface_extends:com.bt.rpc.internal.InputProto)
-    //com.google.protobuf.MessageOrBuilder
-{
+public interface InputProtoOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:com.bt.rpc.internal.InputProto)
+    com.google.protobuf.MessageOrBuilder {
 
   /**
    * <code>.com.bt.rpc.internal.SerialEnum e = 1;</code>
@@ -40,16 +36,16 @@ public interface InputProtoOrBuilder
    * @return The utf8.
    */
   String getUtf8();
-  ///**
-  // * <pre>
-  // *for json , txt like serial
-  // * </pre>
-  // *
-  // * <code>string utf8 = 2;</code>
-  // * @return The bytes for utf8.
-  // */
-  //com.google.protobuf.ByteString
-  //    getUtf8Bytes();
+  /**
+   * <pre>
+   *for json , txt like serial
+   * </pre>
+   *
+   * <code>string utf8 = 2;</code>
+   * @return The bytes for utf8.
+   */
+  com.google.protobuf.ByteString
+      getUtf8Bytes();
 
   /**
    * <pre>
@@ -68,13 +64,7 @@ public interface InputProtoOrBuilder
    * <code>bytes bs = 3;</code>
    * @return The bs.
    */
-  byte[] getBs();
+  com.google.protobuf.ByteString getBs();
 
   public InputProto.DataCase getDataCase();
-
-  interface InBuilder{
-    InBuilder setE(SerialEnum value);
-    InBuilder setUtf8(String value);
-    InBuilder setBs(byte[] value);
-  }
 }

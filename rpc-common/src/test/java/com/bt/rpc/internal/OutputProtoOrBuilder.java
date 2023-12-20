@@ -3,11 +3,9 @@
 
 package com.bt.rpc.internal;
 
-public interface OutputProtoOrBuilder {
-//  extends
-//  // @@protoc_insertion_point(interface_extends:com.bt.rpc.internal.OutputProto)
-//  com.google.protobuf.MessageOrBuilder
-//{
+public interface OutputProtoOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:com.bt.rpc.internal.OutputProto)
+    com.google.protobuf.MessageOrBuilder {
 
   /**
    * <pre>
@@ -29,15 +27,15 @@ public interface OutputProtoOrBuilder {
    */
   String getM();
   /**
-  // * <pre>
-  // *detail  message if there is a error ,otherwise  null
-  // * </pre>
-  // *
-  // * <code>string m = 2;</code>
-  // * @return The bytes for m.
-  // */
-  //com.google.protobuf.ByteString
-  //    getMBytes();
+   * <pre>
+   *detail  message if there is a error ,otherwise  null 
+   * </pre>
+   *
+   * <code>string m = 2;</code>
+   * @return The bytes for m.
+   */
+  com.google.protobuf.ByteString
+      getMBytes();
 
   /**
    * <pre>
@@ -61,12 +59,12 @@ public interface OutputProtoOrBuilder {
    * <pre>
    *&#47;/for json , txt like serial
    * </pre>
-  // *
-  // * <code>string utf8 = 3;</code>
-  // * @return The bytes for utf8.
-  // */
-  //com.google.protobuf.ByteString
-  //    getUtf8Bytes();
+   *
+   * <code>string utf8 = 3;</code>
+   * @return The bytes for utf8.
+   */
+  com.google.protobuf.ByteString
+      getUtf8Bytes();
 
   /**
    * <pre>
@@ -85,15 +83,7 @@ public interface OutputProtoOrBuilder {
    * <code>bytes bs = 4;</code>
    * @return The bs.
    */
-  byte[] getBs();
+  com.google.protobuf.ByteString getBs();
 
   public OutputProto.DataCase getDataCase();
-
-
-  interface OutBuilder{
-    OutBuilder setC(int value);
-    OutBuilder  setM(String value);
-    OutBuilder setUtf8( String value);
-    OutBuilder setBs(byte[] value);
-  }
 }

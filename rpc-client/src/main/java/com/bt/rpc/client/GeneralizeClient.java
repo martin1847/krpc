@@ -7,7 +7,6 @@ import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.util.JsonUtils;
-import com.google.protobuf.ByteString;
 import io.grpc.CallOptions;
 import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
 import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener;
@@ -90,9 +89,9 @@ public class GeneralizeClient {
         if (outout.hasUtf8()) {
             data = outout.getUtf8();
         } else {
-            ByteString payload = outout.getBs();
+            var payload = outout.getBs();
             data = JsonUtils.stringify(
-                    Base64.getEncoder().encodeToString(payload.toByteArray()));
+                    Base64.getEncoder().encodeToString(payload));
         }
         sb.append(",\"data\":").append(data);
         sb.append('}');

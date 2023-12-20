@@ -57,7 +57,7 @@ public class OutputMarshaller implements Marshaller<OutputProto> {
             //return new ByteArrayInputStream(buf);
         }
 
-        return tagLengthDelimitedAsStream(DATA_4_BYTES_TAG,proto.getBs().toByteArray());
+        return tagLengthDelimitedAsStream(DATA_4_BYTES_TAG,proto.getBs());
 
         //if (!proto.getMBytes().isEmpty()) {
         //    com.google.protobuf.GeneratedMessageV3.writeString(output, 2, m_);
@@ -89,7 +89,7 @@ public class OutputMarshaller implements Marshaller<OutputProto> {
     @SneakyThrows
     @Override
     public OutputProto parse(InputStream inputStream) {
-        return OutputProto.parser().parseFrom(inputStream);
+        return new OutputProto(inputStream);
     }
     //
     //public static void main(String[] args) {

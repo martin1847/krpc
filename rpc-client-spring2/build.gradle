@@ -15,7 +15,7 @@ dependencies {
 
     compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 //    implementation 'org.springframework:spring-context:5.3.31'
-    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
 //    api "io.grpc:grpc-netty:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
 

@@ -4,6 +4,8 @@
  */
 package test.client;
 
+import java.util.Arrays;
+
 import com.bt.rpc.client.AsyncClient;
 import com.bt.rpc.client.AsyncMethod;
 import com.bt.rpc.client.AsyncMethod.ResultObserver;
@@ -25,7 +27,11 @@ public class TestDemoService {
 
         var demoService = client.getService(DemoService.class,null);
 
-        System.out.println(demoService.bytesTime());
+        System.out.println("bytesTime : "+ Arrays.toString(demoService.bytesTime().getData()));
+
+        System.out.println(demoService.bytesSum(new byte[]{1,2,3,4,5}));
+
+        System.out.println("bytesInc: "+ Arrays.toString(demoService.incBytes(new byte[]{1,2,3,4,5}).getData()));
 
         var asyncClient = new AsyncClient<>(demoService);
         testAsync(asyncClient,"save",new Book(11,"async"));

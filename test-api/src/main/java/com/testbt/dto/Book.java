@@ -1,5 +1,6 @@
 package com.testbt.dto;
 
+import com.bt.rpc.annotation.Doc;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +9,12 @@ import lombok.NoArgsConstructor;
 public class Book {
     private Integer id;
     private String name;
+
+
+    Float lng;
+
+    @Doc(value = "纬度")
+    Float lat;
 
 
     BookStatus stat;

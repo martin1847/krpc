@@ -16,7 +16,7 @@ public class TestGen {
 
 
     public static void main(String[] args) {
-        //Gen.basePkg = "com.zlkj.test";
+        Gen.basePkg = DemoRpc.class.getPackageName();
         ////Gen.basePkg = "com.zlkj.course.partner.admin.service";
         //
         //var json  = "{\"1-1-1\":[\"1000-01-01\",\"2081-05-08\"]}";
@@ -25,9 +25,9 @@ public class TestGen {
         //System.out.println(map);
 
         Gen.genSingleTypescript("-test", DemoRpc.class);
-        //Gen.genTypescript("demo-java-server");
-        //Gen.genMiniprogram("demo-java-server");
-        ////Gen.genDart("demo-java-server");
+        Gen.genTypescript("demo-java-server");
+        Gen.genMiniprogram("demo-java-server");
+        Gen.genDart("demo-java-server");
         ////Gen.genYamltest("demo-java-server");
         //
         //testEmojiChar();

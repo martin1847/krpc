@@ -25,4 +25,14 @@ public abstract class StringUtils {
         return null != str && !str.isBlank();
     }
 
+    /**
+     * 如果是空串，转换为null值
+     */
+    public static String nullIfBlank(String str){
+        if(null != str && str.isBlank()){
+            return null;
+        }
+        return str;
+    }
+
 }

@@ -46,6 +46,13 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     //@Inject
     //RpcConfig rpcConfig;
 
+    static {
+        log.debug("static GraalvmBuild.forNative.....");
+        //io.grpc.ManagedChannelProvider$ProviderNotFoundException: No functional server found. Try adding a dependency on the grpc-netty or grpc-netty-shaded artifact quarkus graal native
+        //https://github.com/quarkusio/quarkus/blob/main/extensions/grpc/runtime/src/main/java/io/quarkus/grpc/spi/GrpcBuilderProvider.java
+        GraalvmBuild.forNative();
+    }
+
     Server server;
 
     ExecutorService executor;

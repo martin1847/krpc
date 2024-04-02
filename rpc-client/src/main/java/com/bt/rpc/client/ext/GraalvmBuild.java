@@ -16,4 +16,8 @@ public class GraalvmBuild {
         System.out.println("[ RPC Client For GraalvmBuild ] NameResolverRegistry   : " + NameResolverRegistry.getDefaultRegistry());
         System.out.println("[ RPC Client For GraalvmBuild ] LoadBalancerRegistry   : " + LoadBalancerRegistry.getDefaultRegistry());
     }
+
+    static public void forNative(){
+
+    }
 }

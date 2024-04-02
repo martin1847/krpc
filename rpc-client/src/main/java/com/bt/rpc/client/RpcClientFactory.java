@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.List;
 
+import com.bt.rpc.client.ext.GraalvmBuild;
 import com.bt.rpc.internal.SerialEnum;
 import io.grpc.ManagedChannel;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,14 @@ public class RpcClientFactory {
     private CacheManager cacheManager;
 
     private SerialEnum defaultSerial;
+
+
+    static {
+        log.debug("static client GraalvmBuild.forNative.....");
+        //io.grpc.ManagedChannelProvider$ProviderNotFoundException: No functional server found. Try adding a dependency on the grpc-netty or grpc-netty-shaded artifact quarkus graal native
+        //https://github.com/quarkusio/quarkus/blob/main/extensions/grpc/runtime/src/main/java/io/quarkus/grpc/spi/GrpcBuilderProvider.java
+        GraalvmBuild.forNative();
+    }
 
     public RpcClientFactory(String serverName, ManagedChannel channel, CacheManager cacheManager) {
         this.channel = channel;

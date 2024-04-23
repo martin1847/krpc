@@ -1,6 +1,7 @@
 package com.bt.rpc.model;
 
 import java.io.Serializable;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -58,6 +59,13 @@ public class RpcResult<DTO> implements Serializable {
         return (RpcResult<T>) this;
     }
 
+
+    public DTO orElseThrow() {
+        if (data == null) {
+            throw new IllegalStateException("error code: "+code +" ,caused by: "+msg);
+        }
+        return data;
+    }
 
 
     public static <T> RpcResult<T> ok(T data){

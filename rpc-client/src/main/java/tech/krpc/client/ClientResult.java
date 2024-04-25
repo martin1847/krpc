@@ -1,4 +1,4 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import tech.krpc.common.ResultWrapper;
 import tech.krpc.internal.OutputProto;

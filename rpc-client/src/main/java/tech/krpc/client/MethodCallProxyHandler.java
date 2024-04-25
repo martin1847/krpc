@@ -1,4 +1,4 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;

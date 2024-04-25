@@ -1,4 +1,4 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;

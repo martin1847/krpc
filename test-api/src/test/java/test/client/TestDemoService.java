@@ -6,9 +6,9 @@ package test.client;
 
 import java.util.Arrays;
 
-import com.bt.rpc.client.AsyncClient;
-import com.bt.rpc.client.AsyncMethod;
-import com.bt.rpc.client.AsyncMethod.ResultObserver;
+import tech.krpc.client.AsyncClient;
+import tech.krpc.client.AsyncMethod;
+import tech.krpc.client.AsyncMethod.ResultObserver;
 import tech.krpc.model.RpcResult;
 import com.testbt.DemoService;
 import com.testbt.dto.TimeReq;

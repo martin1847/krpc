@@ -4,7 +4,7 @@
  */
 package test.client;
 
-import com.bt.rpc.client.GeneralizeClient;
+import tech.krpc.client.GeneralizeClient;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 

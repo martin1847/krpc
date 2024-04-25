@@ -1,4 +1,4 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

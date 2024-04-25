@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.lang.reflect.Proxy;
 import java.util.Map.Entry;

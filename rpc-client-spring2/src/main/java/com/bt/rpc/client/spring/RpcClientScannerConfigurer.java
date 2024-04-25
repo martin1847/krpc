@@ -11,8 +11,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import tech.krpc.annotation.RpcService;
-import com.bt.rpc.client.CacheManager;
-import com.bt.rpc.client.RpcClientFactory;
+import tech.krpc.client.CacheManager;
+import tech.krpc.client.RpcClientFactory;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import io.grpc.ManagedChannelBuilder;

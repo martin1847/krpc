@@ -1,4 +1,4 @@
-package com.bt.rpc.client.ext;
+package tech.krpc.client.ext;
 
 import io.grpc.LoadBalancerRegistry;
 import io.grpc.ManagedChannelProvider;

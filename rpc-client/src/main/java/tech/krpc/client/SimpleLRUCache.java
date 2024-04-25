@@ -1,4 +1,4 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import tech.krpc.annotation.Doc;
 import lombok.AllArgsConstructor;

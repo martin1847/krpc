@@ -1,4 +1,4 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.util.Base64;
 import java.util.function.Consumer;

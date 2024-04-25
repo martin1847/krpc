@@ -1,4 +1,4 @@
-package com.bt.rpc.client.ext;
+package tech.krpc.client.ext;
 
 import java.util.List;
 

@@ -3,10 +3,10 @@ package test.client;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import com.bt.rpc.client.CacheManager;
-import com.bt.rpc.client.ClientFilter;
-import com.bt.rpc.client.RpcClientFactory;
-import com.bt.rpc.client.SimpleLRUCache;
+import tech.krpc.client.CacheManager;
+import tech.krpc.client.ClientFilter;
+import tech.krpc.client.RpcClientFactory;
+import tech.krpc.client.SimpleLRUCache;
 import tech.krpc.common.RpcConstants;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;

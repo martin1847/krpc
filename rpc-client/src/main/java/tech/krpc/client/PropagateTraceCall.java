@@ -2,7 +2,7 @@
  * BestULearn.com Inc.
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 //import jakarta.validation.constraints.NotNull;
 

@@ -2,12 +2,12 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import com.bt.rpc.client.AsyncMethod.ResultObserver;
+import tech.krpc.client.AsyncMethod.ResultObserver;
 import lombok.extern.slf4j.Slf4j;
 
 /**

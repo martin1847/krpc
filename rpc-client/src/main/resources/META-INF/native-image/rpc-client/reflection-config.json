@@ -1,6 +1,4 @@
 [
-
-
   {
     "name" : "io.netty.channel.socket.nio.NioSocketChannel",
     "allDeclaredConstructors" : true,
@@ -8,11 +6,9 @@
     "allDeclaredMethods" : true,
     "allPublicMethods" : true
   },
-
   {
     "name" : "io.grpc.netty.NettyClientHandler",
     "allDeclaredMethods" : true,
     "allPublicMethods" : true
   }
-
 ]

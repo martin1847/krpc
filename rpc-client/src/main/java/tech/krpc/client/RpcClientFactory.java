@@ -1,10 +1,10 @@
-package com.bt.rpc.client;
+package tech.krpc.client;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.List;
 
-import com.bt.rpc.client.ext.GraalvmBuild;
+import tech.krpc.client.ext.GraalvmBuild;
 import tech.krpc.internal.SerialEnum;
 import io.grpc.ManagedChannel;
 import lombok.extern.slf4j.Slf4j;

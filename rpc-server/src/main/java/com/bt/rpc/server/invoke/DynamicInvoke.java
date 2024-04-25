@@ -3,7 +3,7 @@ package com.bt.rpc.server.invoke;
 import java.lang.reflect.ParameterizedType;
 
 import tech.krpc.model.RpcResult;
-import com.bt.rpc.serial.Serial;
+import tech.krpc.serial.Serial;
 import com.bt.rpc.server.ServerContext;
 
 @FunctionalInterface

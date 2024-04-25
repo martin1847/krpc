@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import tech.krpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;
-import com.bt.rpc.util.EnvUtils;
+import tech.krpc.util.EnvUtils;
 import com.testbt.AbstractDemoService;
 import com.testbt.dto.TimeReq;
 import com.testbt.dto.TimeResult;

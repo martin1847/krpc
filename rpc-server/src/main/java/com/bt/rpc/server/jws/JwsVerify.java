@@ -15,7 +15,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.bt.rpc.util.JsonUtils;
+import tech.krpc.util.JsonUtils;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import lombok.Getter;

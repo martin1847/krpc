@@ -4,7 +4,7 @@
  */
 package test.zlkj;
 
-import com.bt.rpc.util.RefUtils;
+import tech.krpc.util.RefUtils;
 import com.testbt.dto.Img;
 import com.testbt.dto.SubImg;
 import org.junit.jupiter.api.Test;

@@ -2,7 +2,7 @@ package com.testbt.filter;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import com.bt.rpc.common.FilterChain;
+import tech.krpc.common.FilterChain;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.server.ServerFilter;
 import com.bt.rpc.server.ServerResult;

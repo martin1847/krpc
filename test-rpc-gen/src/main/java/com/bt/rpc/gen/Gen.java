@@ -19,13 +19,13 @@ import java.util.stream.Collectors;
 
 import tech.krpc.annotation.RpcService;
 import tech.krpc.annotation.UnsafeWeb;
-import com.bt.rpc.common.MethodStub;
+import tech.krpc.common.MethodStub;
 import com.bt.rpc.gen.meta.ApiMetaRoot;
 import com.bt.rpc.gen.meta.Dto;
 import com.bt.rpc.server.RpcServerBuilder;
 import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
-import com.bt.rpc.util.JsonUtils;
-import com.bt.rpc.util.RefUtils;
+import tech.krpc.util.JsonUtils;
+import tech.krpc.util.RefUtils;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import freemarker.template.Configuration;

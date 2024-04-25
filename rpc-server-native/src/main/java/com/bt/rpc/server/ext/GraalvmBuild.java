@@ -1,6 +1,6 @@
 package com.bt.rpc.server.ext;
 
-import com.bt.rpc.common.RpcConstants;
+import tech.krpc.common.RpcConstants;
 import io.grpc.ServerProvider;
 
 /**

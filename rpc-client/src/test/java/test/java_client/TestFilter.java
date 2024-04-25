@@ -3,7 +3,7 @@ package test.java_client;
 import com.bt.rpc.client.ClientContext;
 import com.bt.rpc.client.ClientFilter;
 import com.bt.rpc.client.ClientResult;
-import com.bt.rpc.common.FilterChain;
+import tech.krpc.common.FilterChain;
 
 /**
  * 2020-04-03 17:19

@@ -17,7 +17,7 @@ import com.bt.http.server.AbstractHttpHandler;
 import com.bt.http.server.GetHandler;
 import com.bt.http.server.HttpServer;
 import com.bt.http.server.PostHandler;
-import com.bt.rpc.util.EnvUtils;
+import tech.krpc.util.EnvUtils;
 import io.quarkus.runtime.Startup;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;

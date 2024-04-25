@@ -1,6 +1,6 @@
 package com.bt.rpc.client.ext;
 
-import com.bt.rpc.common.RpcConstants;
+import tech.krpc.common.RpcConstants;
 
 public class Remote {
     public String host;

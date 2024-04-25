@@ -19,17 +19,17 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import tech.krpc.annotation.Doc;
-import com.bt.rpc.common.RpcMetaService;
-import com.bt.rpc.common.meta.Anno;
-import com.bt.rpc.common.meta.Api;
-import com.bt.rpc.common.meta.ApiMeta;
-import com.bt.rpc.common.meta.Dto;
-import com.bt.rpc.common.meta.Method;
-import com.bt.rpc.common.meta.Property;
-import com.bt.rpc.common.meta.PropertyType;
-import com.bt.rpc.internal.SerialEnum;
+import tech.krpc.common.RpcMetaService;
+import tech.krpc.common.meta.Anno;
+import tech.krpc.common.meta.Api;
+import tech.krpc.common.meta.ApiMeta;
+import tech.krpc.common.meta.Dto;
+import tech.krpc.common.meta.Method;
+import tech.krpc.common.meta.Property;
+import tech.krpc.common.meta.PropertyType;
+import tech.krpc.internal.SerialEnum;
 import tech.krpc.model.RpcResult;
-import com.bt.rpc.serial.Serial;
+import tech.krpc.serial.Serial;
 import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
 import lombok.extern.slf4j.Slf4j;
 

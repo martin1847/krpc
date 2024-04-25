@@ -5,9 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-import com.bt.rpc.common.AbstractContext;
-import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.internal.SerialEnum;
+import tech.krpc.common.AbstractContext;
+import tech.krpc.common.FilterChain;
+import tech.krpc.internal.SerialEnum;
 import tech.krpc.model.RpcResult;
 import io.grpc.CallOptions;
 import lombok.Data;

@@ -1,10 +1,10 @@
 package com.bt.rpc.client;
 
-import com.bt.rpc.common.ResultWrapper;
-import com.bt.rpc.internal.OutputProto;
+import tech.krpc.common.ResultWrapper;
+import tech.krpc.internal.OutputProto;
 import tech.krpc.model.RpcResult;
-import com.bt.rpc.serial.ClientReader;
-import com.bt.rpc.serial.Serial;
+import tech.krpc.serial.ClientReader;
+import tech.krpc.serial.Serial;
 
 /**
  * 2020-04-03 16:12

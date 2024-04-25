@@ -3,10 +3,10 @@ package com.bt.rpc.client;
 import java.util.Base64;
 import java.util.function.Consumer;
 
-import com.bt.rpc.common.MethodStub;
-import com.bt.rpc.internal.InputProto;
-import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.util.JsonUtils;
+import tech.krpc.common.MethodStub;
+import tech.krpc.internal.InputProto;
+import tech.krpc.internal.OutputProto;
+import tech.krpc.util.JsonUtils;
 import io.grpc.CallOptions;
 import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
 import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener;

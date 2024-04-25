@@ -6,10 +6,10 @@ import java.util.List;
 
 import jakarta.validation.Validator;
 
-import com.bt.rpc.common.AbstractContext;
-import com.bt.rpc.common.FilterChain;
-import com.bt.rpc.context.TraceMeta;
-import com.bt.rpc.internal.InputProto;
+import tech.krpc.common.AbstractContext;
+import tech.krpc.common.FilterChain;
+import tech.krpc.context.TraceMeta;
+import tech.krpc.internal.InputProto;
 import com.bt.rpc.server.jws.CredentialVerify;
 import com.bt.rpc.server.jws.HttpConst;
 import com.bt.rpc.server.jws.UserCredential;

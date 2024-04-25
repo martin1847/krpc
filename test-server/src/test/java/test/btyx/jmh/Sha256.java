@@ -7,7 +7,7 @@ package test.btrpc.jmh;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import com.bt.rpc.util.MD5;
+import tech.krpc.util.MD5;
 import com.google.common.hash.Hashing;
 
 /**

@@ -1,9 +1,9 @@
 package com.bt.rpc.server;
 
-import com.bt.rpc.common.ResultWrapper;
-import com.bt.rpc.internal.OutputProto;
+import tech.krpc.common.ResultWrapper;
+import tech.krpc.internal.OutputProto;
 import tech.krpc.model.RpcResult;
-import com.bt.rpc.serial.ServerWriter;
+import tech.krpc.serial.ServerWriter;
 
 /**
  * 2020-04-07 13:41

@@ -4,8 +4,8 @@
  */
 package com.bt.rpc.server;
 
-import com.bt.rpc.internal.InputProto;
-import com.bt.rpc.internal.OutputProto;
+import tech.krpc.internal.InputProto;
+import tech.krpc.internal.OutputProto;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;

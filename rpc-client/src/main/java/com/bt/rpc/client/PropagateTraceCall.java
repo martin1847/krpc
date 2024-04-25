@@ -6,9 +6,9 @@ package com.bt.rpc.client;
 
 //import jakarta.validation.constraints.NotNull;
 
-import com.bt.rpc.context.TraceMeta;
-import com.bt.rpc.internal.InputProto;
-import com.bt.rpc.internal.OutputProto;
+import tech.krpc.context.TraceMeta;
+import tech.krpc.internal.InputProto;
+import tech.krpc.internal.OutputProto;
 import io.grpc.ClientCall;
 import io.grpc.ForwardingClientCall;
 import io.grpc.Metadata;

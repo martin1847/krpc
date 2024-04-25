@@ -7,7 +7,7 @@ import com.bt.rpc.client.CacheManager;
 import com.bt.rpc.client.ClientFilter;
 import com.bt.rpc.client.RpcClientFactory;
 import com.bt.rpc.client.SimpleLRUCache;
-import com.bt.rpc.common.RpcConstants;
+import tech.krpc.common.RpcConstants;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 

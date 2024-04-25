@@ -4,10 +4,10 @@
  */
 package com.bt.rpc.server;
 
-import com.bt.rpc.common.RpcConstants;
-import com.bt.rpc.common.MService;
+import tech.krpc.common.RpcConstants;
+import tech.krpc.common.MService;
 import tech.krpc.model.RpcResult;
-import com.bt.rpc.util.EnvUtils;
+import tech.krpc.util.EnvUtils;
 
 /**
  *

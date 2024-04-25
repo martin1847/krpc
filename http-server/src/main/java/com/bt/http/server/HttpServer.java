@@ -2,7 +2,6 @@ package com.bt.http.server;
 
 import jakarta.annotation.PreDestroy;
 
-import com.bt.rpc.util.EnvUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;

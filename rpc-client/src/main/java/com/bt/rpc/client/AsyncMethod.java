@@ -7,8 +7,8 @@ package com.bt.rpc.client;
 import java.lang.reflect.Proxy;
 import java.util.Map.Entry;
 
-import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.internal.SerialEnum;
+import tech.krpc.internal.OutputProto;
+import tech.krpc.internal.SerialEnum;
 import tech.krpc.model.RpcResult;
 import io.grpc.CallOptions;
 import io.grpc.Context;

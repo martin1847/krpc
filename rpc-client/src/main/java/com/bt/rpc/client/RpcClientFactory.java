@@ -5,7 +5,7 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 
 import com.bt.rpc.client.ext.GraalvmBuild;
-import com.bt.rpc.internal.SerialEnum;
+import tech.krpc.internal.SerialEnum;
 import io.grpc.ManagedChannel;
 import lombok.extern.slf4j.Slf4j;
 

@@ -3,9 +3,9 @@ package com.bt.rpc.client;
 import java.nio.charset.StandardCharsets;
 
 import tech.krpc.annotation.Doc;
-import com.bt.rpc.common.MethodStub;
-import com.bt.rpc.internal.InputProto;
-import com.bt.rpc.internal.OutputProto;
+import tech.krpc.common.MethodStub;
+import tech.krpc.internal.InputProto;
+import tech.krpc.internal.OutputProto;
 
 /**
  * 2020-08-25 15:27

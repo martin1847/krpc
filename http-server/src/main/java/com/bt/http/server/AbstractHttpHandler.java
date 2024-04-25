@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.Validator;
 
-import com.bt.rpc.util.JsonUtils;
+import tech.krpc.util.JsonUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;

@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 
-import com.bt.rpc.annotation.RpcService;
+import tech.krpc.annotation.RpcService;
 import com.bt.rpc.client.CacheManager;
 import com.bt.rpc.client.RpcClientFactory;
 import com.google.common.reflect.ClassPath;

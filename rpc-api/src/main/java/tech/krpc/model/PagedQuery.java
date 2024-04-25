@@ -2,7 +2,7 @@
  * Botaoyx.com Inc.
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.model;
+package tech.krpc.model;
 
 import java.io.Serializable;
 

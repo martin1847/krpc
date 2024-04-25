@@ -21,7 +21,7 @@ import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 
 /**
  *

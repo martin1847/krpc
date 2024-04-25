@@ -9,7 +9,7 @@ import java.util.Map;
 
 import jakarta.validation.constraints.Size;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import lombok.Data;
 
 /**

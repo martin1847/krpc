@@ -1,12 +1,12 @@
 [
   {
-    "name" : "com.bt.model.PagedList",
+    "name" : "tech.krpc.model.PagedList",
     "allPublicConstructors" : true,
     "allPublicMethods" : true,
     "allDeclaredFields" : true
   },
   {
-    "name" : "com.bt.model.PagedQuery",
+    "name" : "tech.krpc.model.PagedQuery",
     "allPublicConstructors" : true,
     "allPublicMethods" : true,
     "allDeclaredFields" : true

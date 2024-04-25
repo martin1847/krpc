@@ -1,7 +1,6 @@
-package com.bt.rpc.model;
+package tech.krpc.model;
 
 import java.io.Serializable;
-import java.util.NoSuchElementException;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;

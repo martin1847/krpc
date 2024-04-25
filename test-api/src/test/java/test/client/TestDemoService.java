@@ -9,7 +9,7 @@ import java.util.Arrays;
 import com.bt.rpc.client.AsyncClient;
 import com.bt.rpc.client.AsyncMethod;
 import com.bt.rpc.client.AsyncMethod.ResultObserver;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.testbt.DemoService;
 import com.testbt.dto.TimeReq;
 import com.testbt.dto.TimeResult;

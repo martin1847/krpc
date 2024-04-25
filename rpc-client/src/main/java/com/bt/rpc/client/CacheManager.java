@@ -2,7 +2,7 @@ package com.bt.rpc.client;
 
 import java.nio.charset.StandardCharsets;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;

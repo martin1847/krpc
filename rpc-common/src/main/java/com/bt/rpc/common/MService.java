@@ -1,8 +1,8 @@
 package com.bt.rpc.common;
 
-import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.annotation.UnsafeWeb;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.annotation.RpcService;
+import tech.krpc.annotation.UnsafeWeb;
+import tech.krpc.model.RpcResult;
 
 /**
  * 2020-01-19 16:05

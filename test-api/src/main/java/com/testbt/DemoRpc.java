@@ -2,8 +2,8 @@ package com.testbt;
 
 import java.util.List;
 
-import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.annotation.RpcService;
+import tech.krpc.model.RpcResult;
 import com.testbt.dto.Book;
 import com.testbt.dto.TimeReq;
 import com.testbt.dto.TimeResult;

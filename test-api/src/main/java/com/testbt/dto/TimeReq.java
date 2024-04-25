@@ -2,7 +2,7 @@ package com.testbt.dto;
 
 import java.util.List;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

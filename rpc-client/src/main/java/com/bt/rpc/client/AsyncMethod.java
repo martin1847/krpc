@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import io.grpc.CallOptions;
 import io.grpc.Context;
 import io.grpc.stub.ClientCalls;

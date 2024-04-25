@@ -5,13 +5,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import com.bt.rpc.annotation.UnsafeWeb;
-import com.bt.rpc.annotation.UnsafeWeb.RequireCredential;
+import tech.krpc.annotation.UnsafeWeb;
+import tech.krpc.annotation.UnsafeWeb.RequireCredential;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.serial.ServerWriter;
 import com.bt.rpc.server.invoke.DynamicInvoke;

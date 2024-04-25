@@ -1,6 +1,6 @@
 package com.bt.rpc.client;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import lombok.AllArgsConstructor;
 
 import java.util.LinkedHashMap;

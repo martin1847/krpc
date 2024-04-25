@@ -4,7 +4,7 @@
  */
 package com.testbt.dto;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 
 /**
  *

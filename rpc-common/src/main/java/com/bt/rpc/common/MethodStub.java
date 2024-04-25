@@ -3,7 +3,7 @@ package com.bt.rpc.common;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
-import com.bt.rpc.annotation.RpcService;
+import tech.krpc.annotation.RpcService;
 import com.bt.rpc.common.proto.InputMarshaller;
 import com.bt.rpc.common.proto.OutputMarshaller;
 import com.bt.rpc.internal.InputProto;

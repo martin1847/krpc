@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import com.bt.rpc.gen.meta.Anno;
 import com.bt.rpc.gen.meta.PropertyType;
 

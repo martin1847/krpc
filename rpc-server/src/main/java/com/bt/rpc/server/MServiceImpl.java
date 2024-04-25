@@ -6,7 +6,7 @@ package com.bt.rpc.server;
 
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.common.MService;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.util.EnvUtils;
 
 /**

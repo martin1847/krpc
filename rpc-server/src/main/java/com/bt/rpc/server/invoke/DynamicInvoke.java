@@ -2,7 +2,7 @@ package com.bt.rpc.server.invoke;
 
 import java.lang.reflect.ParameterizedType;
 
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.server.ServerContext;
 

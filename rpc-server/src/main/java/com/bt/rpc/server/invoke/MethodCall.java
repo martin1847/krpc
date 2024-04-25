@@ -4,7 +4,7 @@
  */
 package com.bt.rpc.server.invoke;
 
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 
 /**
  *

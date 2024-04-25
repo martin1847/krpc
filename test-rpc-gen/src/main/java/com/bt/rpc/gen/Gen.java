@@ -17,8 +17,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.annotation.UnsafeWeb;
+import tech.krpc.annotation.RpcService;
+import tech.krpc.annotation.UnsafeWeb;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.gen.meta.ApiMetaRoot;
 import com.bt.rpc.gen.meta.Dto;

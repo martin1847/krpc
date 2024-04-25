@@ -2,9 +2,9 @@ package com.bt.rpc.common;
 
 import java.util.List;
 
-import com.bt.rpc.annotation.RpcService;
+import tech.krpc.annotation.RpcService;
 import com.bt.rpc.common.meta.ApiMeta;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 
 /**
  * 2020-01-19 16:05

@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 import com.bt.rpc.common.AbstractContext;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.internal.SerialEnum;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import io.grpc.CallOptions;
 import lombok.Data;
 

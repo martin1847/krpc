@@ -1,4 +1,4 @@
-package com.bt.rpc.annotation;
+package tech.krpc.annotation;
 
 import java.lang.annotation.*;
 

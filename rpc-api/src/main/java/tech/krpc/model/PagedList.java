@@ -1,4 +1,4 @@
-package com.bt.model;
+package tech.krpc.model;
 
 
 import java.io.Serializable;

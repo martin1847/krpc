@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.bt.rpc.annotation.RpcService;
+import tech.krpc.annotation.RpcService;
 import com.bt.rpc.common.MService;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.common.RpcConstants;

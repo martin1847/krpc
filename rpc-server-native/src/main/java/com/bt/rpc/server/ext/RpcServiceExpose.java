@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 
-import com.bt.rpc.annotation.RpcService;
+import tech.krpc.annotation.RpcService;
 import com.bt.rpc.common.RpcConstants;
 import com.bt.rpc.filter.GlobalFilter;
 import com.bt.rpc.filter.GlobalFilter.Order;
@@ -26,7 +26,6 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.inject.literal.InjectLiteral;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Inject;

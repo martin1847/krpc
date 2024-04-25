@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import com.bt.rpc.common.RpcMetaService;
 import com.bt.rpc.common.meta.Anno;
 import com.bt.rpc.common.meta.Api;
@@ -28,7 +28,7 @@ import com.bt.rpc.common.meta.Method;
 import com.bt.rpc.common.meta.Property;
 import com.bt.rpc.common.meta.PropertyType;
 import com.bt.rpc.internal.SerialEnum;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.serial.Serial;
 import com.bt.rpc.server.RpcServerBuilder.RpcMetaMethod;
 import lombok.extern.slf4j.Slf4j;

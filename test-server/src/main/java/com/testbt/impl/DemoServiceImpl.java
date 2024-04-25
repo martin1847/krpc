@@ -2,7 +2,7 @@ package com.testbt.impl;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;
 import com.bt.rpc.util.EnvUtils;
 import com.testbt.AbstractDemoService;

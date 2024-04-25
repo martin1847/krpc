@@ -8,7 +8,7 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 
-import com.bt.model.PagedQuery;
+import tech.krpc.model.PagedQuery;
 import com.testbt.dto.TimeReq;
 
 /**

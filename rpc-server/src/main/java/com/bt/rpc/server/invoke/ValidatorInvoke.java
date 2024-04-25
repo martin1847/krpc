@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.Validator;
 
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.server.ServerContext;
 import io.grpc.Status;
 import lombok.extern.slf4j.Slf4j;

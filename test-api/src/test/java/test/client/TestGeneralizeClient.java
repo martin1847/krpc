@@ -2,7 +2,7 @@
  * Zhulinkeji.com Inc.
  * Copyright (c) 2021-2024 All Rights Reserved.
  */
-package test.java_client;
+package test.client;
 
 import com.bt.rpc.client.GeneralizeClient;
 import io.grpc.ManagedChannel;
@@ -18,7 +18,10 @@ public class TestGeneralizeClient {
     public static void main(String[] args) {
 
         ManagedChannel channel =  ManagedChannelBuilder.forAddress("10.17.1.10",20051).usePlaintext().build();
-        GeneralizeClient.call(channel,"/-common-cdn/Cdn/testHttp","{\"url\":\"https://www.baidu.com\",\"type\":2}");
-        
+        GeneralizeClient.call(channel,"-common-cdn/Cdn/testHttp","{\"url\":\"https://www.baidu.com\",\"type\":2}");
+
+        channel =  ManagedChannelBuilder.forAddress("iwytest.wangyuedaojia.com",443).useTransportSecurity().build();
+        GeneralizeClient.call(channel,"wy/Home/diamond","\"320200\"");
+
     }
 }

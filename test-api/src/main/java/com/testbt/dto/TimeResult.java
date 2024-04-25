@@ -5,7 +5,7 @@ import java.util.Date;
 
 import jakarta.validation.constraints.NotNull;
 
-import com.bt.rpc.annotation.Doc;
+import tech.krpc.annotation.Doc;
 import lombok.Data;
 
 @Data

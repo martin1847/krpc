@@ -2,7 +2,7 @@ package com.bt.rpc.client;
 
 import com.bt.rpc.common.ResultWrapper;
 import com.bt.rpc.internal.OutputProto;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.serial.ClientReader;
 import com.bt.rpc.serial.Serial;
 

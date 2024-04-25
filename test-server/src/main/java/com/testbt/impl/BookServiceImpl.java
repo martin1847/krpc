@@ -10,10 +10,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import com.bt.model.PagedList;
-import com.bt.model.PagedQuery;
+import tech.krpc.model.PagedList;
+import tech.krpc.model.PagedQuery;
 import com.bt.rpc.server.Filters;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.testbt.BookService;
 import com.testbt.filter.TestFilter2;
 import com.testbt.mapper.BookMapper;

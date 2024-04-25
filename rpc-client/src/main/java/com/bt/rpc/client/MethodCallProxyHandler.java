@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.bt.rpc.annotation.Cached;
+import tech.krpc.annotation.Cached;
 import com.bt.rpc.common.FilterChain;
 import com.bt.rpc.common.MethodStub;
 import com.bt.rpc.context.TraceMeta;
@@ -15,7 +15,7 @@ import com.bt.rpc.filter.FilterInvokeHelper;
 import com.bt.rpc.internal.InputProto;
 import com.bt.rpc.internal.OutputProto;
 import com.bt.rpc.internal.SerialEnum;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import com.bt.rpc.serial.ClientReader;
 import com.bt.rpc.serial.ClientReader.Generic;
 import com.bt.rpc.serial.ClientReader.Normal;

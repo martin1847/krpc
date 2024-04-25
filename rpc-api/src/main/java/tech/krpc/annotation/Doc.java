@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package com.bt.rpc.annotation;
+package tech.krpc.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;

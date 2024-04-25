@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.bt.rpc.annotation.RpcService;
-import com.bt.rpc.annotation.UnsafeWeb;
+import tech.krpc.annotation.RpcService;
+import tech.krpc.annotation.UnsafeWeb;
 import com.bt.rpc.common.MethodStub;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 
 /**
  * 2020-01-09 15:01

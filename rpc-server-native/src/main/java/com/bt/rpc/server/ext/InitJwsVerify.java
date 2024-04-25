@@ -10,9 +10,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
-import com.bt.rpc.server.ServerContext;
-import com.bt.rpc.server.jws.ExtVerify;
-import com.bt.rpc.server.jws.JwsVerify;
+import tech.krpc.server.ServerContext;
+import tech.krpc.server.jws.ExtVerify;
+import tech.krpc.server.jws.JwsVerify;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 

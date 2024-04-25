@@ -6,8 +6,8 @@ package com.testbt;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import com.bt.rpc.server.jws.ExtVerify;
-import com.bt.rpc.server.jws.JwsCredential;
+import tech.krpc.server.jws.ExtVerify;
+import tech.krpc.server.jws.JwsCredential;
 import io.grpc.StatusException;
 import io.quarkus.runtime.Startup;
 

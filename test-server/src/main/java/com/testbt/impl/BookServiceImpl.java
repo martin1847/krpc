@@ -12,7 +12,7 @@ import jakarta.transaction.Transactional;
 
 import tech.krpc.model.PagedList;
 import tech.krpc.model.PagedQuery;
-import com.bt.rpc.server.Filters;
+import tech.krpc.server.Filters;
 import tech.krpc.model.RpcResult;
 import com.testbt.BookService;
 import com.testbt.filter.TestFilter2;

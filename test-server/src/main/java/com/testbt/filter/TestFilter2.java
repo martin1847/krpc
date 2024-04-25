@@ -3,9 +3,9 @@ package com.testbt.filter;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import tech.krpc.common.FilterChain;
-import com.bt.rpc.server.ServerContext;
-import com.bt.rpc.server.ServerFilter;
-import com.bt.rpc.server.ServerResult;
+import tech.krpc.server.ServerContext;
+import tech.krpc.server.ServerFilter;
+import tech.krpc.server.ServerResult;
 import io.quarkus.arc.Unremovable;
 import lombok.extern.slf4j.Slf4j;
 

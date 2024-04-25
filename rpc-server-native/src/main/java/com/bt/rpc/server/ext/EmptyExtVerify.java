@@ -7,8 +7,8 @@ package com.bt.rpc.server.ext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 
-import com.bt.rpc.server.jws.ExtVerify;
-import com.bt.rpc.server.jws.JwsCredential;
+import tech.krpc.server.jws.ExtVerify;
+import tech.krpc.server.jws.JwsCredential;
 import io.grpc.StatusException;
 import io.quarkus.arc.DefaultBean;
 import lombok.extern.slf4j.Slf4j;

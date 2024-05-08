@@ -20,7 +20,7 @@ dependencies {
     implementation "io.grpc:grpc-stub:${grpcVersion}"
 
     // https://mvnrepository.com/artifact/org.springframework/spring-context
-    implementation 'org.springframework:spring-context:5.3.31'
+    implementation 'org.springframework:spring-context:5.3.34'
 // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-autoconfigure
     implementation 'org.springframework.boot:spring-boot-autoconfigure:2.7.18'
 

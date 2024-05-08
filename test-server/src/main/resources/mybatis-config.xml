@@ -34,8 +34,8 @@
         <!--        <typeAlias type="com.alipay.intl.comm.mybatis.type.Json2LongList" alias="Json2LongList"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopExtInfo" alias="Json2ShopExtInfo"/>-->
         <!--        <typeAlias type="com.alipay.imdopcore.mapper.config.Json2ShopBuildLog" alias="Json2ShopBuildLog"/>-->
-        <package name="com.testbt.dto"/>
-        <package name="com.testbt.typehandler"/>
+        <package name="tech.test.krpc.dto"/>
+        <package name="tech.test.krpc.typehandler"/>
     </typeAliases>
 
 <!--    <typeHandlers>-->
@@ -43,7 +43,7 @@
 <!--    </typeHandlers>-->
 
     <plugins>
-        <plugin interceptor="com.bt.mybatis.MysqlPagingInterceptor"/>
+        <plugin interceptor="tech.krpc.mybatis.MysqlPagingInterceptor"/>
     </plugins>
 
 
@@ -53,7 +53,7 @@
             <transactionManager type="MANAGED">
                 <property name="closeConnection" value="false"/>
             </transactionManager>
-            <dataSource type="com.bt.mybatis.runtime.bridge.QuarkusDataSourceFactory" />
+            <dataSource type="tech.krpc.mybatis.runtime.bridge.QuarkusDataSourceFactory" />
 <!--                <property name="db" value="h2"/>-->
 <!--            </dataSource>-->
         </environment>
@@ -68,7 +68,7 @@ SqlXmlFolder
     <mappers>
 <!--
 <mapper resource="mapper/*UserMapper.xml"/>-->
-        <package name="com.testbt.mapper"/>
+        <package name="tech.test.krpc.mapper"/>
     </mappers>
 
 

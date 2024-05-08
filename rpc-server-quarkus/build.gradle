@@ -1,0 +1,51 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version "$jandexVersion"
+}
+
+apply from: "$rootProject.projectDir/upload.gradle"
+
+
+//version = "1.0.0"
+
+dependencies {
+//    compileOnly "javax.annotation:javax.annotation-api:1.2"
+
+
+    api project(':rpc-server')
+//    implementation "io.grpc:grpc-services:${grpcVersion}"
+
+    // just for overridden
+//    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
+
+
+//    api "com.bt.ext:ext-rpc:$globalRpcVersion"
+    implementation "tech.krpc.ext:ext-rpc:$globalRpcVersion"
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
+
+//    implementation platform("io.quarkus:quarkus-bom:2.4.2.Final")
+    compileOnly "io.quarkus:quarkus-arc:$quarkusMiniSupport"
+    //this version is the max to support JNI/DrawCaptcha
+//    compileOnly "io.quarkus:quarkus-core:$quarkusMiniSupport"
+
+    compileOnly "io.netty:netty-common:$nettyGrpcVersion"
+    compileOnly "io.netty:netty-handler:$nettyGrpcVersion"
+
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+
+    // native
+//    compileOnly 'org.graalvm.sdk:nativeimage:24.0.0'
+    // native-Target_io_netty_handler_codec_http_HttpContentDecompressor
+//    compileOnly "io.netty:netty-codec-http:$nettyGrpcVersion"
+
+
+}
+
+compileTestJava {
+    dependsOn('jandex')
+}
+

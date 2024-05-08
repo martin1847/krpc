@@ -1,10 +1,10 @@
 package test.zlkj;
 
-import com.testbt.dto.Book;
+import tech.test.krpc.dto.Book;
 import jakarta.inject.Inject;
 
-import com.testbt.BookService;
-import com.testbt.mapper.BookMapper;
+import tech.test.krpc.BookService;
+import tech.test.krpc.mapper.BookMapper;
 import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Assertions;

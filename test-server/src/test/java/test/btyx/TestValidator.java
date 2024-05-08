@@ -9,7 +9,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 
 import tech.krpc.model.PagedQuery;
-import com.testbt.dto.TimeReq;
+import tech.test.krpc.dto.TimeReq;
 
 /**
  *

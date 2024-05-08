@@ -6,7 +6,7 @@
 
 ```bash
 export HOSTNAME=test-server-76fcf967d7-x4pdg
-./build/test-server-1.0.0-runner    -Dquarkus.log.level=DEBUG
+./build/test-server-1.0.0.rc1-runner   -Dquarkus.log.level=DEBUG
 ```
 
 ```bash

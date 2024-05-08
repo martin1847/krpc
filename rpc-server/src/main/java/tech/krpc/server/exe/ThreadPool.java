@@ -36,8 +36,8 @@ public class ThreadPool {
                 .setNameFormat(name + "-%d")
                 .setDaemon(true)
                 .build();
-        return new ThreadPoolExecutor(cpus * 2, cpus * 6, 60, TimeUnit.SECONDS,
-                 new LinkedBlockingQueue<>(cpus * 20 ), tf, new AbortPolicyWithReport(name));
+        return new ThreadPoolExecutor(cpus * 4, cpus * 8, 60, TimeUnit.SECONDS,
+                 new LinkedBlockingQueue<>(cpus * 10 ), tf, new AbortPolicyWithReport(name));
     }
 
 }

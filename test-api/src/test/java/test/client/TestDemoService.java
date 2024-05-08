@@ -10,10 +10,10 @@ import tech.krpc.client.AsyncClient;
 import tech.krpc.client.AsyncMethod;
 import tech.krpc.client.AsyncMethod.ResultObserver;
 import tech.krpc.model.RpcResult;
-import com.testbt.DemoService;
-import com.testbt.dto.TimeReq;
-import com.testbt.dto.TimeResult;
-import com.testbt.dto.Book;
+import tech.test.krpc.DemoService;
+import tech.test.krpc.dto.TimeReq;
+import tech.test.krpc.dto.TimeResult;
+import tech.test.krpc.dto.Book;
 
 /**
  *

@@ -4,8 +4,8 @@
  */
 package test.gen;
 
-import com.bt.rpc.gen.Gen;
-import com.testbt.DemoRpc;
+import tech.krpc.gen.Gen;
+import tech.test.krpc.DemoRpc;
 
 /**
  *

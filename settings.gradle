@@ -17,7 +17,7 @@ pluginManagement {
 
 include 'test-api','test-rpc-gen','test-server'
 
-include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-native','http-server'
-include 'rpc-client-spring2'
+include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-quarkus','http-server'
+include 'rpc-client-spring'
 
 //include 'quarkus-mybatis','quarkus-mybatis-deployment'

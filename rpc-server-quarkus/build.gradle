@@ -18,7 +18,6 @@ dependencies {
 //    api "com.google.protobuf:protobuf-javalite:$protobufVersion"
 
 
-//    api "com.bt.ext:ext-rpc:$globalRpcVersion"
     implementation "tech.krpc.ext:ext-rpc:$globalRpcVersion"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"

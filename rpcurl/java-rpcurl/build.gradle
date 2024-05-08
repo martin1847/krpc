@@ -18,9 +18,6 @@ dependencies {
 
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
 
-//    api 'com.bt.rpc:rpc-client:1.0.0'
-//    api 'com.bt.rpc:rpc-common:1.0.0'
-////
 //    implementation project(':rpc-client')
 //
 //
@@ -72,7 +69,7 @@ compileJava {
 //        main {
 //            // Main options
 ////            imageName = 'application' // The name of the native image, defaults to the project name
-//            mainClass = 'com.bt.rpc.Main' // The main class to use, defaults to the application.mainClass
+//            mainClass = 'tech.krpc.Main' // The main class to use, defaults to the application.mainClass
 ////            debug = true // Determines if debug info should be generated, defaults to false
 ////            verbose = true // Add verbose output, defaults to false
 //            fallback = true // Sets the fallback mode of native-image, defaults to false

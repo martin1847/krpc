@@ -1,10 +1,10 @@
-package com.bt.rpc;
+package tech.krpc;
 
 import java.io.IOException;
 
-import com.bt.rpc.client.GeneralizeClient;
-import com.bt.rpc.common.meta.ApiMeta;
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.client.GeneralizeClient;
+import tech.krpc.common.meta.ApiMeta;
+import tech.krpc.model.RpcResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.grpc.ManagedChannelBuilder;

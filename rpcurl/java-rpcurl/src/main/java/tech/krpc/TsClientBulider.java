@@ -1,4 +1,4 @@
-//package com.bt.rpc;
+//package tech.krpc;
 //
 //import java.util.HashMap;
 //import java.util.HashSet;
@@ -7,12 +7,12 @@
 //import java.util.Set;
 //import java.util.stream.Collectors;
 //
-//import com.bt.rpc.common.meta.Anno;
-//import com.bt.rpc.common.meta.Api;
-//import com.bt.rpc.common.meta.ApiMeta;
-//import com.bt.rpc.common.meta.Dto;
-//import com.bt.rpc.common.meta.Method;
-//import com.bt.rpc.common.meta.Property;
+//import tech.krpc.common.meta.Anno;
+//import tech.krpc.common.meta.Api;
+//import tech.krpc.common.meta.ApiMeta;
+//import tech.krpc.common.meta.Dto;
+//import tech.krpc.common.meta.Method;
+//import tech.krpc.common.meta.Property;
 //
 //public class TsClientBulider {
 //

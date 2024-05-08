@@ -1,4 +1,4 @@
-package com.bt.rpc;
+package tech.krpc;
 
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;

@@ -1,6 +1,6 @@
-package com.bt.rpc;
+package tech.krpc;
 
-import com.bt.rpc.model.RpcResult;
+import tech.krpc.model.RpcResult;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection(targets={

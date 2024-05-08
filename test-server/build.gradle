@@ -36,8 +36,6 @@ dependencies {
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-//    implementation "com.bt.ext:ext-mybatis:$globalRpcVersion"
-//    implementation "com.bt.common:mybatis:$globalRpcVersion"
     implementation "tech.krpc.ext:ext-mybatis:$globalRpcVersion"
 //    implementation "tech.krpc.mybatis:mybatis:$globalRpcVersion"
 
@@ -116,7 +114,7 @@ quarkusBuild {
         additionalBuildArgs2 = "--allow-incomplete-classpath," +
 //                "-H:DynamicProxyConfigurationFiles=dynamic-proxy.json,"+
                 "-H:ReflectionConfigurationFiles=reflection-config.json," +
-                "--initialize-at-build-time=com.bt.RuntimeToNativeBuild,"+
+                "--initialize-at-build-time=xxx.RuntimeToNativeBuild,"+
                 "--initialize-at-run-time=" +
                     "io.netty.util.internal.logging.Log4JLogger" +
                     "\\,io.netty.buffer.PooledByteBufAllocator" +

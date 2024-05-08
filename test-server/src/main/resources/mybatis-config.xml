@@ -39,7 +39,7 @@
     </typeAliases>
 
 <!--    <typeHandlers>-->
-<!--        <package name="com.bt.typehandler"/>-->
+<!--        <package name="xxx.typehandler"/>-->
 <!--    </typeHandlers>-->
 
     <plugins>

@@ -2,9 +2,9 @@
 Latest version : `1.0.0`
 
 ```gradle
-//implementation "com.bt.rpc:rpc-server:1.0.0"
-//implementation "com.bt.rpc:rpc-client:1.0.0"
-//implementation "com.bt.ext:ext-rpc:1.0.0"
+//implementation "tech.krpc:rpc-server:1.0.0"
+//implementation "tech.krpc:rpc-client:1.0.0"
+//implementation "tech.kext:ext-rpc:1.0.0"
 ```
 
 ![ARCHITECTURE](./ARCHITECTURE.png)
@@ -26,7 +26,7 @@ plugins {
 }
 
 dependencies {
-    api "com.bt.rpc:rpc-api:1.0.0"
+    api "tech.krpc:rpc-api:1.0.0"
 }
 ```
 
@@ -79,7 +79,7 @@ Convention & Limit  about the service define :
 * returnType must be `RpcResult<DTO>` .
     - `DTO` can be any object , BUT Abstract/Interface Not Support
     - Do not use Enum as return Field(Input can), maybe not Compatibility when Upgrade. Use string/int instead.
-    - 不要直接使用`date/time`, use [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
+    - java`date/time`, jackson 情况下，会被转换为 [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
     - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
     - 除非必要，禁止使用Map做为出入参
     - 其余参考 [命名规范](https://redmine.btrpc.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
@@ -111,10 +111,10 @@ Then publish this API package to  https://jcr.btrpc.com  for the client side to 
 
 implementation project(':your-api')
 
-implementation "com.bt.rpc:rpc-server:1.0.0"
-implementation "com.bt.ext:ext-rpc:1.0.0"
+implementation "tech.krpc:rpc-server:1.0.0"
+implementation "tech.krpc.ext:ext-rpc:1.0.0"
 
-//implementation "com.bt.ext:ext-mybatis:1.0.0"
+//implementation "tech.krpc.ext:ext-mybatis:1.0.0"
 ```
   
 * Implention the service 

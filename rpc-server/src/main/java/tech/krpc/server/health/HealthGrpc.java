@@ -1,4 +1,4 @@
-//package com.bt.rpc.server.health;
+//package tech.krpc.server.health;
 //
 //import static io.grpc.MethodDescriptor.generateFullMethodName;
 //

@@ -5,12 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
+import io.grpc.CallOptions;
+import io.netty.util.concurrent.FastThreadLocal;
+import lombok.Data;
 import tech.krpc.common.AbstractContext;
 import tech.krpc.common.FilterChain;
 import tech.krpc.internal.SerialEnum;
 import tech.krpc.model.RpcResult;
-import io.grpc.CallOptions;
-import lombok.Data;
 
 /**
  * 2020-04-03 16:12
@@ -21,9 +22,9 @@ import lombok.Data;
 public class ClientContext extends AbstractContext<ClientResult,Object[],ClientContext> {
 
 
-    static final ThreadLocal<ClientContext> LOCAL = new ThreadLocal<>();
+    static final FastThreadLocal<ClientContext> LOCAL = new FastThreadLocal<>();
 
-    static final ThreadLocal<CallOptions> OPTION_LOCAL = new ThreadLocal<>();
+    static final FastThreadLocal<CallOptions> OPTION_LOCAL = new FastThreadLocal<>();
 
     static final List<ClientFilter> GLOBAL_FILTERS = new ArrayList<>();
 

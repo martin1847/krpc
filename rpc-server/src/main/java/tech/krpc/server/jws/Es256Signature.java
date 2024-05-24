@@ -15,6 +15,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -25,10 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Es256Signature {
 
-    final ThreadLocal<Signature> sigLocal;
+    final FastThreadLocal<Signature> sigLocal;
 
-
-    public Es256Signature(String pri64){
+    public Es256Signature(String pri64) {
         ECPrivateKey privateKey;
 
         try {
@@ -41,16 +41,20 @@ public class Es256Signature {
             throw new RuntimeException(e);
         }
 
-        sigLocal = ThreadLocal.withInitial(() -> {
-            try {
-                var sig = Signature.getInstance(Es256Jwk.SING_ALGORITHM);
-                sig.initSign(privateKey);
-                return sig;
-            } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-                log.error("error get Signature: ", e);
-                throw new RuntimeException(e);
+        //sigLocal = ThreadLocal.withInitial(() -> {
+        sigLocal = new FastThreadLocal<>() {
+            @Override
+            protected Signature initialValue(){
+                try {
+                    var sig = Signature.getInstance(Es256Jwk.SING_ALGORITHM);
+                    sig.initSign(privateKey);
+                    return sig;
+                } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+                    log.error("error get Signature: ", e);
+                    throw new RuntimeException(e);
+                }
             }
-        });
+        };
     }
 
     public String sign(String header64, String payload64) {
@@ -65,7 +69,7 @@ public class Es256Signature {
         }
     }
 
-    public static String base64(byte[] data){
+    public static String base64(byte[] data) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(data);
     }
 

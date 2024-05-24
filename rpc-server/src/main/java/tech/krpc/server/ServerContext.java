@@ -4,6 +4,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import jakarta.validation.Validator;
 
 import tech.krpc.common.AbstractContext;
@@ -27,7 +28,7 @@ import org.slf4j.MDC;
 @Slf4j
 public class ServerContext extends AbstractContext<ServerResult, InputProto, ServerContext> {
 
-    static final ThreadLocal<ServerContext> LOCAL = new ThreadLocal<>();
+    static final FastThreadLocal<ServerContext> LOCAL = new FastThreadLocal<>();
 
     static final List<ServerFilter> GLOBAL_FILTERS = new ArrayList<>();
 

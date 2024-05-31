@@ -139,8 +139,14 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         var buildFLag = fileSplit + "build" + fileSplit;
 
         if ((split = path.indexOf(buildFLag)) <= 0) {
-            path = System.getProperty("native.image.path");
-            split = path.indexOf(buildFLag);
+            var nativePath = System.getProperty("native.image.path");
+            if(null != nativePath){
+                path =nativePath;
+                split = path.indexOf(buildFLag);
+            }else {
+                //idea 构建目录,最后一次尝试
+                split = path.indexOf(fileSplit + "out" + fileSplit);
+            }
         }
 
         if (split > 0) {

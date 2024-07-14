@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2022 All Rights Reserved.
  */
-package test.zlkj;
+package test.krpc;
 
 import tech.krpc.util.RefUtils;
 import tech.test.krpc.dto.Img;

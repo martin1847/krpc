@@ -1,4 +1,4 @@
-package test.zlkj.jmh;
+package test.krpc.jmh;
 
 /**
  * @author gongming

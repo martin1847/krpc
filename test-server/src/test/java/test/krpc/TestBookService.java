@@ -1,4 +1,4 @@
-package test.zlkj;
+package test.krpc;
 
 import tech.test.krpc.dto.Book;
 import jakarta.inject.Inject;

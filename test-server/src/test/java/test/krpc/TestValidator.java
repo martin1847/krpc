@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2023 All Rights Reserved.
  */
-package test.zlkj;
+package test.krpc;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

@@ -51,7 +51,7 @@ dependencies {
         exclude module: 'quarkus-bootstrap-maven-resolver'
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
-    testImplementation 'org.mockito:mockito-core:5.8.0'
+    testImplementation "org.mockito:mockito-core:$mockitoVersion"
 
     // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
     testImplementation 'org.openjdk.jmh:jmh-core:1.35'

@@ -1,4 +1,32 @@
 
+
+# `kRPC` Project
+
+`kRPC` 是一个基于`Netty`和`gRPC`实现的快速开发框架（构建RPC服务），隐藏了protobuf细节（无需编写proto文件），可以直接面向接口编程。
+
+why `kRPC`, `k`是什么：
+
+* 首先,`k`代表`k8s`,云原生的含义
+  * 全面拥抱`k8s`,拥抱`Service Mesh`服务网格,专业的事交给专业的人去做
+  * 没有自己的服务发现，利用`k8s`的`service`[云原生服务发现](https://kubernetes.io/docs/concepts/services-networking/service)
+  * 没有自己的负载均衡，利用`服务网格`[istio](https://istio.io/latest/docs/concepts/traffic-management/#load-balancing-options)
+  * 没有自己的`telemetry`黄金四指标`four golden signals`,还是利用`服务网格的可观测性`[istio](https://istio.io/latest/zh/docs/concepts/observability/)
+  * 没有自己实现web兼容`gRPC web`,还是利用[istio ingress](https://istio.io/latest/zh/docs/ops/configuration/traffic-management/protocol-selection/)
+* `k`代表中文里的`kuai快`
+  * 性能
+    * 基于`Netty`和`gRPC`的极薄封装
+    * java版本全面拥抱`GraalVM/quarkus`进行AOT(去除了反射)，适应云原生,启动秒起
+    * CPU/内存占用低（经验：只有JVM版本的 20%～40%之间, AOT的好处，直接享受)
+  * 开发
+    * 无需知晓、编写`proto`,直接开发`Java interface`即可
+    * 代码即文档，基于一套`interface`,生成`dart/typesctipt/python/go`等客户端，客户端所见即所得
+    * 支持Flutter客户端(iOS、安卓原生客户端待测试)
+    * 支持web客户端/微信小程序,通过`gRPC web`协议，（无需引入http/rest概念)
+    
+# 版本
+
+不再支持`JDK8`，最小支持`JDK11`。
+
 Latest version : `1.0.0`
 
 ```gradle
@@ -15,14 +43,12 @@ There is a  [demo-rpc](/example/demo-rpc) project.
 
 最重要的一步，API即文档，后续前端TypeScript、Java客户端均使用这一套API声明
 
-* Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan.
+* Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan （quarkus编译阶段利用它扫描类进行AOT配置）.
 * build.gradle file:
 
-
 ```gradle
-
 plugins {
-    id 'org.kordamp.gradle.jandex' version '1.1.0'
+    id 'org.kordamp.gradle.jandex' version '2.0.0'
 }
 
 dependencies {
@@ -39,7 +65,7 @@ package com.xxxx;
 @RpcService
 public interface DemoService {
 
-    RpcResult<TimeResult> hello(TimeReq req);
+    RpcResult<HelloResult> hello(HelloReq req);
 
     RpcResult<byte[]> bytesTime();
 
@@ -54,7 +80,7 @@ public interface DemoService {
 
 
 @Data
-public class TimeReq {
+public class HelloReq {
 
   @Doc("姓名")
   @NotBlank
@@ -73,7 +99,7 @@ public class TimeReq {
 Convention & Limit  about the service define : 
 * 字段使用 `jakarta.validation` 进行验证，默认采用 `hibernate-validator` 实现。
   * RPC框架自动验证，开发时标准好即可
-* API即文档，请使用`Doc`加以说明字段含义
+* 代码即文档，请使用`Doc`加以说明字段含义
   * 使用框架自动生成前端`TypeScript`调用代码
   * `Doc`更是给前端、测试同学看的，请认真对待
 * returnType must be `RpcResult<DTO>` .

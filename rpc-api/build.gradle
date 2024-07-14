@@ -8,7 +8,7 @@ targetCompatibility = "11"
 dependencies {
 
     // just for Transitive Dependency，most sub project need below two lib.
-    api 'jakarta.validation:jakarta.validation-api:3.0.2'
+    api 'jakarta.validation:jakarta.validation-api:3.1.0'
     // just for PageList/PageQuery , in bt-mybatis project.
 
     compileOnly "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"

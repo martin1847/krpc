@@ -51,9 +51,14 @@ public class RpcResult<DTO> implements Serializable {
         if( OK == code ){
             var res = dataHandler.apply(data);
             if(null != res) {
-                return RpcResult.ok(res);
+                var result =  (RpcResult<T>) this;
+                result.data = res;
+                return result;
+                //return (RpcResult<T>) this;
+                //return RpcResult.ok(res);
+            }else {
+                return RpcResult.error(DATA_LOSS, "call ifOk But got null !!!");
             }
-            return RpcResult.error(DATA_LOSS,"call ifOk But got null !!!");
         }
         return (RpcResult<T>) this;
     }
@@ -74,6 +79,7 @@ public class RpcResult<DTO> implements Serializable {
     }
 
     public static <T> RpcResult<T> error(int code, String msg) {
+        assert  code != 0;
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
         res.msg = msg;

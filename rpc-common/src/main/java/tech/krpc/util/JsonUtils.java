@@ -7,6 +7,7 @@ package tech.krpc.util;
 import java.lang.reflect.Type;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
@@ -45,7 +46,7 @@ public abstract class JsonUtils {
      *  MAP_TYPE_REFERENCE.getType()
      *
      */
-    @SneakyThrows
+    @SneakyThrows(JsonProcessingException.class)
     public static <T> T parse(String json, Type type) {
         return (T)MAPPER.readValue(json,MAPPER.constructType(type));
         //if (type instanceof Class) {
@@ -57,7 +58,7 @@ public abstract class JsonUtils {
     /**
      * 泛型使用
      */
-    @SneakyThrows
+    @SneakyThrows(JsonProcessingException.class)
     public static <T> T parse(String json, Class<T> type) {
         return (T) MAPPER.readValue(json,type);
     }

@@ -38,6 +38,12 @@ public abstract class JsonUtils {
 
     /**
      *  通用类型转换
+     *
+     *  比如要转换为List<Map<String, String>>
+     *
+     *  TypeReference<List<Map<String, String>>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
+     *  MAP_TYPE_REFERENCE.getType()
+     *
      */
     @SneakyThrows
     public static <T> T parse(String json, Type type) {

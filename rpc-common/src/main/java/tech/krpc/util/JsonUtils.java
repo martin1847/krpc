@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.SneakyThrows;
 
 /**
  *
@@ -28,13 +27,12 @@ public abstract class JsonUtils {
         //MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 
-    @SneakyThrows
     public static String stringify(Object obj) {
-        //try {
+        try {
             return MAPPER.writeValueAsString(obj);
-        //} catch (JsonProcessingException e) {
-        //    throw new RuntimeException(e);
-        //}
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -46,55 +44,23 @@ public abstract class JsonUtils {
      *  MAP_TYPE_REFERENCE.getType()
      *
      */
-    @SneakyThrows(JsonProcessingException.class)
     public static <T> T parse(String json, Type type) {
-        return (T)MAPPER.readValue(json,MAPPER.constructType(type));
-        //if (type instanceof Class) {
-        //    return parse(json, (Class<T>) type);
-        //}
-        //return parse(json, (ParameterizedType) type);
+        try {
+            return (T)MAPPER.readValue(json,MAPPER.constructType(type));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
      * 泛型使用
      */
-    @SneakyThrows(JsonProcessingException.class)
     public static <T> T parse(String json, Class<T> type) {
-        return (T) MAPPER.readValue(json,type);
+        try {
+            return (T) MAPPER.readValue(json,type);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
-    //}
-    //
-    ////@Deprecated
-    ////public static <T> T parse(String json, TypeReference<T> type) {
-    ////    //var typeFactory = MAPPER.getTypeFactory();
-    ////    //var listType = typeFactory.constructCollectionType(List.class, type));
-    ////    try {
-    ////        return MAPPER.readValue(json, type);
-    ////    } catch (JsonProcessingException e) {
-    ////        throw new RuntimeException(e);
-    ////    }
-    ////}
-    //
-    //public static <T> T parse(String json, ParameterizedType type) {
-    //    //if (null == json || json.isEmpty()) {
-    //    //    return null;
-    //    //}
-    //    JavaType genc = TYPES_MAP.computeIfAbsent(type, t -> {
-    //        var parameterClasses = Stream.of(type.getActualTypeArguments())
-    //                .map(it -> (Class) it)
-    //                .toArray(Class[]::new);
-    //        //            System.out.println( type.getRawType() +" < " + Arrays.toString(parameterClasses));
-    //
-    //        return MAPPER.getTypeFactory().constructParametricType(
-    //                (Class) type.getRawType(), parameterClasses
-    //        );
-    //    });
-    //
-    //    try {
-    //        return (T) MAPPER.readValue(json, genc);
-    //    } catch (JsonProcessingException e) {
-    //        throw new RuntimeException(e);
-    //    }
-    //}
 
 }

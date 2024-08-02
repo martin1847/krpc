@@ -41,6 +41,7 @@ public class TsNameMap {
         nameMapping.put("Boolean","boolean");
 
         nameMapping.put("Date","number");
+        nameMapping.put("LocalDate","string/* yyyy-MM-dd */");
 
         nameMapping.put("List","Array");
         nameMapping.put("Set","Array");

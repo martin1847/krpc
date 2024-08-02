@@ -34,6 +34,7 @@ public class DartNameMap {
         //   @JsonKey(fromJson: BaseService.jsonToU8, toJson: BaseService.u8ToJson)
         nameMapping.put("byte[]","Uint8List");
         nameMapping.put("Date","int");
+        nameMapping.put("LocalDate","String/* yyyy-MM-dd */");
         nameMapping.put("Object","dynamic");
     }
 

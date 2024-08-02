@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -24,6 +25,15 @@ public abstract class JsonUtils {
     static {
         MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        var jsr310Exists = "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule";
+        try {
+            var module = Class.forName(jsr310Exists).getDeclaredConstructor().newInstance();
+            MAPPER.registerModule((Module) module);
+            System.out.println("!!!! jackson jsr310.JavaTimeModule register !!!");
+        } catch (Exception e) {
+            //ignore
+        }
         //MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     }
 

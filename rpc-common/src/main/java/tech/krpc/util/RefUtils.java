@@ -122,30 +122,32 @@ public abstract class RefUtils {
     }
 
     public static final char HIDDEN_SERVICE = '-';
-    public static String rpcServiceName(String appName,Class clz) {
+
+    public static String rpcServiceName(String appName, Class clz) {
 
         //var pac =  clz.getPackageName();
         //if(TRIM_SERVICE_NAME && pac.startsWith("com.")){
         //    pac = pac.substring(4);
         //}
         var name = clz.getSimpleName();
-        int begin = 0 , end = name.length();
-        if(name.startsWith("I")){
+        int begin = 0, end = name.length();
+        //IDemoService 兼容I开头的service命名逻辑
+        if (name.charAt(0) == 'I' && end > 1 && Character.isUpperCase(name.charAt(1))) {
             begin = 1;
         }
-        if(name.endsWith("Service")){
+        if (name.endsWith("Service")) {
             end -= "Service".length();
-        }else if(name.endsWith("Rpc")){
+        } else if (name.endsWith("Rpc")) {
             end -= "Rpc".length();
         }
-        name = name.substring(begin,end);
+        name = name.substring(begin, end);
 
         var fullName = appName + "/" + name;
-        if(! clz.isAnnotationPresent(UnsafeWeb.class) ){
+        if (!clz.isAnnotationPresent(UnsafeWeb.class)) {
             // use - prefix to hidden the service
             fullName = HIDDEN_SERVICE + fullName;
         }
-        return fullName ;
+        return fullName;
     }
     //
     //public static void main(String[] args) {

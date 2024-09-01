@@ -237,7 +237,7 @@ rpcurl.exe $KRPC_APP/demo-java-server/Demo/hello  -d '{"name":"rpc","age":123}'
 
 [go/k6](https://gitlab.krpc.tech/middleware/xk6-krpc)
 
-[rpcurl](./krpc-crates/crates/rpcurl)
+[rpcurl](../krpc-crates/crates/rpcurl)
 
 # CI & CD
 

@@ -7,12 +7,16 @@ dependencies {
 //    api "io.grpc:grpc-netty-shaded:${grpcVersion}"
     api "io.grpc:grpc-stub:${grpcVersion}"
 
+    implementation "io.netty:netty-common:$nettyGrpcVersion"
     
     ////  TEST //////
 //    implementation 'jakarta.annotation-api:jakarta.annotation:1.3.5'
 
-//    testImplementation project(':demo-api')
-//    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    // native
+    compileOnly 'org.graalvm.sdk:nativeimage:24.0.1'
+
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+    testRuntimeOnly "io.grpc:grpc-netty:${grpcVersion}"
 }

@@ -1,11 +1,11 @@
 # use this template
-# https://gitlab.botaoyx.com/it-devops/ci/-/blob/master/helm/java.1.0/values.yaml
+# https://gitlab.btrpc.com/it-devops/ci/-/blob/master/helm/java.1.0/values.yaml
 
 
 extSecret: example-db-secret
 
 deployment:
-  corsAllow: course.botaoyx.com
+  corsAllow: course.btrpc.com
   env:
     APP_ENV: TEST
     LOG_LEVEL: warn

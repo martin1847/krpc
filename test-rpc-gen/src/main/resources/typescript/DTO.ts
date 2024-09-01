@@ -4,8 +4,8 @@
 */
 <#assign isTs = (lang == 'Typescript')>
 <#--
-import {RpcResult,RpcService} from '@zlkj/rpc-base';
-${isTs?then("'@zlkj/rpc'","'../utils/rpc'")};
+import {RpcResult,RpcService} from 'bt-rpc-base';
+${isTs?then("'bt-rpc-web'","'bt-rpc-mini'")};
 -->
 
 <#if isTs>

@@ -9,12 +9,11 @@ dependencies {
     implementation project(':rpc-api')
     implementation project(':rpc-server')
 
-//    implementation 'com.btyx.common:cdn-api:1.1.1220'
+//    implementation 'com.zlkj.common:cdn-api:1.1.1220'
 //    api 'javax.validation:validation-api:2.0.1.Final'
 //    api 'jakarta.validation:jakarta.validation-api:2.0.2'
 //
-//    api "com.bt.common:model:1.0.0"
-    implementation 'org.freemarker:freemarker:2.3.31'
+    implementation 'org.freemarker:freemarker:2.3.32'
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 

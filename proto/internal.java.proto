@@ -12,11 +12,11 @@ syntax = "proto3";
 // protoc internal.proto  --js_out=import_style=commonjs,binary:js --grpc-web_out=import_style=typescript,mode=grpcweb:js
 // https://github.com/grpc/grpc-web#wire-format-mode
 
-option csharp_namespace = "Com.Bt.Rpc.Internal";
-option java_package = "com.bt.rpc.internal";
+option csharp_namespace = "Tech.Krpc.Internal";
+option java_package = "tech.krpc.internal";
 option java_multiple_files = true;
 
-package com.bt.rpc.internal;
+package tech.krpc.internal;
 
 
 // service Mailer {

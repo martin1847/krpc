@@ -1,0 +1,82 @@
+[
+  {
+    "name": "java.lang.Long",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name" : "java.lang.Integer",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.lang.String",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.HashMap",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.Map",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.List",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.Set",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.RpcMetaService",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.MService",
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.meta.ApiMeta",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.meta.Api",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.meta.Dto",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.meta.Method",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.meta.Property",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+  "name" : "tech.krpc.common.meta.PropertyType",
+  "allPublicConstructors" : true,
+  "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.common.meta.Anno",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "tech.krpc.model.RpcResult",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true
+  }
+]

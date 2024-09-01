@@ -1,12 +1,12 @@
 plugins {
-    id 'org.kordamp.gradle.jandex' version '1.1.0'
+    id 'org.kordamp.gradle.jandex' version "$jandexVersion"
 }
 
 apply plugin: 'org.kordamp.gradle.jandex'
 apply from: "$rootProject.projectDir/upload.gradle"
 
 
-group = "com.bttest.example"
+group = "test.tech.krpc"
 
 dependencies {
 
@@ -20,7 +20,6 @@ dependencies {
 //    api 'javax.validation:validation-api:2.0.1.Final'
 //    api 'jakarta.validation:jakarta.validation-api:2.0.2'
 //
-//    api "com.bt.common:model:1.0.0"
 //    implementation 'org.freemarker:freemarker:2.3.31'
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")

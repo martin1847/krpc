@@ -26,16 +26,19 @@ void main(List<String> arguments) async {
   final String ENV_URL = "RPC_URL";
   final String ENV_APP = "RPC_APP";
   final String ENV_TOKEN = "RPC_TOKEN";
+  final String ENV_COOKIE = "RPC_COOKIE";
   final String ENV_CID = "RPC_CID";
   final String ENV_CMETA = "RPC_CMETA";
 
   final String LOCAL = 'http://127.0.0.1:50051';
 
-  final String VERSION = 'rpcurl-1.0 2023.07.27';
+  final String VERSION = 'rpcurl-1.0 2023.09.12';
 
   final String DEFAULT_CID = 'drpcurl-${Platform.localHostname}';
 
   final parser = ArgParser()
+    ..addFlag('verbose',
+          negatable: false, abbr: 'v',help: 'Verbose')
     ..addFlag('no-url',
         negatable: false, abbr: 'L', help: '本机测试，本机测试 url=$LOCAL')
     ..addFlag('no-web', negatable: false, abbr: 'W', help: '测试非 UnsafeWeb 服务')
@@ -56,6 +59,9 @@ void main(List<String> arguments) async {
     ..addOption('token',
         abbr: 't',
         help: 'authorization: Bearer <accessToken>,也可通过环境变量`$ENV_TOKEN`传递')
+    ..addOption('cookie',
+        abbr: 'c',
+        help: 'cookie ,也可通过环境变量`$ENV_COOKIE`传递')
     ..addOption('clientId',
         abbr: 'i', help: '设置c-id,或者环境变量 `$ENV_CID`,默认 $DEFAULT_CID')
     ..addOption('clientMeta',
@@ -72,6 +78,8 @@ void main(List<String> arguments) async {
   }
   // final paths = argResults.rest;
   final envVarMap = Platform.environment;
+
+  bool verbose = args['verbose'];
 
   bool local = args['no-url'];
   String? url;
@@ -111,15 +119,19 @@ void main(List<String> arguments) async {
 
   final channel = ClientChannel(uri.host, port: uri.port, options: options);
 
+  var tk = args['token'] ?? envVarMap[ENV_TOKEN];
   final baseService = BaseService(
       channel,
       app,
       sName,
       ServiceConfig(
-          accessToken: args['token'] ?? envVarMap[ENV_TOKEN],
+          accessToken: tk,
           clientId: args['clientId'] ?? envVarMap[ENV_CID] ?? DEFAULT_CID,
           clientMeta:
               args['clientMeta'] ?? envVarMap[ENV_CMETA] ?? '{"os":4}'));
+  if(verbose && tk != null){
+    print('tk  :  $tk');
+  }
 
   String? param = args['data'];
   String? file = args['file'];
@@ -134,15 +146,15 @@ void main(List<String> arguments) async {
     if (null != param) {
       print('${jsonDecode(param)}');
     }
-
+	var ck = args['cookie'] ?? envVarMap[ENV_COOKIE];
     final response = await baseService.call0(mName, param,
-        headers: parseHeaders(args), toJson: (String p0) => p0);
+        headers: parseHeaders(args,ck), toJson: (String p0) => p0);
 
     print('');
     var jsonRes = {'code': response.code, 'data': response.data};
     var msg = response.message;
     if (null != msg && msg.isNotEmpty) {
-      jsonRes['message'] = msg;
+      jsonRes['msg'] = msg;
     }
     print(args['no-pretty']
         ? jsonEncode(jsonRes)
@@ -159,12 +171,12 @@ void main(List<String> arguments) async {
 
 void showUsage(ArgParser parser) {
   print(
-      'Usage: rpcurl https://demo.btyxapi.com/appName/DemoService/methodName -d \'{"param":1}\' [ or  -f param.json ] ');
+      'Usage: rpcurl https://demo.zlkjapi.com/appName/DemoService/methodName -d \'{"param":1}\' [ or  -f param.json ] ');
   print('测试rpc服务\r\n');
   print(parser.usage);
 }
 
-Map<String, String> parseHeaders(ArgResults args) {
+Map<String, String> parseHeaders(ArgResults args,String? ck) {
   List<String> headList = args['header'];
   Map<String, String> headerMap = {};
   if (headList.isNotEmpty) {
@@ -173,6 +185,11 @@ Map<String, String> parseHeaders(ArgResults args) {
       headerMap[kvs[0].trim()] = kvs[1].trim();
     }
     print('custom header(s) -> $headerMap');
+  }
+
+
+  if(null != ck){
+    headerMap['cookie'] = ck;
   }
 
   return headerMap;

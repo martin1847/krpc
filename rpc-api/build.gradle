@@ -6,14 +6,13 @@ targetCompatibility = "11"
 
 
 dependencies {
-    compileOnly "org.projectlombok:lombok:${lombokVersion}"
-
 
     // just for Transitive Dependency，most sub project need below two lib.
-    api 'jakarta.validation:jakarta.validation-api:3.0.2'
+    api 'jakarta.validation:jakarta.validation-api:3.1.0'
     // just for PageList/PageQuery , in bt-mybatis project.
-//    api "com.bt.common:model:1.0.0"
 
     compileOnly "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 }

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 
 //package bt.rpc;
-option go_package = "google.golang.org/btrpc";
+option go_package = "google.golang.org/krpc";
 
 service Grpc {
   rpc call (InputProto) returns (OutputProto);
@@ -19,6 +19,8 @@ message OutputProto {
   //google.rpc.Code  see https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
   int32 c = 1;
 
+
+  // like union Data in C++
   oneof data {
 	string m = 2;//detail  message if there is a error ,otherwise  null
 	string utf8 = 3;////for json , txt like serial

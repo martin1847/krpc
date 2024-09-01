@@ -6,14 +6,14 @@ plugins {
 }
 
 
-group = "com.bttest.test.rpc"
+group = "test.tech.krpc"
 dependencies {
 
     implementation project(':test-api')
-    implementation project(':rpc-server-native')
+    implementation project(':rpc-server-quarkus')
     implementation project(':rpc-client')
 
-//    implementation "com.btyx.example:test-api:$globalRpcVersion"
+//    implementation "com.zlkj.example:test-api:$globalRpcVersion"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
@@ -36,12 +36,12 @@ dependencies {
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-    implementation "com.bt.ext:ext-mybatis:$globalRpcVersion"
-    implementation "com.bt.common:mybatis:$globalRpcVersion"
+    implementation "tech.krpc.ext:ext-mybatis:$globalRpcVersion"
+//    implementation "tech.krpc.mybatis:mybatis:$globalRpcVersion"
 
     //1.5.2.Final  1.5.0.Beta1
-    implementation 'org.mapstruct:mapstruct:1.5.3.Final'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.3.Final'
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 
 //    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
@@ -51,7 +51,7 @@ dependencies {
         exclude module: 'quarkus-bootstrap-maven-resolver'
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
-    testImplementation 'org.mockito:mockito-core:4.8.1'
+    testImplementation "org.mockito:mockito-core:$mockitoVersion"
 
     // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
     testImplementation 'org.openjdk.jmh:jmh-core:1.35'
@@ -114,7 +114,7 @@ quarkusBuild {
         additionalBuildArgs2 = "--allow-incomplete-classpath," +
 //                "-H:DynamicProxyConfigurationFiles=dynamic-proxy.json,"+
                 "-H:ReflectionConfigurationFiles=reflection-config.json," +
-                "--initialize-at-build-time=com.bt.RuntimeToNativeBuild,"+
+                "--initialize-at-build-time=xxx.RuntimeToNativeBuild,"+
                 "--initialize-at-run-time=" +
                     "io.netty.util.internal.logging.Log4JLogger" +
                     "\\,io.netty.buffer.PooledByteBufAllocator" +

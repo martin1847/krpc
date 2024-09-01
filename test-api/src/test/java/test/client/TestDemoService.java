@@ -4,14 +4,16 @@
  */
 package test.client;
 
-import com.bt.rpc.client.AsyncClient;
-import com.bt.rpc.client.AsyncMethod;
-import com.bt.rpc.client.AsyncMethod.ResultObserver;
-import com.bt.rpc.model.RpcResult;
-import com.btyx.test.DemoService;
-import com.btyx.test.dto.TimeReq;
-import com.btyx.test.dto.TimeResult;
-import com.btyx.test.dto.User;
+import java.util.Arrays;
+
+import tech.krpc.client.AsyncClient;
+import tech.krpc.client.AsyncMethod;
+import tech.krpc.client.AsyncMethod.ResultObserver;
+import tech.krpc.model.RpcResult;
+import tech.test.krpc.DemoService;
+import tech.test.krpc.dto.TimeReq;
+import tech.test.krpc.dto.TimeResult;
+import tech.test.krpc.dto.Book;
 
 /**
  *
@@ -25,11 +27,15 @@ public class TestDemoService {
 
         var demoService = client.getService(DemoService.class,null);
 
-        System.out.println(demoService.bytesTime());
+        System.out.println("bytesTime : "+ Arrays.toString(demoService.bytesTime().getData()));
+
+        System.out.println(demoService.bytesSum(new byte[]{1,2,3,4,5}));
+
+        System.out.println("bytesInc: "+ Arrays.toString(demoService.incBytes(new byte[]{1,2,3,4,5}).getData()));
 
         var asyncClient = new AsyncClient<>(demoService);
-        testAsync(asyncClient,"save",new User(11,"async"));
-        testAsync(asyncClient,"save",new User(22,"async"));
+        testAsync(asyncClient,"save",new Book(11,"async"));
+        testAsync(asyncClient,"save",new Book(22,"async"));
         testAsync(asyncClient,"inc100",100);
 
         AsyncMethod<DemoService, TimeReq, TimeResult> hello = AsyncMethod.from(demoService,"hello");

@@ -1,10 +1,56 @@
 
+
+# The `KRPC` Project
+
+`KRPC` 是一个基于`面向所选编程语言`的快速开发框架（构建RPC服务），就像写一个普通函数一样。
+* 序列化独立，默认采用json(最小成本兼容最多终端，android/iOS/h5/微信小程序等等)，不考虑跨语言，也可以使用特定语言序列化方案。
+* 通信协议`HTTP/2`(plaintext)，代理友好、H5友好、移动设备友好，暴露给终端可经由网关配置`TLS`。
+
+目前支持的语言如下：
+
+| 语言     | 服务端 | 客户端 |
+|--------|---| -------- |
+| Java   | ✅ | ✅       |
+| Rust   | ✅ | ✅       |
+| C#     | ✅ | ✅       |
+| Dart   | 否 | ✅       |
+| js/web | 否 | ✅       |
+| nodejs | 否  | ✅       |
+| Python | 否 | ✅       |
+| Go     |  ✅ | ✅       |
+
+
+愿景：让`KRPC`成为现代网络`API`的事实标准（`rest`使命已完成，可以退出历史舞台了）。
+
+why `KRPC`, `K`是什么：
+
+* 首先,`K`代表`k8s`,云原生的含义
+  * 全面拥抱`k8s`,拥抱`Service Mesh`服务网格,专业的事交给专业的人去做
+  * 没有自己的服务发现，利用`k8s`的`service`[云原生服务发现](https://kubernetes.io/docs/concepts/services-networking/service)
+  * 没有自己的负载均衡，利用`服务网格`[istio](https://istio.io/latest/docs/concepts/traffic-management/#load-balancing-options)
+  * 没有自己的`telemetry`黄金四指标`four golden signals`,还是利用`服务网格的可观测性`[istio](https://istio.io/latest/zh/docs/concepts/observability/)
+  * 没有自己实现web兼容`gRPC web`,还是利用[istio ingress](https://istio.io/latest/zh/docs/ops/configuration/traffic-management/protocol-selection/)
+* `K`代表中文里的`kuai快`
+  * 性能
+    * 基于`Netty`和`gRPC`的极薄封装
+    * java版本全面拥抱`GraalVM/quarkus`进行AOT(去除了反射)，适应云原生,启动秒起
+    * CPU/内存占用低（经验：只有JVM版本的 20%～40%之间, AOT的好处，直接享受)
+  * 开发
+    * 无需知晓、编写`proto`,直接开发`Java interface`即可
+    * 代码即文档，基于一套`interface`,生成`dart/typesctipt/python/go`等客户端，客户端所见即所得
+    * 支持Flutter客户端(iOS、安卓原生客户端待测试)
+    * 支持web客户端/微信小程序,通过`gRPC web`协议，（无需引入http/rest概念)
+    
+# 版本
+
+不再支持`JDK8`，最小支持`JDK11`。
+
 Latest version : `1.0.0`
 
 ```gradle
-//implementation "com.bt.rpc:rpc-server:1.0.0"
-//implementation "com.bt.rpc:rpc-client:1.0.0"
-//implementation "com.bt.ext:ext-rpc:1.0.0"
+//implementation "tech.krpc:rpc-server:1.0.0"
+//implementation "tech.krpc:rpc-client:1.0.0"
+//implementation "tech.kext:ext-rpc:1.0.0"
 ```
 
 ![ARCHITECTURE](./ARCHITECTURE.png)
@@ -15,18 +61,16 @@ There is a  [demo-rpc](/example/demo-rpc) project.
 
 最重要的一步，API即文档，后续前端TypeScript、Java客户端均使用这一套API声明
 
-* Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan.
+* Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan （quarkus编译阶段利用它扫描类进行AOT配置）.
 * build.gradle file:
 
-
 ```gradle
-
 plugins {
-    id 'org.kordamp.gradle.jandex' version '1.1.0'
+    id 'org.kordamp.gradle.jandex' version '2.0.0'
 }
 
 dependencies {
-    api "com.bt.rpc:rpc-api:1.0.0"
+    api "tech.krpc:rpc-api:1.0.0"
 }
 ```
 
@@ -39,7 +83,7 @@ package com.xxxx;
 @RpcService
 public interface DemoService {
 
-    RpcResult<TimeResult> hello(TimeReq req);
+    RpcResult<HelloResult> hello(HelloReq req);
 
     RpcResult<byte[]> bytesTime();
 
@@ -54,7 +98,7 @@ public interface DemoService {
 
 
 @Data
-public class TimeReq {
+public class HelloReq {
 
   @Doc("姓名")
   @NotBlank
@@ -73,13 +117,13 @@ public class TimeReq {
 Convention & Limit  about the service define : 
 * 字段使用 `jakarta.validation` 进行验证，默认采用 `hibernate-validator` 实现。
   * RPC框架自动验证，开发时标准好即可
-* API即文档，请使用`Doc`加以说明字段含义
+* 代码即文档，请使用`Doc`加以说明字段含义
   * 使用框架自动生成前端`TypeScript`调用代码
   * `Doc`更是给前端、测试同学看的，请认真对待
 * returnType must be `RpcResult<DTO>` .
     - `DTO` can be any object , BUT Abstract/Interface Not Support
     - Do not use Enum as return Field(Input can), maybe not Compatibility when Upgrade. Use string/int instead.
-    - 不要直接使用`date/time`, use [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
+    - java`date/time`, jackson 情况下，会被转换为 [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
     - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
     - 除非必要，禁止使用Map做为出入参
     - 其余参考 [命名规范](https://redmine.btrpc.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
@@ -111,10 +155,10 @@ Then publish this API package to  https://jcr.btrpc.com  for the client side to 
 
 implementation project(':your-api')
 
-implementation "com.bt.rpc:rpc-server:1.0.0"
-implementation "com.bt.ext:ext-rpc:1.0.0"
+implementation "tech.krpc:rpc-server:1.0.0"
+implementation "tech.krpc.ext:ext-rpc:1.0.0"
 
-//implementation "com.bt.ext:ext-mybatis:1.0.0"
+//implementation "tech.krpc.ext:ext-mybatis:1.0.0"
 ```
   
 * Implention the service 
@@ -187,11 +231,11 @@ rpcurl.exe https://example.testapi.com/demo-java-server/Demo/hello  -d '{"name":
 
 # 各种客户端
 
-[Dart](https://gitlab.btrpc.com/middleware/btyx-rpc-dart-client)
+[Dart](https://gitlab.btrpc.com/middleware/zlkj-rpc-dart-client)
 
-[TypeScript](https://gitlab.btrpc.com/middleware/btyx-rpc-ts-client)
+[TypeScript](https://gitlab.btrpc.com/middleware/zlkj-rpc-ts-client)
 
-[Python](https://gitlab.btrpc.com/middleware/btyx-rpc-python-client)
+[Python](https://gitlab.btrpc.com/middleware/zlkj-rpc-python-client)
 
 [go/k6](https://gitlab.btrpc.com/middleware/xk6-btrpc)
 

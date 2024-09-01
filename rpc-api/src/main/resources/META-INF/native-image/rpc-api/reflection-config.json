@@ -1,0 +1,14 @@
+[
+  {
+    "name" : "tech.krpc.model.PagedList",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  },
+  {
+    "name" : "tech.krpc.model.PagedQuery",
+    "allPublicConstructors" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true
+  }
+]

@@ -1,18 +1,36 @@
 
 
-# `kRPC` Project
+# The `KRPC` Project
 
-`kRPC` 是一个基于`Netty`和`gRPC`实现的快速开发框架（构建RPC服务），隐藏了protobuf细节（无需编写proto文件），可以直接面向接口编程。
+`KRPC` 是一个基于`面向所选编程语言`的快速开发框架（构建RPC服务），就像写一个普通函数一样。
+* 序列化独立，默认采用json(最小成本兼容最多终端，android/iOS/h5/微信小程序等等)，不考虑跨语言，也可以使用特定语言序列化方案。
+* 通信协议`HTTP/2`(plaintext)，代理友好、H5友好、移动设备友好，暴露给终端可经由网关配置`TLS`。
 
-why `kRPC`, `k`是什么：
+目前支持的语言如下：
 
-* 首先,`k`代表`k8s`,云原生的含义
+| 语言     | 服务端 | 客户端 |
+|--------|---| -------- |
+| Java   | ✅ | ✅       |
+| Rust   | ✅ | ✅       |
+| C#     | ✅ | ✅       |
+| Dart   | 否 | ✅       |
+| js/web | 否 | ✅       |
+| nodejs | 否  | ✅       |
+| Python | 否 | ✅       |
+| Go     |  ✅ | ✅       |
+
+
+愿景：让`KRPC`成为现代网络`API`的事实标准（`rest`使命已完成，可以退出历史舞台了）。
+
+why `KRPC`, `K`是什么：
+
+* 首先,`K`代表`k8s`,云原生的含义
   * 全面拥抱`k8s`,拥抱`Service Mesh`服务网格,专业的事交给专业的人去做
   * 没有自己的服务发现，利用`k8s`的`service`[云原生服务发现](https://kubernetes.io/docs/concepts/services-networking/service)
   * 没有自己的负载均衡，利用`服务网格`[istio](https://istio.io/latest/docs/concepts/traffic-management/#load-balancing-options)
   * 没有自己的`telemetry`黄金四指标`four golden signals`,还是利用`服务网格的可观测性`[istio](https://istio.io/latest/zh/docs/concepts/observability/)
   * 没有自己实现web兼容`gRPC web`,还是利用[istio ingress](https://istio.io/latest/zh/docs/ops/configuration/traffic-management/protocol-selection/)
-* `k`代表中文里的`kuai快`
+* `K`代表中文里的`kuai快`
   * 性能
     * 基于`Netty`和`gRPC`的极薄封装
     * java版本全面拥抱`GraalVM/quarkus`进行AOT(去除了反射)，适应云原生,启动秒起

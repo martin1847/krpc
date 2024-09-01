@@ -126,7 +126,7 @@ Convention & Limit  about the service define :
     - java`date/time`, jackson 情况下，会被转换为 [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
     - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
     - 除非必要，禁止使用Map做为出入参
-    - 其余参考 [命名规范](https://redmine.btrpc.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
+    - 其余参考 [命名规范](https://redmine.krpc.tech/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
 * 入参不多于一个 
 * 标记 `RpcService` annotation
 
@@ -144,7 +144,7 @@ apply from: "$rootProject.projectDir/gradle/upload.gradle"
     sourceCompatibility = "11"
     targetCompatibility = "11"
 ```
-Then publish this API package to  https://jcr.btrpc.com  for the client side to reference.
+Then publish this API package to  https://jcr.krpc.tech  for the client side to reference.
 
 
 # 2. Setup the Server
@@ -217,31 +217,31 @@ rpcurl.exe $KRPC_APP/demo-java-server/Demo/hello  -d '{"name":"rpc","age":123}'
 
 # Exception Handler
 
-## 使用错误码/Soft Exception
-* 约定错误码 ： https://redmine.btrpc.com/projects/bt/wiki/%E5%85%A8%E5%B1%80%E9%94%99%E8%AF%AF%E7%A0%81
+## 推荐使用错误码 (Soft Exception, java侧并不会抛出Exception)
+* 约定全局错误码 ：每个业务域可以划分开
 * ServerSide : Just return a RpcResult with non-OK  Code and a error message(left data null)
 * ClientSide : Check IsOk Before Use Data
 
-## 禁止使用 Hard Exception。业务无关的除外，比如安全认证，参数校验，通常捕获为系统错误
+## 不推荐使用 Hard Exception。业务无关的除外，比如安全认证，参数校验，通常捕获为系统错误
 * ServerSide : Throw a RpcException (Status/Runtime/Exception in Java Side) with your StatusCode or Other Exception(mapping to `Unknown` code)
 * ClientSide : Get a RpcException (StatusRuntimeException Java side, catch it or not )
 
 
 # 各种客户端
 
-[Dart](https://gitlab.btrpc.com/middleware/zlkj-rpc-dart-client)
+[Dart](https://gitlab.krpc.tech/middleware/zlkj-rpc-dart-client)
 
-[TypeScript](https://gitlab.btrpc.com/middleware/zlkj-rpc-ts-client)
+[TypeScript](https://gitlab.krpc.tech/middleware/zlkj-rpc-ts-client)
 
-[Python](https://gitlab.btrpc.com/middleware/zlkj-rpc-python-client)
+[Python](https://gitlab.krpc.tech/middleware/zlkj-rpc-python-client)
 
-[go/k6](https://gitlab.btrpc.com/middleware/xk6-btrpc)
+[go/k6](https://gitlab.krpc.tech/middleware/xk6-krpc)
 
-[rpcurl](./rpcurl/dart)
+[rpcurl](./krpc-crates/crates/rpcurl)
 
 # CI & CD
 
-[ ci demo](https://gitlab.btrpc.com/example/demo-rpc/-/pipelines)
+[ ci demo](https://gitlab.krpc.tech/example/demo-rpc/-/pipelines)
 
 
 

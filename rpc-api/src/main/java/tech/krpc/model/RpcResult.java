@@ -81,7 +81,7 @@ public class RpcResult<DTO> implements Serializable {
 
     public static <T> RpcResult<T> error(int code, String msg) {
         assert null != msg;
-        assert code != 0;
+        assert code > 0;
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
         res.msg = msg;

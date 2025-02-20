@@ -22,13 +22,13 @@ public class TestGeneralizeClient {
     public static void main(String[] args) {
 
         var addr = "10.17.1.10";
-        addr ="127.0.0.1";
-        ManagedChannel channel =  ManagedChannelBuilder.forAddress(addr,50051).usePlaintext().build();
-        var proto = GeneralizeClient.call(channel,"-foreign/Image/captcha","\"Hello,123,60\"");
-        //System.out.println(Arrays.toString());
+        addr = "127.0.0.1";
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(addr, 50051).usePlaintext().build();
+        var proto = GeneralizeClient.call(channel, "-foreign/Image/qrcode", null);
+        //"\"A9XmK,132,48\""        //System.out.println(Arrays.toString());
 
         var byteArray = proto.getBs();
-         var filePath = "/Users/martin/Downloads/test3.jpg";
+        var filePath = "/Users/martin/Downloads/test3.jpg";
         try (var fos = new FileOutputStream(filePath)) {
             // 将字节数组写入文件
             fos.write(byteArray);

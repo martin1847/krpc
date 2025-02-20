@@ -10,7 +10,7 @@
 //apply plugin:  'io.quarkus'
 
 plugins {
-    id 'io.quarkus'  version "$quarkusTestServerVersion"
+    id 'io.quarkus'  version "$quarkusMiniSupport"
 }
 
 
@@ -36,7 +36,7 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
     implementation "io.grpc:grpc-netty:${grpcVersion}"
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusTestServerVersion}")
+    implementation platform("io.quarkus:quarkus-bom:${quarkusMiniSupport}")
     implementation "io.quarkus:quarkus-arc"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"

@@ -20,6 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 @Startup
 @Slf4j
 public class DemoServiceImpl extends AbstractDemoService {
+
+    @Override
+    public RpcResult<String> str(String in) {
+        return RpcResult.ok("java5678:got: [ " + in +" ] , headers : "  + ServerContext.current().getHeaders().toString());
+    }
+
+
     @Override
     public RpcResult<TimeResult> hello(TimeReq req) {
 

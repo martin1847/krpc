@@ -77,15 +77,15 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             var query = new QueryStringDecoder(uri);
             // var post = postMap.get(uri);
             // post with parameters
-            var post = postMap.get(query.rawPath());
-            if (null != post) {
-                var dto = parsePost(request, post);
+            var postHandler = postMap.get(query.rawPath());
+            if (null != postHandler) {
+                var dto = parsePost(request, postHandler);
 
-                if(!query.rawQuery().isEmpty() && dto instanceof QueryStringAware){
+                if (!query.rawQuery().isEmpty() && dto instanceof QueryStringAware) {
                     ((QueryStringAware) dto).setQueryString(query);
                 }
 
-                writeHandler(ctx, post, dto, request.headers());
+                writeHandler(ctx, postHandler, dto, request.headers());
                 return;
             }
         }

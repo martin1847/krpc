@@ -7,6 +7,7 @@
 
 类似spring的 `org.mybatis.spring.mapper.MapperScannerConfigurer`
 
+!!! springboot  版本暂时不支持 AOT 编译 !!!
 
 1. 增加依赖
 ```groovy
@@ -25,3 +26,18 @@ rpc:
     app: ${spring.application.name}
     jwks:  https://zlkj-jwks.oss-cn-shanghai.aliyuncs.com/.well-known/test.bo.jwks.json
 ```
+
+3. 实现RpcService
+
+```java
+@Named
+public class DemoServiceImpl implements DemoService {
+    @Override
+    public RpcResult<String> str(String in) {
+        return RpcResult.ok("springboot:got:" + in);
+    }
+}
+```
+
+其余用法跟`quarkus`一样。
+

@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: test-server
+
+rpc:
+  server:
+    app: ${spring.application.name}
+    jwks:  https://zlkj-jwks.oss-cn-shanghai.aliyuncs.com/.well-known/test.bo.jwks.json

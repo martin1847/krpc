@@ -2,9 +2,6 @@ syntax = "proto3";
 
 package krpc;
 
-option go_package = "google.golang.org/krpc";
-
-
 service KrpcBaseService {
   rpc callUnary (InputProto) returns (OutputProto);
 }
@@ -18,13 +15,13 @@ message InputProto {
 // same with the server side
 message OutputProto {
   //google.rpc.Code  see https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto
-  int32 c = 1;
+  int32 code = 1;
 
 
   // like union Data in C++
   oneof data {
-	string m = 2;//detail  message if there is a error ,otherwise  null
+	string msg = 2;//detail  message if there is a error ,otherwise  null
 	string utf8 = 3;////for json , txt like serial
-	bytes bs = 4; // ByteString, others Serialization transfer by protobuf
+	// bytes bs = 4; // ByteString, others Serialization transfer by protobuf,same with string in cpp
   }
 }

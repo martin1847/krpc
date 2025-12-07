@@ -76,8 +76,8 @@ public class RpcServiceExposer implements  ApplicationContextAware {
     @PostConstruct
     public void afterPropertiesSet() throws Exception {
         log.debug("*******************rpc.enable RpcServerAutoConfigure*******************************");
-        log.info(" app = {} , port = {}",app,port);
-        log.info(" validator = {}",validator);
+        log.debug(" app = {} , port = {}",app,port);
+        log.debug(" validator = {}",validator);
 
         initFilter(applicationContext);
 

@@ -7,7 +7,7 @@
 
 类似spring的 `org.mybatis.spring.mapper.MapperScannerConfigurer`
 
-!!! springboot  版本暂时不支持 AOT 编译 !!!
+!!! springboot  版本暂时不支持 `AOT` 编译 !!!
 
 1. 增加依赖
 ```groovy
@@ -16,6 +16,9 @@
         exclude(module: "jakarta.validation-api")
     }
     implementation("tech.krpc:rpc-server-spring:1.0.0.rc1")
+
+    //开启JSR-380 Bean Validation，支持RPC参数校验
+    implementation "org.springframework.boot:spring-boot-starter-validation"
 ```
 
 2. 增加配置
@@ -40,4 +43,9 @@ public class DemoServiceImpl implements DemoService {
 ```
 
 其余用法跟`quarkus`一样。
+
+比如拦截器：
+[test-server-spring](../test-server-spring) 项目中有示例。
+* Global : 拦截所有RpcService，参考 [ExecServerFilter.java](../test-server-spring/src/main/java/tech/krpc/test/spring/filter/ExecServerFilter.java)
+* Service专用：参考 `@Filters(TestFilter.class)`
 

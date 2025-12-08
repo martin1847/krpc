@@ -1,6 +1,7 @@
 package tech.krpc.test.spring.service;
 
 
+import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 import tech.krpc.model.RpcResult;
@@ -11,6 +12,7 @@ import tech.krpc.util.EnvUtils;
 import tech.test.krpc.AbstractDemoService;
 import tech.test.krpc.dto.TimeReq;
 import tech.test.krpc.dto.TimeResult;
+import tech.test.krpc.inner.DemoRpc;
 
 /**
  * 2020-01-06 15:52
@@ -22,8 +24,13 @@ import tech.test.krpc.dto.TimeResult;
 @Filters(TestFilter.class)
 public class DemoServiceImpl extends AbstractDemoService {
 
+
+    @Inject
+    DemoRpc demoRpc;
+
     @Override
     public RpcResult<String> str(String in) {
+        log.info("demoRpc: {}" , demoRpc);
         return RpcResult.ok("spring5678:got: [ " + in +" ] , headers : "  + ServerContext.current().getHeaders().toString());
     }
 

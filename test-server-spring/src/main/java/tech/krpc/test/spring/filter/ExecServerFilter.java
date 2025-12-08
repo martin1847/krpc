@@ -4,6 +4,7 @@ import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 import tech.krpc.common.FilterChain;
 import tech.krpc.filter.GlobalFilter;
+import tech.krpc.model.RpcResult;
 import tech.krpc.server.ServerContext;
 import tech.krpc.server.ServerFilter;
 import tech.krpc.server.ServerResult;
@@ -21,8 +22,13 @@ public class ExecServerFilter implements ServerFilter {
     public ServerResult Invoke(ServerContext serverContext, FilterChain<ServerResult, ServerContext> next) throws Throwable {
 
         var s = System.currentTimeMillis();
-        var res = next.invoke(serverContext);
-        log.info(" Call method {} cost {} ms ." , serverContext.getMethod() , (System.currentTimeMillis() - s));
-        return res;
+        try {
+            var res = next.invoke(serverContext);
+            log.info(" Call method {} cost {} ms ." , serverContext.getMethod() , (System.currentTimeMillis() - s));
+            return res;
+        }catch (Throwable e){
+            //balalalal
+            return new ServerResult(500,e.getMessage());
+        }
     }
 }

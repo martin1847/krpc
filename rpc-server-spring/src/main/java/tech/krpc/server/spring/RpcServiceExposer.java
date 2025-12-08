@@ -9,8 +9,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 
 import io.grpc.Server;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.validation.Validator;
@@ -21,6 +19,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.SmartLifecycle;
 import tech.krpc.annotation.RpcService;
 import tech.krpc.common.RpcConstants;
 import tech.krpc.filter.GlobalFilter;
@@ -41,22 +40,23 @@ import tech.krpc.util.EnvUtils;
 @Slf4j
 @ConfigurationProperties(prefix = "rpc.server")
 @Named
-public class RpcServiceExposer implements  ApplicationContextAware {
+public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycle {
 
     @Setter
     String app;
 
     @Setter
-    int port =  RpcConstants.DEFAULT_PORT;
+    int port = RpcConstants.DEFAULT_PORT;
 
     @Setter
     boolean defaultExecutor = false;
 
     static {
         //log.debug("static GraalvmBuild.forNative.....");
-        //io.grpc.ManagedChannelProvider$ProviderNotFoundException: No functional server found. Try adding a dependency on the grpc-netty or grpc-netty-shaded artifact quarkus graal native
+        //io.grpc.ManagedChannelProvider$ProviderNotFoundException: No functional server found. Try adding a dependency on the grpc-netty
+        // or grpc-netty-shaded artifact quarkus graal native
         //https://github.com/quarkusio/quarkus/blob/main/extensions/grpc/runtime/src/main/java/io/quarkus/grpc/spi/GrpcBuilderProvider.java
-        if(!RpcConstants.CI_BUILD_ID.startsWith("null")) {
+        if (!RpcConstants.CI_BUILD_ID.startsWith("null")) {
             System.out.println("[ RpcServiceExpose ] CI_BUILD_ID :" + RpcConstants.CI_BUILD_ID);
         }
         //see Target_io_netty_util_internal_logging_InternalLoggerFactory
@@ -67,67 +67,18 @@ public class RpcServiceExposer implements  ApplicationContextAware {
     ExecutorService executor;
 
     @Inject
-    Validator validator;
+    Validator     validator;
     @Inject
     InitJwsVerify initJwsVerify;
 
     ApplicationContext applicationContext;
-
-    @PostConstruct
-    public void afterPropertiesSet() throws Exception {
-        log.debug("*******************rpc.enable RpcServerAutoConfigure*******************************");
-        log.debug(" app = {} , port = {}",app,port);
-        log.debug(" validator = {}",validator);
-
-        initFilter(applicationContext);
-
-        initValidator();
-
-        initJwsVerify.init();
-
-
-        if(!defaultExecutor) {
-            // instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL ( SHARED_CHANNEL_EXECUTOR/ NAME = "grpc-default-executor")
-            var name = app + "-rpc";
-            var cpus = Runtime.getRuntime().availableProcessors();
-            if(cpus < 6 ){
-                // docker may be 1
-                log.info(" cpus is too small {} , change to default 6.",cpus);
-                cpus = 6;
-            }
-            executor = ThreadPool.newExecutor(name, cpus);
-            log.info("Init Executor {}({} cpus),  instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name, cpus);
-        }else {
-            log.info("Use CachedThreadPool ServerImplBuilder.DEFAULT_EXECUTOR_POOL grpc-default-executor.");
-        }
-
-        var serviceSize = startServer(applicationContext);
-        log.info("***** 【 {} 】 RpcServer expose {} services on {}, {}.", EnvUtils.current(),serviceSize, port, RpcConstants.CI_BUILD_ID);
-        Thread.currentThread().join();
-
-    }
-
-    @PreDestroy
-    public void shutdown() throws Exception {
-        var waitTask = 0;
-        if (null != server) {
-            server.shutdownNow();
-        }
-        if(null != executor){
-            waitTask = executor.shutdownNow().size();
-        }
-        log.info("***** 【 {} 】 RpcServer shutting down with {} waiting tasks, since JVM is shutting down.", EnvUtils.current(),waitTask);
-    }
-
-
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
-
-    int startServer(ApplicationContext context) throws Exception{
+    int startServer(ApplicationContext context) throws Exception {
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
         proxyServerBuilder.executor(executor);
@@ -154,18 +105,18 @@ public class RpcServiceExposer implements  ApplicationContextAware {
         return i;
     }
 
-    public void initValidator(){
+    public void initValidator() {
         //var validators = CDI.current().select(Validator.class);
         //if (validators.isResolvable()) {
         if (validator instanceof EmptyValidator) {
             log.warn("EmptyValidator Found, All Rpc Validator will Skip, Are you Sure?");
-        }else {
+        } else {
             log.info("[ Reg GlobalValidator ] :  {}", validator);
             ServerContext.regValidator(validator);
         }
     }
 
-    public void initFilter(ApplicationContext applicationContext){
+    public void initFilter(ApplicationContext applicationContext) {
         var beans = applicationContext.getBeansWithAnnotation(GlobalFilter.class);
         var map = new TreeMap<Order, ServerFilter>();
         beans.forEach((bean, it) -> {
@@ -179,6 +130,69 @@ public class RpcServiceExposer implements  ApplicationContextAware {
             log.info("[ Reg GlobalFilter ] :  {}", k);
             ServerContext.regGlobalFilter(v);
         });
+    }
+
+    @Override
+    public void start() {
+        log.debug("*******************rpc.enable RpcServerAutoConfigure*******************************");
+        log.debug(" app = {} , port = {}", app, port);
+        log.debug(" validator = {}", validator);
+
+        initFilter(applicationContext);
+
+        initValidator();
+
+        initJwsVerify.init();
+
+        if (!defaultExecutor) {
+            // instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL ( SHARED_CHANNEL_EXECUTOR/ NAME = "grpc-default-executor")
+            var name = app + "-rpc";
+            var cpus = Runtime.getRuntime().availableProcessors();
+            if (cpus < 6) {
+                // docker may be 1
+                log.info(" cpus is too small {} , change to default 6.", cpus);
+                cpus = 6;
+            }
+            executor = ThreadPool.newExecutor(name, cpus);
+            log.info("Init Executor {}({} cpus),  instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name, cpus);
+        } else {
+            log.info("Use CachedThreadPool ServerImplBuilder.DEFAULT_EXECUTOR_POOL grpc-default-executor.");
+        }
+
+        try {
+            int serviceSize = startServer(applicationContext);
+            log.info("***** 【 {} 】 RpcServer expose {} services on {}, {}.", EnvUtils.current(), serviceSize, port,
+                    RpcConstants.CI_BUILD_ID);
+        } catch (Exception e) {
+            log.error("start krpc netty server failed !!!", e);
+            throw new RuntimeException(e);
+        }
+        //
+        try {
+            server.awaitTermination();
+            //Thread.currentThread().join();
+        } catch (InterruptedException e) {
+            log.warn("server may be killed, prepare shutdown now...", e);
+        }
+    }
+
+    @Override
+    public void stop() {
+
+        var waitTask = 0;
+        if (null != server) {
+            server.shutdownNow();
+        }
+        if (null != executor) {
+            waitTask = executor.shutdownNow().size();
+        }
+        server = null;
+        log.info("***** 【 {} 】 RpcServer shutting down with {} waiting tasks, since JVM is shutting down.", EnvUtils.current(), waitTask);
+    }
+
+    @Override
+    public boolean isRunning() {
+        return server != null;
     }
 
     //

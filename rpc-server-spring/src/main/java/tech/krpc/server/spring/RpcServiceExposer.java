@@ -4,22 +4,23 @@
  */
 package tech.krpc.server.spring;
 
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 
 import io.grpc.Server;
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.validation.Validator;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.SmartLifecycle;
+import org.springframework.context.ApplicationListener;
 import tech.krpc.annotation.RpcService;
 import tech.krpc.common.RpcConstants;
 import tech.krpc.filter.GlobalFilter;
@@ -40,7 +41,7 @@ import tech.krpc.util.EnvUtils;
 @Slf4j
 @ConfigurationProperties(prefix = "rpc.server")
 @Named
-public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycle {
+public class RpcServiceExposer implements ApplicationListener<ApplicationReadyEvent> {
 
     @Setter
     String app;
@@ -71,13 +72,6 @@ public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycl
     @Inject
     InitJwsVerify initJwsVerify;
 
-    ApplicationContext applicationContext;
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
     int startServer(ApplicationContext context) throws Exception {
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
@@ -86,16 +80,22 @@ public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycl
         var beans = context.getBeansWithAnnotation(RpcService.class);
         int i = 0;
         for (var kv : beans.entrySet()) {
+            var bean = kv.getValue();
             var beanName = kv.getKey();
+            if (Proxy.isProxyClass(bean.getClass())) {
+                log.debug("ignore Client RPC : {}", beanName);
+                continue;
+            }
+
             var filterList = new ArrayList<ServerFilter>();
             var fa = context.findAnnotationOnBean(beanName, Filters.class);
             if (null != fa) {
                 for (var f : fa.value()) {
-                    var flt = applicationContext.getBean(f);
+                    var flt = context.getBean(f);
                     filterList.add(flt);
                 }
             }
-            proxyServerBuilder.addService(kv.getValue(), filterList);
+            proxyServerBuilder.addService(bean, filterList);
             i++;
             if (filterList.size() > 0) {
                 log.info("Found RpcService :=> {}  has Filters {} ", beanName, filterList);
@@ -132,13 +132,32 @@ public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycl
         });
     }
 
+    @PreDestroy
+    public void stop() {
+
+        var waitTask = 0;
+        if (null != server) {
+            server.shutdownNow();
+        }
+        if (null != executor) {
+            waitTask = executor.shutdownNow().size();
+        }
+        server = null;
+        log.info("***** 【 {} 】 RpcServer shutting down with {} waiting tasks, since JVM is shutting down.", EnvUtils.current(), waitTask);
+    }
+
+    //public boolean isRunning() {
+    //    return server != null;
+    //}
+
     @Override
-    public void start() {
+    public void onApplicationEvent(ApplicationReadyEvent event) {
+        var ctx = event.getApplicationContext();
         log.debug("*******************rpc.enable RpcServerAutoConfigure*******************************");
         log.debug(" app = {} , port = {}", app, port);
         log.debug(" validator = {}", validator);
 
-        initFilter(applicationContext);
+        initFilter(ctx);
 
         initValidator();
 
@@ -160,8 +179,8 @@ public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycl
         }
 
         try {
-            int serviceSize = startServer(applicationContext);
-            log.info("***** 【 {} 】 RpcServer expose {} services on {}, {}.", EnvUtils.current(), serviceSize, port,
+            int serviceSize = startServer(ctx);
+            log.info("***** 【 {} 】 RpcServer Expose {} Services on {}, {}.", EnvUtils.current(), serviceSize, port,
                     RpcConstants.CI_BUILD_ID);
         } catch (Exception e) {
             log.error("start krpc netty server failed !!!", e);
@@ -174,25 +193,6 @@ public class RpcServiceExposer implements ApplicationContextAware, SmartLifecycl
         } catch (InterruptedException e) {
             log.warn("server may be killed, prepare shutdown now...", e);
         }
-    }
-
-    @Override
-    public void stop() {
-
-        var waitTask = 0;
-        if (null != server) {
-            server.shutdownNow();
-        }
-        if (null != executor) {
-            waitTask = executor.shutdownNow().size();
-        }
-        server = null;
-        log.info("***** 【 {} 】 RpcServer shutting down with {} waiting tasks, since JVM is shutting down.", EnvUtils.current(), waitTask);
-    }
-
-    @Override
-    public boolean isRunning() {
-        return server != null;
     }
 
     //

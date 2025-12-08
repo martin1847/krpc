@@ -38,9 +38,11 @@ subprojects {
     group = "$group"
     version = "$version"
 
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
-    //JavaVersion.VERSION_17
+    java{
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
+    }
+        //JavaVersion.VERSION_17
 
     compileJava {
         options.encoding = 'UTF-8'

@@ -1,4 +1,4 @@
-package tech.test.krpc;
+package tech.test.krpc.inner;
 
 import java.util.List;
 

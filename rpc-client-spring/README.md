@@ -14,7 +14,8 @@
     implementation ("com.zlkj.common:cdn-rpc:1.3.1117") {
         exclude(module: "jakarta.validation-api")
     }
-    implementation("tech.krpc:rpc-client-spring:1.0.0.rc1")
+//更新最新版本
+    implementation("tech.krpc:rpc-client-spring:1.0.2")
 ```
 
 2. 增加配置

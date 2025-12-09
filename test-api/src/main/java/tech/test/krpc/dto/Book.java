@@ -19,6 +19,8 @@ public class Book {
 
     BookStatus stat;
 
+    Book1 book1;
+
     public Book(Integer id, String name) {
         this.id = id;
         this.name = name;

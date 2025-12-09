@@ -13,7 +13,6 @@ dependencies {
     implementation project(':rpc-server-quarkus')
     implementation project(':rpc-client')
 
-//    implementation "com.zlkj.example:test-api:$globalRpcVersion"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
@@ -37,8 +36,7 @@ dependencies {
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-    implementation "tech.krpc.ext:ext-mybatis:$globalRpcVersion"
-//    implementation "tech.krpc.mybatis:mybatis:$globalRpcVersion"
+    implementation "tech.krpc.ext:ext-mybatis:$extRpcVersion"
 
     //1.5.2.Final  1.5.0.Beta1
     implementation 'org.mapstruct:mapstruct:1.6.3'

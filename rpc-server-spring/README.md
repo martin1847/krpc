@@ -15,7 +15,7 @@
     implementation ("com.zlkj.common:cdn-rpc:1.3.1117") {
         exclude(module: "jakarta.validation-api")
     }
-    implementation("tech.krpc:rpc-server-spring:1.0.0.rc1")
+    implementation("tech.krpc:rpc-server-spring:1.0.2")
 
     //开启JSR-380 Bean Validation，支持RPC参数校验
     implementation "org.springframework.boot:spring-boot-starter-validation"

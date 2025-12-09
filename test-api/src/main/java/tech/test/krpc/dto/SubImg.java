@@ -16,5 +16,4 @@ public class SubImg extends Img {
 
     String noAnno;
 
-
 }

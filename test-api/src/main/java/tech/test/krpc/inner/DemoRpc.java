@@ -22,4 +22,6 @@ public interface DemoRpc {
     RpcResult<String> save(Book book);
 
     RpcResult<List<Book>> listUser(List<Book> query);
+
+    RpcResult<String> name();
 }

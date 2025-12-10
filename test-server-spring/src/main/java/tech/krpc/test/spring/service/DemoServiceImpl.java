@@ -1,9 +1,13 @@
 package tech.krpc.test.spring.service;
 
 
+import java.util.concurrent.TimeUnit;
+
+import io.grpc.CallOptions;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
+import tech.krpc.client.ClientContext;
 import tech.krpc.model.RpcResult;
 import tech.krpc.server.Filters;
 import tech.krpc.server.ServerContext;
@@ -31,6 +35,11 @@ public class DemoServiceImpl extends AbstractDemoService {
     @Override
     public RpcResult<String> str(String in) {
         log.info("demoRpc: {}" , demoRpc);
+        ClientContext.withCallOptions(null,demoRpc::name);
+        ClientContext.withCallOptions(null,demoRpc::hello,new TimeReq());
+        CallOptions.DEFAULT
+                .withDeadlineAfter(500, TimeUnit.MICROSECONDS);
+
         return RpcResult.ok("spring5678:got: [ " + in +" ] , headers : "  + ServerContext.current().getHeaders().toString());
     }
 

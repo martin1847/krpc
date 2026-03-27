@@ -1,0 +1,12 @@
+[
+  {
+    "name": "java.security.spec.ECParameterSpec",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.server.jws.Jwks",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  }
+]

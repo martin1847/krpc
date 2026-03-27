@@ -13,7 +13,7 @@ dependencies {
 //    api 'javax.validation:validation-api:2.0.1.Final'
 //    api 'jakarta.validation:jakarta.validation-api:2.0.2'
 //
-    implementation 'org.freemarker:freemarker:2.3.32'
+    implementation 'org.freemarker:freemarker:2.3.34'
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 

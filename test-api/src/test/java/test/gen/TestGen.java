@@ -5,7 +5,7 @@
 package test.gen;
 
 import tech.krpc.gen.Gen;
-import tech.test.krpc.DemoRpc;
+import tech.test.krpc.inner.DemoRpc;
 
 /**
  *

@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: test-server
+
+rpc:
+  server:
+    app: ${spring.application.name}
+    jwks:  https://zlkj-jwks.oss-cn-shanghai.aliyuncs.com/.well-known/test.bo.jwks.json
+  #这里当时只想着支持client，只对client起作用
+  enable: true
+  clients:
+    common-cdn:
+      url: http://common-cdn.common:50051
+      scan: tech.test.krpc.inner

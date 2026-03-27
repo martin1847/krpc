@@ -28,7 +28,9 @@ public class ThreadPool {
      * (响应时间/（响应时间-调用第三方接口时间-访问数据库时间））。
      *
      * 比如一个获取商品详细的接口平均响应时间为50ms，调用库存接口用了10ms，调用优惠接口用了10ms，调用数据库用来20ms，
-     * 该服务所在机器CPU核数为10，则可以估算出线程数为:threads=10*(50/50-10-10-20)=50。
+     * 该服务所在机器CPU核数为10，则可以估算出线程数为:threads=10*(50/(50-10-10-20))=50。
+     *
+     * TODO beanchmark with Virtual Thread
      */
     public static ExecutorService newExecutor(String name, int base) {
         int cpus = Math.max(base, Runtime.getRuntime().availableProcessors());
@@ -36,7 +38,7 @@ public class ThreadPool {
                 .setNameFormat(name + "-%d")
                 .setDaemon(true)
                 .build();
-        return new ThreadPoolExecutor(cpus * 4, cpus * 8, 60, TimeUnit.SECONDS,
+        return new ThreadPoolExecutor(cpus * 4, cpus * 12, 60, TimeUnit.SECONDS,
                  new LinkedBlockingQueue<>(cpus * 10 ), tf, new AbortPolicyWithReport(name));
     }
 

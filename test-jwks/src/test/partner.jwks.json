@@ -1,0 +1,19 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "e": "AQAB",
+      "use": "enc",
+      "kid": "pt-pwd-2310",
+      "n": "kZYpZZs_uzxWxeeM2_ePcD2Fuivlx3zSLTekK-0BOwxYkNPM6qT1srFSbj5qAp-In0LMgIkx6DLvFOAc-pGfGBxbC8-gsh5dEX9Scc_LIyMju141-IRawfCyvOgAp72FUVQKyKHIvuDo4560azm4Zx72V38cq5N58-cffd984z8"
+    },
+    {
+      "kty": "EC",
+      "use": "sig",
+      "crv": "P-256",
+      "kid": "pt-jws-2310",
+      "x": "evyEVUzzZcAoeFy-nbY_cm6eJbhCWCY3oKwImBymolo",
+      "y": "fw290P6o2YgzdKsLCImf6ySsPTK6sScveyEkpEEPfgY"
+    }
+  ]
+}

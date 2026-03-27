@@ -1,0 +1,34 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version "$jandexVersion"
+}
+
+apply from: "$rootProject.projectDir/upload.gradle"
+
+//version = "1.0.0"
+
+dependencies {
+
+    api project(':rpc-server')
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+
+    implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+    // https://mvnrepository.com/artifact/org.springframework/spring-context
+    implementation 'org.springframework:spring-context:5.3.39'
+// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-autoconfigure
+    implementation 'org.springframework.boot:spring-boot-autoconfigure:2.7.18'
+    implementation 'jakarta.annotation:jakarta.annotation-api:3.0.0'
+
+    compileOnly "io.netty:netty-common:$nettyGrpcVersion"
+    compileOnly "io.netty:netty-handler:$nettyGrpcVersion"
+
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+
+}
+
+compileTestJava {
+    dependsOn('jandex')
+}
+

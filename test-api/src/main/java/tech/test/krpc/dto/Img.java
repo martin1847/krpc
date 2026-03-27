@@ -44,4 +44,6 @@ public class Img {
     Map<String,String> strMap;
 
 
+    Book3 book3;
+
 }

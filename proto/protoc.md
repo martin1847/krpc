@@ -35,6 +35,8 @@ mkdir -p generated && protoc --dart_out=grpc:generated internal.proto
 docker run --rm rvolosatovs/protoc --help 
 只有proto，没有grpc的，换成`tonic-build`
 ```bash
+# rust-grpc
 docker run --rm -it --mount type=bind,source="$(pwd)",dst=/tmp/proto -w /tmp/proto rvolosatovs/protoc \
 --rust_out=experimental-codegen=enabled,kernel=cpp:/tmp/proto  -I/tmp/proto internal.proto
 ```
+

@@ -11,7 +11,7 @@ nupkg/
 
 test-api/dart
 test-api/typescript
-
+dep.txt
 
 target/
 wrapper/

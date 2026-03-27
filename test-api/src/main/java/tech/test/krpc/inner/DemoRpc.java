@@ -1,4 +1,4 @@
-package tech.test.krpc;
+package tech.test.krpc.inner;
 
 import java.util.List;
 
@@ -22,4 +22,6 @@ public interface DemoRpc {
     RpcResult<String> save(Book book);
 
     RpcResult<List<Book>> listUser(List<Book> query);
+
+    RpcResult<String> name();
 }

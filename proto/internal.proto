@@ -1,11 +1,12 @@
 syntax = "proto3";
 
+package krpc;
 
-//package bt.rpc;
 option go_package = "google.golang.org/krpc";
 
-service Grpc {
-  rpc call (InputProto) returns (OutputProto);
+
+service KrpcBaseService {
+  rpc callUnary (InputProto) returns (OutputProto);
 }
 
 

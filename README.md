@@ -126,7 +126,7 @@ Convention & Limit  about the service define :
     - java`date/time`, jackson 情况下，会被转换为 [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
     - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
     - 除非必要，禁止使用Map做为出入参
-    - 其余参考 [命名规范](https://redmine.btrpc.com/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
+    - 其余参考 [命名规范](https://redmine.krpc.tech/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
 * 入参不多于一个 
 * 标记 `RpcService` annotation
 
@@ -144,7 +144,7 @@ apply from: "$rootProject.projectDir/gradle/upload.gradle"
     sourceCompatibility = "11"
     targetCompatibility = "11"
 ```
-Then publish this API package to  https://jcr.btrpc.com  for the client side to reference.
+Then publish this API package to  https://jcr.krpc.tech  for the client side to reference.
 
 
 # 2. Setup the Server
@@ -185,31 +185,29 @@ public class DemoServiceImpl implements DemoService {
 ## 3.1 使用rpcurl
 
 ```bash
-Usage: rpcurl https://demo.api.com/appName/Demo/methodName -f param.json
-测试rpc服务
+[ Cli Client For KRPC ]
 
--L, --no-url          本机测试，本机测试 url=http://127.0.0.1:50051
--W, --no-web          测试非 UnsafeWeb 服务
--P, --no-pretty       NO pretty json
--h, --help            show usage
--u, --url             服务地址,默认参数,必传,也可通过环境变量`RPC_URL`传递,如: https://example.testapi.com/demo-java-server/Demo/hello
--a, --app             服务项目名,也可通过环境变量`RPC_APP`传递,如 demo-java-server
--s, --service         服务名
-                      (defaults to "RpcMeta")
--m, --method          方法名
-                      (defaults to "listApis")
--d, --data            入参json,优先级高于file,如 -d '{"name":"rpcurl"}'
--f, --file            入参jsonFile,如 -f test.json
--t, --token           authorization: Bearer <accessToken>,也可通过环境变量`RPC_TOKEN`传递
--i, --clientId        设置c-id,或者环境变量 `RPC_CID`
--M, --clientMeta      设置 c-meta(json),或者环境变量 `RPC_CMETA`
--V, --[no-]version    打印版本号 rpcurl-1.0 2022.02.24
+Usage: rpcurl [OPTIONS] <URL>
 
+Arguments:
+  <URL>  RPC服务的URL,如 https://demo.krpc.tech/appName/DemoService/methodName
+
+Options:
+  -d, --data <DATA>      入参json, 优先级高于file, e.g. `-d '{"name":"KRPC"}'`
+  -f, --file <FILE>      入参jsonFile, e.g. `-f test.json`
+  -t, --token <TOKEN>    Authorization: Bearer <accessToken>, 支持环境变量传值 [env: KRPC_TOKEN=]
+  -c, --cookie <COOKIE>  Cookie, e.g. `tk=j.w.t` [env: KRPC_COOKIE=]
+  -i, --c-id <C_ID>      客户端id，便于tracking [env: KRPC_CID=]
+  -m, --c-meta <C_META>  客户端meta [env: KRPC_CMETA=]
+  -H, --header <HEADER>  Custom headers, e.g. `-H a=b -H c=d`
+  -v, --verbose          Verbose mode, prints headers, input, URL, etc
+  -h, --help             Print help
+  -V, --version          Print version
 
 
-# 比如
-rpcurl https://example.testapi.com/demo-java-server/Demo/inc100 -d 90
-rpcurl.exe https://example.testapi.com/demo-java-server/Demo/hello  -d '{"name":"rpc","age":123}' 
+# 比如 export KRPC_APP="https://example.testapi.com/demo-java-server"
+rpcurl $KRPC_APP/Demo/inc100 -d 90
+rpcurl.exe $KRPC_APP/demo-java-server/Demo/hello  -d '{"name":"rpc","age":123}' 
 ```
 
 ## 3.2 生成ts代码，前端调用测试
@@ -219,31 +217,31 @@ rpcurl.exe https://example.testapi.com/demo-java-server/Demo/hello  -d '{"name":
 
 # Exception Handler
 
-## 使用错误码/Soft Exception
-* 约定错误码 ： https://redmine.btrpc.com/projects/bt/wiki/%E5%85%A8%E5%B1%80%E9%94%99%E8%AF%AF%E7%A0%81
+## 推荐使用错误码 (Soft Exception, java侧并不会抛出Exception)
+* 约定全局错误码 ：每个业务域可以划分开
 * ServerSide : Just return a RpcResult with non-OK  Code and a error message(left data null)
 * ClientSide : Check IsOk Before Use Data
 
-## 禁止使用 Hard Exception。业务无关的除外，比如安全认证，参数校验，通常捕获为系统错误
+## 不推荐使用 Hard Exception。业务无关的除外，比如安全认证，参数校验，通常捕获为系统错误
 * ServerSide : Throw a RpcException (Status/Runtime/Exception in Java Side) with your StatusCode or Other Exception(mapping to `Unknown` code)
 * ClientSide : Get a RpcException (StatusRuntimeException Java side, catch it or not )
 
 
 # 各种客户端
 
-[Dart](https://gitlab.btrpc.com/middleware/zlkj-rpc-dart-client)
+[Dart](https://gitlab.krpc.tech/middleware/zlkj-rpc-dart-client)
 
-[TypeScript](https://gitlab.btrpc.com/middleware/zlkj-rpc-ts-client)
+[TypeScript](https://gitlab.krpc.tech/middleware/zlkj-rpc-ts-client)
 
-[Python](https://gitlab.btrpc.com/middleware/zlkj-rpc-python-client)
+[Python](https://gitlab.krpc.tech/middleware/zlkj-rpc-python-client)
 
-[go/k6](https://gitlab.btrpc.com/middleware/xk6-btrpc)
+[go/k6](https://gitlab.krpc.tech/middleware/xk6-krpc)
 
-[rpcurl](./rpcurl/dart)
+[rpcurl](../krpc-crates/crates/rpcurl)
 
 # CI & CD
 
-[ ci demo](https://gitlab.btrpc.com/example/demo-rpc/-/pipelines)
+[ ci demo](https://gitlab.krpc.tech/example/demo-rpc/-/pipelines)
 
 
 

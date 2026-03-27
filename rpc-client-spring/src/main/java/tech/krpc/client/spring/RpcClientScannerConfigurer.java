@@ -4,15 +4,11 @@
  */
 package tech.krpc.client.spring;
 
-import java.beans.Introspector;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 
-import tech.krpc.annotation.RpcService;
-import tech.krpc.client.CacheManager;
-import tech.krpc.client.RpcClientFactory;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import io.grpc.ManagedChannelBuilder;
@@ -27,6 +23,9 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.util.ClassUtils;
+import tech.krpc.annotation.RpcService;
+import tech.krpc.client.CacheManager;
+import tech.krpc.client.RpcClientFactory;
 
 /**
  * @author martin
@@ -53,8 +52,7 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
     //Map<String,Object> clients;
 
     @Setter
-    //@Autowired
-            Map<String, RpcCfg> clients;
+    Map<String, RpcCfg> clients;
 
     @Setter
     @Autowired
@@ -122,9 +120,11 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
             for (var clz : clzSet) {
                 var bd = new RootBeanDefinition(clz, () -> fac.get(clz));
                 //AnnotationBeanNameGenerator.buildDefaultBeanName
-                var name = Introspector.decapitalize(clz.getSimpleName());
+                //var name = java.beans.Introspector.decapitalize(clz.getSimpleName());
+                //Break changes. Default Name used full name,not
+                var name = clz.getName();
                 registry.registerBeanDefinition(name, bd);
-                log.info("registry Rpc Client bean  {} -> {}", name, clz);
+                log.info("register Rpc Client Bean  {} -> {}", name, clz);
             }
         }
     }
@@ -133,9 +133,4 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 
     }
-    //
-    //@Override
-    //public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-    //
-    //}
 }

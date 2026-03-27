@@ -2,7 +2,7 @@
 //apply plugin:  'io.quarkus'
 
 plugins {
-    id 'io.quarkus'  version "$quarkusTestServerVersion"
+    id 'io.quarkus'  version "$quarkusMiniSupport"
 }
 
 
@@ -13,7 +13,6 @@ dependencies {
     implementation project(':rpc-server-quarkus')
     implementation project(':rpc-client')
 
-//    implementation "com.zlkj.example:test-api:$globalRpcVersion"
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
@@ -21,7 +20,8 @@ dependencies {
     runtimeOnly "io.quarkus:quarkus-hibernate-validator"
 
 
-    implementation platform("io.quarkus:quarkus-bom:${quarkusTestServerVersion}")
+//    implementation platform("io.quarkus:quarkus-bom:${quarkusMiniSupport}")
+    implementation platform("io.quarkus.platform:quarkus-bom:${quarkusMiniSupport}")
     implementation "io.quarkus:quarkus-arc"
     implementation "io.quarkus:quarkus-netty"
     implementation  "io.quarkus:quarkus-hibernate-validator"
@@ -36,12 +36,11 @@ dependencies {
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-    implementation "tech.krpc.ext:ext-mybatis:$globalRpcVersion"
-//    implementation "tech.krpc.mybatis:mybatis:$globalRpcVersion"
+    implementation "tech.krpc.ext:ext-mybatis:$extRpcVersion"
 
     //1.5.2.Final  1.5.0.Beta1
-    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
 
 //    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
@@ -54,8 +53,8 @@ dependencies {
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
 
     // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
-    testImplementation 'org.openjdk.jmh:jmh-core:1.35'
-    testImplementation 'org.openjdk.jmh:jmh-generator-annprocess:1.35'
+    testImplementation 'org.openjdk.jmh:jmh-core:1.37'
+    testImplementation 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
 
 
 //    testImplementation 'org.freemarker:freemarker:2.3.31'

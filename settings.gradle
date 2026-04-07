@@ -1,16 +1,16 @@
 pluginManagement {
     repositories {
 
-        maven{
-            url "$MAVEN_REPO"
-            credentials(HttpHeaderCredentials) {
-                name = "X-JFrog-Art-API"
-                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
-        }
+//        maven{
+//            url "$MAVEN_REPO"
+//            credentials(HttpHeaderCredentials) {
+//                name = "X-JFrog-Art-API"
+//                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+//            }
+//            authentication {
+//                header(HttpHeaderAuthentication)
+//            }
+//        }
         gradlePluginPortal()
     }
 }

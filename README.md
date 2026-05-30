@@ -1,72 +1,59 @@
+# KRPC
 
+[简体中文](README.zh-CN.md)
 
-# The `KRPC` Project
+KRPC is an interface-first RPC framework for cloud-native services.
 
-`KRPC` 是一个基于`面向所选编程语言`的快速开发框架（构建RPC服务），就像写一个普通函数一样。
-* 序列化独立，默认采用json(最小成本兼容最多终端，android/iOS/h5/微信小程序等等)，不考虑跨语言，也可以使用特定语言序列化方案。
-* 通信协议`HTTP/2`(plaintext)，代理友好、H5友好、移动设备友好，暴露给终端可经由网关配置`TLS`。
+Write a Java interface, publish it as the API contract, and let KRPC handle RPC transport, validation, metadata, and client generation. Service authors do not need to write proto files for normal business APIs.
 
-目前支持的语言如下：
+## What It Does
 
-| 语言     | 服务端 | 客户端 |
-|--------|---| -------- |
-| Java   | ✅ | ✅       |
-| Rust   | ✅ | ✅       |
-| C#     | ✅ | ✅       |
-| Dart   | 否 | ✅       |
-| js/web | 否 | ✅       |
-| nodejs | 否  | ✅       |
-| Python | 否 | ✅       |
-| Go     |  ✅ | ✅       |
+- Uses gRPC / HTTP/2 as the transport.
+- Uses JSON by default for broad client reach.
+- Treats Java interfaces and DTOs as the API source of truth.
+- Generates clients for frontend, mobile, scripting, and service-to-service use.
+- Supports JDK 21 and virtual threads.
+- Works with Kubernetes and service mesh instead of replacing them.
 
+KRPC does not own service discovery, load balancing, telemetry, ingress TLS, or mesh policy. Those belong to Kubernetes, Istio, gateway, or deployment infrastructure.
 
-愿景：让`KRPC`成为现代网络`API`的事实标准（`rest`使命已完成，可以退出历史舞台了）。
+KRPC is used in production in e-commerce, education, and local service products. Public adopter names are omitted unless explicit approval is granted.
 
-why `KRPC`, `K`是什么：
+## Modules
 
-* 首先,`K`代表`k8s`,云原生的含义
-  * 全面拥抱`k8s`,拥抱`Service Mesh`服务网格,专业的事交给专业的人去做
-  * 没有自己的服务发现，利用`k8s`的`service`[云原生服务发现](https://kubernetes.io/docs/concepts/services-networking/service)
-  * 没有自己的负载均衡，利用`服务网格`[istio](https://istio.io/latest/docs/concepts/traffic-management/#load-balancing-options)
-  * 没有自己的`telemetry`黄金四指标`four golden signals`,还是利用`服务网格的可观测性`[istio](https://istio.io/latest/zh/docs/concepts/observability/)
-  * 没有自己实现web兼容`gRPC web`,还是利用[istio ingress](https://istio.io/latest/zh/docs/ops/configuration/traffic-management/protocol-selection/)
-* `K`代表中文里的`kuai快`
-  * 性能
-    * 基于`Netty`和`gRPC`的极薄封装
-    * java版本全面拥抱`GraalVM/quarkus`进行AOT(去除了反射)，适应云原生,启动秒起
-    * CPU/内存占用低（经验：只有JVM版本的 20%～40%之间, AOT的好处，直接享受)
-  * 开发
-    * 无需知晓、编写`proto`,直接开发`Java interface`即可
-    * 代码即文档，基于一套`interface`,生成`dart/typesctipt/python/go`等客户端，客户端所见即所得
-    * 支持Flutter客户端(iOS、安卓原生客户端待测试)
-    * 支持web客户端/微信小程序,通过`gRPC web`协议，（无需引入http/rest概念)
-    
-# 版本
+- `rpc-api`: annotations and shared API models.
+- `rpc-common`: serialization, context, filters, metadata, and utilities.
+- `rpc-client`: Java client runtime.
+- `rpc-server`: Java server runtime.
+- `rpc-client-spring`: Spring client integration.
+- `rpc-server-spring`: Spring server integration.
+- `rpc-server-quarkus`: Quarkus and native-image integration.
+- `http-server`: HTTP gateway support.
+- `test-rpc-gen`: client code generation examples.
+- `rpcurl`: command-line RPC client.
 
-不再支持`JDK8`，最小支持`JDK11`。
+![Architecture](./ARCHITECTURE.png)
 
-Latest version : `1.0.0`
+## Requirements
+
+- JDK 21
+- Gradle
+
+Latest version: `1.0.0`
 
 ```gradle
-//implementation "tech.krpc:rpc-server:1.0.0"
-//implementation "tech.krpc:rpc-client:1.0.0"
-//implementation "tech.kext:ext-rpc:1.0.0"
+implementation "tech.krpc:rpc-api:1.0.0"
+implementation "tech.krpc:rpc-client:1.0.0"
+implementation "tech.krpc:rpc-server:1.0.0"
 ```
 
-![ARCHITECTURE](./ARCHITECTURE.png)
+## Define An API
 
-There is a  [demo-rpc](/example/demo-rpc) project. 
-
-# 1. 声明接口和DTO (Data Transfer objects)
-
-最重要的一步，API即文档，后续前端TypeScript、Java客户端均使用这一套API声明
-
-* Just Add the  `rpc-api` and apply the `jandex` plugin for auto scan （quarkus编译阶段利用它扫描类进行AOT配置）.
-* build.gradle file:
+Add `rpc-api` to the API module:
 
 ```gradle
 plugins {
-    id 'org.kordamp.gradle.jandex' version '2.0.0'
+    id "org.kordamp.gradle.jandex" version "2.0.0"
 }
 
 dependencies {
@@ -74,174 +61,121 @@ dependencies {
 }
 ```
 
-for example :
-
+Define services as Java interfaces:
 
 ```java
-package com.xxxx;
-
 @RpcService
 public interface DemoService {
-
     RpcResult<HelloResult> hello(HelloReq req);
-
-    RpcResult<byte[]> bytesTime();
-
-    RpcResult<byte[]> incBytes(byte[] bytes);
-
-    RpcResult<User> getUser(Integer id);
-
-    RpcResult<PagedList<User>> listUser(PagedQuery<User> query);
-
-    RpcResult<Integer> saveUser(User u);
 }
 
-
-@Data
 public class HelloReq {
-
-  @Doc("姓名")
-  @NotBlank
-  @Size(max = 10,message = "name's length too long than 10")
-  private String name;
-
-  @Doc("年龄")
-  @NotNull
-  @Min(1)@Max(80)
-  private Integer age;
-  
+    @Doc("name")
+    @NotBlank
+    private String name;
 }
-
 ```
 
-Convention & Limit  about the service define : 
-* 字段使用 `jakarta.validation` 进行验证，默认采用 `hibernate-validator` 实现。
-  * RPC框架自动验证，开发时标准好即可
-* 代码即文档，请使用`Doc`加以说明字段含义
-  * 使用框架自动生成前端`TypeScript`调用代码
-  * `Doc`更是给前端、测试同学看的，请认真对待
-* returnType must be `RpcResult<DTO>` .
-    - `DTO` can be any object , BUT Abstract/Interface Not Support
-    - Do not use Enum as return Field(Input can), maybe not Compatibility when Upgrade. Use string/int instead.
-    - java`date/time`, jackson 情况下，会被转换为 [Unix Timestamp](https://en.wikipedia.org/wiki/Unix_time) (long type)
-    - use customer `DTO` Object insteadOf simple object for Upgrade Friendly 
-    - 除非必要，禁止使用Map做为出入参
-    - 其余参考 [命名规范](https://redmine.krpc.tech/projects/bt/wiki/%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83)
-* 入参不多于一个 
-* 标记 `RpcService` annotation
+API rules:
 
+- Return `RpcResult<DTO>`.
+- Use one input object per method.
+- Use DTOs for request and response bodies.
+- Use `jakarta.validation` for input validation.
+- Use `@Doc` for fields that need generated client documentation.
+- Avoid `Map` in API contracts unless there is a strong reason.
+- Avoid enum fields in response DTOs when long-term client stability matters.
 
-## 发布API到仓库
+Publish API artifacts with semantic versions. Avoid `SNAPSHOT` for shared API packages.
 
-* 使用 [semver 版本](https://semver.org/lang/zh-CN/), 不要使用`SNAPSHOT`
-* API定义可以使用java版本`11`预留兼容性 ， 其余业务代码可以使用 `java 17`
- 
-```gradle
+## Implement A Server
 
-apply from: "$rootProject.projectDir/gradle/upload.gradle"
-// gradle clean publish 
-
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
-```
-Then publish this API package to  https://jcr.krpc.tech  for the client side to reference.
-
-
-# 2. Setup the Server
-
-* 增加 [rpc-server] to your `build.gradle`
+Add the API and server runtime:
 
 ```gradle
-
-implementation project(':your-api')
-
-implementation "tech.krpc:rpc-server:1.0.0"
-implementation "tech.krpc.ext:ext-rpc:1.0.0"
-
-//implementation "tech.krpc.ext:ext-mybatis:1.0.0"
+dependencies {
+    implementation project(":your-api")
+    implementation "tech.krpc:rpc-server:1.0.0"
+}
 ```
-  
-* Implention the service 
-  
-* Mark Service with   `@ApplicationScoped` and `@Startup `
+
+Implement the interface:
 
 ```java
 @ApplicationScoped
 @Startup
 public class DemoServiceImpl implements DemoService {
     @Override
-    public RpcResult<TimeResult> hello(TimeReq req) {
-        var res = new TimeResult();
-        res.setTime(" from  (" + EnvUtils.hostName() + ") : " + req);
-        res.setTimestamp(System.currentTimeMillis());
-        return RpcResult.ok(res);
+    public RpcResult<HelloResult> hello(HelloReq req) {
+        return RpcResult.ok(new HelloResult("hello " + req.getName()));
     }
 }
 ```
 
+## Call With rpcurl
 
-# 3. Test in the Client Side
-
-## 3.1 使用rpcurl
+`rpcurl` is available from [martin1847/krpc-crates](https://github.com/martin1847/krpc-crates/).
 
 ```bash
-[ Cli Client For KRPC ]
+export KRPC_APP="https://example.com/demo"
 
-Usage: rpcurl [OPTIONS] <URL>
-
-Arguments:
-  <URL>  RPC服务的URL,如 https://demo.krpc.tech/appName/DemoService/methodName
-
-Options:
-  -d, --data <DATA>      入参json, 优先级高于file, e.g. `-d '{"name":"KRPC"}'`
-  -f, --file <FILE>      入参jsonFile, e.g. `-f test.json`
-  -t, --token <TOKEN>    Authorization: Bearer <accessToken>, 支持环境变量传值 [env: KRPC_TOKEN=]
-  -c, --cookie <COOKIE>  Cookie, e.g. `tk=j.w.t` [env: KRPC_COOKIE=]
-  -i, --c-id <C_ID>      客户端id，便于tracking [env: KRPC_CID=]
-  -m, --c-meta <C_META>  客户端meta [env: KRPC_CMETA=]
-  -H, --header <HEADER>  Custom headers, e.g. `-H a=b -H c=d`
-  -v, --verbose          Verbose mode, prints headers, input, URL, etc
-  -h, --help             Print help
-  -V, --version          Print version
-
-
-# 比如 export KRPC_APP="https://example.testapi.com/demo-java-server"
-rpcurl $KRPC_APP/Demo/inc100 -d 90
-rpcurl.exe $KRPC_APP/demo-java-server/Demo/hello  -d '{"name":"rpc","age":123}' 
+rpcurl "$KRPC_APP/Demo/hello" -d '{"name":"krpc"}'
 ```
 
-## 3.2 生成ts代码，前端调用测试
+Common options:
 
-## 3.3 java项目测试
+```text
+-d, --data <DATA>      request JSON
+-f, --file <FILE>      request JSON file
+-t, --token <TOKEN>    Authorization: Bearer token
+-c, --cookie <COOKIE>  Cookie header
+-H, --header <HEADER>  custom header, e.g. -H a=b
+-v, --verbose          verbose output
+```
 
+## Error Handling
 
-# Exception Handler
+Use soft errors for business failures:
 
-## 推荐使用错误码 (Soft Exception, java侧并不会抛出Exception)
-* 约定全局错误码 ：每个业务域可以划分开
-* ServerSide : Just return a RpcResult with non-OK  Code and a error message(left data null)
-* ClientSide : Check IsOk Before Use Data
+- Server: return `RpcResult` with a non-OK code and message.
+- Client: check `isOk()` before reading data.
 
-## 不推荐使用 Hard Exception。业务无关的除外，比如安全认证，参数校验，通常捕获为系统错误
-* ServerSide : Throw a RpcException (Status/Runtime/Exception in Java Side) with your StatusCode or Other Exception(mapping to `Unknown` code)
-* ClientSide : Get a RpcException (StatusRuntimeException Java side, catch it or not )
+Use exceptions for system failures, security failures, validation failures, and unexpected runtime errors.
 
+## Run Existing Demo
 
-# 各种客户端
+The repository includes an integration demo in `test-api` and `test-server`.
 
-[Dart](https://gitlab.krpc.tech/middleware/zlkj-rpc-dart-client)
+Build it:
 
-[TypeScript](https://gitlab.krpc.tech/middleware/zlkj-rpc-ts-client)
+```bash
+gradle :test-server:build -x test
+```
 
-[Python](https://gitlab.krpc.tech/middleware/zlkj-rpc-python-client)
+Run it:
 
-[go/k6](https://gitlab.krpc.tech/middleware/xk6-krpc)
+```bash
+gradle :test-server:quarkusDev \
+  -Dquarkus.datasource.password=youshallnotpass \
+  -Ddebug=false \
+  --console=plain
+```
 
-[rpcurl](../krpc-crates/crates/rpcurl)
+Call it:
 
-# CI & CD
+```bash
+rpcurl http://127.0.0.1:50051/test-server/Demo/hello \
+  -d '{"name":"krpc","age":18}'
+```
 
-[ ci demo](https://gitlab.krpc.tech/example/demo-rpc/-/pipelines)
+This is an integration demo, not a minimal quickstart template. It includes MySQL, MyBatis, and JWKS-related configuration; local JWKS fetch warnings do not block the `Demo/hello` call.
 
+## Clients
 
+Generated or companion clients exist for Dart, TypeScript, Python, Go/k6, Java, and rpcurl.
 
+## Project Governance
+
+- Documentation index: [docs/INDEX.md](docs/INDEX.md)
+- Repository scope: [ADR-0001](docs/decisions/ADR-0001-repository-scope.md)
+- JDK 21 and virtual threads: [ADR-0002](docs/decisions/ADR-0002-jdk21-virtual-threads.md)

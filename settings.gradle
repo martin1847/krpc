@@ -1,23 +1,24 @@
 pluginManagement {
     repositories {
 
-        maven{
-            url "$MAVEN_REPO"
-            credentials(HttpHeaderCredentials) {
-                name = "X-JFrog-Art-API"
-                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
-        }
+//        maven{
+//            url "$MAVEN_REPO"
+//            credentials(HttpHeaderCredentials) {
+//                name = "X-JFrog-Art-API"
+//                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+//            }
+//            authentication {
+//                header(HttpHeaderAuthentication)
+//            }
+//        }
         gradlePluginPortal()
     }
 }
 
-include 'test-api','test-rpc-gen','test-jwks','test-server-spring','test-server'
+include 'test-api','test-jwks','test-server-spring','test-server'
 
 include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-quarkus','http-server'
 include 'rpc-client-spring','rpc-server-spring'
+include 'ext-rpc-gen'
 
 //include 'quarkus-mybatis','quarkus-mybatis-deployment'

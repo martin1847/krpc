@@ -1,8 +1,7 @@
+group = "tech.krpc.ext"
+version = "1.0.0"
 
-
-apply from: "$rootProject.projectDir/upload.gradle"
-
-
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 dependencies {
 

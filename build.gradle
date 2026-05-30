@@ -13,16 +13,17 @@ plugins {
 allprojects {
 
     repositories {
-        maven{
-            url "$MAVEN_REPO"
-            credentials(HttpHeaderCredentials) {
-                name = "X-JFrog-Art-API"
-                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
-        }
+        mavenLocal()
+//        maven{
+//            url "$MAVEN_REPO"
+//            credentials(HttpHeaderCredentials) {
+//                name = "X-JFrog-Art-API"
+//                value = System.getenv("JCR_TOKEN" )?:"$JCR_TOKEN"
+//            }
+//            authentication {
+//                header(HttpHeaderAuthentication)
+//            }
+//        }
         maven {
             url 'https://maven.aliyun.com/repository/public/'
         }
@@ -39,14 +40,19 @@ subprojects {
     version = "$version"
 
     java{
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-        //JavaVersion.VERSION_17
 
     compileJava {
         options.encoding = 'UTF-8'
         options.compilerArgs << '-parameters'
+    }
+
+    plugins.withId('org.kordamp.gradle.jandex') {
+        tasks.named('javadoc') {
+            dependsOn(tasks.named('jandex'))
+        }
     }
 
     test {

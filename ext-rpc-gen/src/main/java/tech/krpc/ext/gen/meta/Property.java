@@ -1,4 +1,4 @@
-package tech.krpc.gen.meta;
+package tech.krpc.ext.gen.meta;
 
 import java.util.HashSet;
 import java.util.List;

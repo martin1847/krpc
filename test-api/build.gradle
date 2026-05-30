@@ -3,8 +3,7 @@ plugins {
 }
 
 apply plugin: 'org.kordamp.gradle.jandex'
-apply from: "$rootProject.projectDir/upload.gradle"
-
+//apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 group = "test.tech.krpc"
 
@@ -13,7 +12,7 @@ dependencies {
     api project(':rpc-api')
 
 
-    testImplementation project(':test-rpc-gen')
+    testImplementation project(':ext-rpc-gen')
     testImplementation project(':rpc-client')
     testImplementation "io.grpc:grpc-netty:${grpcVersion}"
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"

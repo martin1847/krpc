@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package tech.krpc.gen.meta;
+package tech.krpc.ext.gen.meta;
 
 import java.util.List;
 import java.util.stream.Collectors;

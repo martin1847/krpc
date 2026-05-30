@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package tech.krpc.gen;
+package tech.krpc.ext.gen;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 import tech.krpc.annotation.RpcService;
 import tech.krpc.annotation.UnsafeWeb;
 import tech.krpc.common.MethodStub;
-import tech.krpc.gen.meta.ApiMetaRoot;
-import tech.krpc.gen.meta.Dto;
+import tech.krpc.ext.gen.meta.ApiMetaRoot;
+import tech.krpc.ext.gen.meta.Dto;
 import tech.krpc.server.RpcServerBuilder;
 import tech.krpc.server.RpcServerBuilder.RpcMetaMethod;
 import tech.krpc.util.JsonUtils;

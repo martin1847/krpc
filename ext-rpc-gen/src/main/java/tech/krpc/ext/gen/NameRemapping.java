@@ -2,7 +2,7 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package tech.krpc.gen;
+package tech.krpc.ext.gen;
 
 import java.util.List;
 import java.util.Locale;
@@ -11,9 +11,9 @@ import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import tech.krpc.gen.meta.Anno;
-import tech.krpc.gen.meta.Dto;
-import tech.krpc.gen.meta.PropertyType;
+import tech.krpc.ext.gen.meta.Anno;
+import tech.krpc.ext.gen.meta.Dto;
+import tech.krpc.ext.gen.meta.PropertyType;
 
 /**
  *

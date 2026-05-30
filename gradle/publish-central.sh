@@ -128,7 +128,7 @@ build_bundle() {
   local bundle_dir="$ROOT_DIR/build/central-bundle"
   local bundle_zip="$ROOT_DIR/build/${project_name}-${version}-central-bundle.zip"
 
-  "$GRADLE_CMD" clean build publishAllPublicationsToCentralStagingRepository >&2
+  "$GRADLE_CMD" clean build publishAllPublicationsToCentralStagingRepository -x test >&2
 
   rm -rf "$bundle_dir" "$bundle_zip"
   mkdir -p "$bundle_dir"

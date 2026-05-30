@@ -4,7 +4,7 @@
  */
 package test.gen;
 
-import tech.krpc.gen.Gen;
+import tech.krpc.ext.gen.Gen;
 import tech.test.krpc.inner.DemoRpc;
 
 /**

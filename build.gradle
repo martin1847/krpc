@@ -49,6 +49,12 @@ subprojects {
         options.compilerArgs << '-parameters'
     }
 
+    plugins.withId('org.kordamp.gradle.jandex') {
+        tasks.named('javadoc') {
+            dependsOn(tasks.named('jandex'))
+        }
+    }
+
     test {
         //        useJUnitPlatform()
 //        systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"

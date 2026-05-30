@@ -2,13 +2,13 @@
  * Martin.Cong
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
-package tech.krpc.gen;
+package tech.krpc.ext.gen;
 
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import tech.krpc.gen.meta.Anno;
-import tech.krpc.gen.meta.PropertyType;
+import tech.krpc.ext.gen.meta.Anno;
+import tech.krpc.ext.gen.meta.PropertyType;
 
 /**
  *

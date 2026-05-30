@@ -114,6 +114,8 @@ public class DemoServiceImpl implements DemoService {
 
 ## Call With rpcurl
 
+`rpcurl` is available from [martin1847/krpc-crates](https://github.com/martin1847/krpc-crates/).
+
 ```bash
 export KRPC_APP="https://example.com/demo"
 
@@ -139,6 +141,34 @@ Use soft errors for business failures:
 - Client: check `isOk()` before reading data.
 
 Use exceptions for system failures, security failures, validation failures, and unexpected runtime errors.
+
+## Run Existing Demo
+
+The repository includes an integration demo in `test-api` and `test-server`.
+
+Build it:
+
+```bash
+gradle :test-server:build -x test
+```
+
+Run it:
+
+```bash
+gradle :test-server:quarkusDev \
+  -Dquarkus.datasource.password=youshallnotpass \
+  -Ddebug=false \
+  --console=plain
+```
+
+Call it:
+
+```bash
+rpcurl http://127.0.0.1:50051/test-server/Demo/hello \
+  -d '{"name":"krpc","age":18}'
+```
+
+This is an integration demo, not a minimal quickstart template. It includes MySQL, MyBatis, and JWKS-related configuration; local JWKS fetch warnings do not block the `Demo/hello` call.
 
 ## Clients
 

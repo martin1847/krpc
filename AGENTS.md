@@ -107,6 +107,7 @@ Do not comment obvious code.
 - JDK 21 is the Java baseline.
 - Virtual threads are a supported runtime feature, not a roadmap item.
 - Existing Claude guidance used `/opt/gradle/gradle/bin/gradle` for local builds; use the repo wrapper `./gradlew` only when it is known to work in the current environment.
+- Public documentation and examples must use `gradle`, not machine-specific Gradle paths.
 - Prefer `rg` for search.
 - Do not add Codex, Claude, or AI-generated signatures to commits.
 

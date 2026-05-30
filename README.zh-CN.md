@@ -114,6 +114,8 @@ public class DemoServiceImpl implements DemoService {
 
 ## 使用 rpcurl 调用
 
+`rpcurl` 可以从 [martin1847/krpc-crates](https://github.com/martin1847/krpc-crates/) 获取。
+
 ```bash
 export KRPC_APP="https://example.com/demo"
 
@@ -139,6 +141,34 @@ rpcurl "$KRPC_APP/Demo/hello" -d '{"name":"krpc"}'
 - 客户端：读取 data 前先检查 `isOk()`。
 
 系统错误、安全失败、参数校验失败和非预期运行时错误使用异常。
+
+## 运行现有 Demo
+
+仓库里已有一个集成 demo：`test-api` + `test-server`。
+
+构建：
+
+```bash
+gradle :test-server:build -x test
+```
+
+启动：
+
+```bash
+gradle :test-server:quarkusDev \
+  -Dquarkus.datasource.password=youshallnotpass \
+  -Ddebug=false \
+  --console=plain
+```
+
+调用：
+
+```bash
+rpcurl http://127.0.0.1:50051/test-server/Demo/hello \
+  -d '{"name":"krpc","age":18}'
+```
+
+这是集成 demo，不是最小 quickstart 模板。它包含 MySQL、MyBatis 和 JWKS 相关配置；本地无网络时可能出现 JWKS 拉取 warning，但不影响 `Demo/hello` 调用。
 
 ## 客户端
 

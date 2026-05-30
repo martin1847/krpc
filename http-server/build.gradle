@@ -2,7 +2,7 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "$jandexVersion"
 }
 
-apply from: "$rootProject.projectDir/upload.gradle"
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 
 //version = "1.0.0"

@@ -17,6 +17,10 @@ This index maps the repository source of truth for KRPC.
 
 - [Active Roadmap](roadmap/active-roadmap.md)
 
+## Plans
+
+- [Dependency Bump Plan](plan/2026-05-30-dependency-bump.md)
+
 ## AI Context
 
 - [Active Context](../.ai/ACTIVE_CONTEXT.md)

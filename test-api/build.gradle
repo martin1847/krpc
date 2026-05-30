@@ -3,7 +3,7 @@ plugins {
 }
 
 apply plugin: 'org.kordamp.gradle.jandex'
-apply from: "$rootProject.projectDir/upload.gradle"
+apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 
 group = "test.tech.krpc"

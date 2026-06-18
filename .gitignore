@@ -59,3 +59,13 @@ gradlew*
 /test-api/miniprogram/
 /dep.txt
 /proto/js/
+
+# Gradle wrapper: committed for a reproducible, pinned toolchain (KRPC-001 P1).
+# Re-include the wrapper dir (overrides `wrapper/` :17), keep its contents ignored,
+# then track only the two official wrapper files. gradlew* (:54) overridden below.
+!gradle/wrapper/
+gradle/wrapper/*
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!/gradlew
+!/gradlew.bat

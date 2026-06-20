@@ -29,7 +29,7 @@ Acceptance Criteria:
 
 ## AGENT-001: Agent-Friendly Introspection And MCP Surface
 
-Status: proposed
+Status: active  (P0 delivered on `dev`, security-reviewed; P1 not started)
 
 Capability: Expose KRPC's runtime self-description to AI agents (discover → call)
 
@@ -45,8 +45,11 @@ ADR: ADR-0004
 
 Phases (sequenced P0 → P1):
 
-- **P0** — HTTP `listApis()` discovery endpoint + generic HTTP invoke endpoint
-  (HTTP analogue of `GeneralizeClient`). Agents discover + call over plain HTTP.
+- **P0 (DONE, on `dev`)** — HTTP `listApis()` discovery endpoint + generic HTTP
+  invoke endpoint (HTTP analogue of `GeneralizeClient`); `WebMethodRegistry` +
+  `UnaryMethod.invokeWeb`. Hidden services double-filtered, credential not bypassed,
+  filter chain single-pass. Security review APPROVE (0 blocking). JVM-mode only —
+  native reflection-config for the new handlers not yet added.
 - **P1** — Runtime MCP server module generated from live `ApiMeta`, Streamable
   HTTP transport, **feature switch default OFF**. Tools = methods opted in via
   `@UnsafeWeb(agentTool=true)` (default `false`).

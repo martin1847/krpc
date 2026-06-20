@@ -43,8 +43,14 @@ Cross-cutting decisions:
 - **Tool opt-in is an attribute of `@UnsafeWeb`, default `false`.** A method/service
   becomes an agent tool only when explicitly opted in (e.g. `@UnsafeWeb(agentTool=true)`).
   Agent exposure is a deliberate subset of web exposure, not implied by it.
-- **Authentication is handled at the gateway, not in KRPC core** for now. MCP's
-  OAuth 2.1 mapping is deferred to the gateway layer.
+- **Authentication AND rate-limiting are handled at the gateway, not in KRPC core**
+  for now. The HTTP agent endpoints (`/agent/discover`, `/agent/invoke`) carry no
+  in-core auth or throttling: `/agent/discover` exposes the full schema of every
+  `@UnsafeWeb` service to any caller, and `/agent/invoke` reaches every
+  `requireCredential=false` `@UnsafeWeb` service. A deployment MUST place these two
+  paths behind a gateway that enforces auth and rate limits. `@UnsafeWeb(requireCredential=true)`
+  services still run the in-core credential check on the invoke path. MCP's OAuth 2.1
+  mapping is likewise deferred to the gateway.
 - **Stay within ADR-0001 boundaries:** no service registry/discovery/LB. Only the
   introspection + schema-expression layer.
 

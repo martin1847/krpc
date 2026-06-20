@@ -40,7 +40,7 @@ public interface TraceMeta {
         if (null == traceparent) {
             return null;
         }
-        var parts = traceparent.split("-");
+        var parts = traceparent.split("-", -1);
         if (parts.length != 4 || parts[1].length() != 32 || parts[2].length() != 16 || parts[3].length() != 2) {
             return null;
         }

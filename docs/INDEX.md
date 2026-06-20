@@ -7,6 +7,7 @@ This index maps the repository source of truth for KRPC.
 - [ADR-0001: Repository Scope And Boundaries](decisions/ADR-0001-repository-scope.md)
 - [ADR-0002: JDK 21 And Virtual Threads](decisions/ADR-0002-jdk21-virtual-threads.md)
 - [ADR-0003: W3C Trace Context Propagation](decisions/ADR-0003-w3c-trace-context.md)
+- [ADR-0004: Agent-Friendly Introspection And MCP Surface](decisions/ADR-0004-agent-friendly-introspection.md)
 
 ## Modules
 
@@ -34,3 +35,4 @@ This index maps the repository source of truth for KRPC.
 | Java client/server runtime over gRPC and HTTP/2 | `rpc-common`, `rpc-client`, `rpc-server` | ADR-0001 | GOV-001 |
 | Framework, native-image, gateway, and tooling integrations | `rpc-client-spring`, `rpc-server-spring`, `rpc-server-quarkus`, `http-server`, `rpcurl`, `test-rpc-gen` | ADR-0001 | GOV-001 |
 | JDK 21 baseline and virtual-thread runtime feature | `rpc-server`, `rpc-client`, `http-server`, integration modules | ADR-0002 | N/A |
+| Agent-friendly introspection (HTTP discover→call, runtime MCP surface) | `rpc-common`, `rpc-server`, `rpc-client`, `http-server`, `rpc-api` | ADR-0004 | AGENT-001 |

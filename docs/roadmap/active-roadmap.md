@@ -26,3 +26,37 @@ Acceptance Criteria:
 - At least one module doc defines FOR and NOT FOR boundaries.
 - Future work can attach to a roadmap item, ADR, or module evolution section.
 - Maintainers review inferred boundaries and either accept ADR-0001 or update it.
+
+## AGENT-001: Agent-Friendly Introspection And MCP Surface
+
+Status: proposed
+
+Capability: Expose KRPC's runtime self-description to AI agents (discover → call)
+
+Components:
+
+- `rpc-common` (`RpcMetaService`, `ApiMeta`), `rpc-server` (`RpcMetaServiceImpl`)
+- `rpc-client` (`GeneralizeClient`)
+- `http-server` (HTTP discover/invoke endpoints)
+- `rpc-api` (`@UnsafeWeb` `agentTool` attribute, `@Doc`)
+- new runtime MCP module (P1)
+
+ADR: ADR-0004
+
+Phases (sequenced P0 → P1):
+
+- **P0** — HTTP `listApis()` discovery endpoint + generic HTTP invoke endpoint
+  (HTTP analogue of `GeneralizeClient`). Agents discover + call over plain HTTP.
+- **P1** — Runtime MCP server module generated from live `ApiMeta`, Streamable
+  HTTP transport, **feature switch default OFF**. Tools = methods opted in via
+  `@UnsafeWeb(agentTool=true)` (default `false`).
+
+Acceptance Criteria:
+
+- An HTTP client can list services + schemas and invoke a method without a gRPC stack (P0).
+- With the MCP switch ON, an MCP client sees each `agentTool=true` method as a tool
+  whose `inputSchema`/`outputSchema` derive from the DTO type tree, constraints,
+  `@Doc`, and `RpcResult<T>` (P1).
+- MCP module off by default adds no runtime surface.
+- No service registry/discovery/LB added (stays within ADR-0001).
+- Authentication remains gateway-side this phase.

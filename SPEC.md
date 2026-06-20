@@ -279,7 +279,49 @@ GitHub release after Central publish succeeds.
 
 ---
 
-## 13. Quick checklist for a new service
+## 13. Native image (GraalVM) reflection
+
+Use the native build command in [§12](#12-build-test-release). Native is closed-world:
+the framework registers reflection at build time, but only for what its build-time
+scan can reach. Know what is and is not covered.
+
+- **The extensions must be on the native build.** DTO reflection is registered by
+  the `ext-rpc` Quarkus deployment processor: it indexes every `@RpcService`
+  interface (Jandex), walks each method's param + return types, and emits
+  `ReflectiveClassBuildItem` for the DTOs with `methods(true).fields(true)`
+  (`ext-rpc/ext-rpc-deployment/.../RpcProcessor.java:75-94,148-150`). `ext-mybatis`
+  does the equivalent for its mapper/entity types. Drop the extension and **nobody**
+  registers your DTOs — they reflect fine on JVM but fail at native runtime.
+- **Nested DTOs are auto-covered only 8 levels deep.** After the top-level DTOs, the
+  processor recurses through nested field types up to `max_level = 8`
+  (`RpcProcessor.java:158-170`); beyond that it logs `TOO DEEP Nest Dto`
+  (`:180`) and stops registering. Keep DTO nesting shallow, or register deeper types
+  by hand.
+- **Third-party bean types are not scanned.** The recursion explicitly skips `java.*`
+  types (`RpcProcessor.java:225`) and only follows types reachable from your own
+  DTO fields — an external-library class referenced by a DTO is outside the scan and
+  will throw at native runtime. Register it yourself with Quarkus's
+  `@RegisterForReflection` (`io.quarkus.runtime.annotations.RegisterForReflection`),
+  e.g. on an aggregate class:
+
+  ```java
+  import io.quarkus.runtime.annotations.RegisterForReflection;
+
+  @RegisterForReflection(targets = { com.vendor.lib.Foo.class, com.vendor.lib.Bar.class })
+  public final class NativeReflectionConfig {}
+  ```
+
+  Or add the class to a `META-INF/native-image/<group>/reflection-config.json`.
+- **Framework classes are already registered — don't re-register them.** krpc's own
+  runtime types ship reflection metadata in each module's
+  `META-INF/native-image/*/reflection-config.json` + `native-image.properties`
+  (`rpc-api/...`, `rpc-common/...`, `rpc-client/...`,
+  `rpc-server-quarkus/src/main/resources/META-INF/native-image/rpc-server/...`).
+  You only own the third-party types your DTOs pull in.
+
+---
+
+## 14. Quick checklist for a new service
 
 - [ ] Interface annotated `@RpcService`; name has no dots.
 - [ ] Every method `RpcResult<Dto> m(OneDto)` or `m()` — never 2+ params, never raw return.

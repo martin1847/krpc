@@ -66,6 +66,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @Inject
     InitJwsVerify initJwsVerify;
 
+    @Inject
+    tech.krpc.server.agent.WebMethodRegistry webMethodRegistry;
+
     @ConfigProperty(name = "rpc.server.app")//,defaultValue = NULL
     Optional<String> app;
 
@@ -212,7 +215,10 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
                 log.info("Found RpcService :=> {}  has Filters {} ", bean.getBeanClass(), filterList);
             }
         }
-        server = proxyServerBuilder.build().startServer();
+        var rpcServerBuilder = proxyServerBuilder.build();
+        // ADR-0004 (AGENT-001 P0): hand the web-only dispatch surface to the HTTP agent endpoints.
+        webMethodRegistry.init(rpcServerBuilder.webMethods(), rpcServerBuilder.webApiMeta());
+        server = rpcServerBuilder.startServer();
         return i;
     }
 

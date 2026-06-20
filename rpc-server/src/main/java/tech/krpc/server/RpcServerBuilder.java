@@ -13,6 +13,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import tech.krpc.annotation.RpcService;
+import tech.krpc.annotation.UnsafeWeb;
 import tech.krpc.common.MService;
 import tech.krpc.common.MethodStub;
 import tech.krpc.common.RpcConstants;
@@ -36,6 +37,11 @@ import lombok.extern.slf4j.Slf4j;
 public class RpcServerBuilder {
 	private final int port;
 	private final Server server;
+
+	// ADR-0004 (AGENT-001 P0): web-only (@UnsafeWeb) dispatch surface, exposed for the
+	// HTTP discover/invoke endpoints. Hidden services are never added here.
+	private final Map<String, WebInvoker> webMethods = new HashMap<>();
+	private ApiMeta                       webApiMeta;
 //	private final static Marshaller<Object> RESPONSE_MARSHALLER = new ResponseMarshaller();
 //	private final static Marshaller<InputMessage> REQUEST_MARSHALLER =
 //			ProtoLiteUtils.marshaller(InputMessage.getDefaultInstance());
@@ -118,6 +124,7 @@ public class RpcServerBuilder {
 		var metaService = new RpcMetaServiceImpl();
 		var publicMetaService = new MServiceImpl();
 		var metaMethods = new ArrayList<RpcMetaMethod>();
+		var webMetaMethods = new ArrayList<RpcMetaMethod>();
 		services.put(metaService,Collections.emptyList());
 		services.put(publicMetaService,Collections.emptyList());
 
@@ -143,12 +150,19 @@ public class RpcServerBuilder {
 				var attr = (RpcService)clz.getAnnotation(RpcService.class);
 
 				boolean needMeta = clz != RpcMetaService.class && clz != MService.class;
+				// ADR-0004: web exposure == @UnsafeWeb. Hidden services keep the '-' prefix
+				// in their service name and are never registered into the web surface.
+				boolean web = clz.isAnnotationPresent(UnsafeWeb.class);
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
 					serviceDefBuilder.addMethod(stub.methodDescriptor, new UnaryCallHandler(methodInvokation));
 					if(needMeta) {
 						metaMethods.add(toMeta(stub,attr));
+					}
+					if(needMeta && web){
+						webMethods.put(webKey(stub.methodDescriptor.getFullMethodName()), methodInvokation);
+						webMetaMethods.add(toMeta(stub,attr));
 					}
 				}
 				var srv = serviceDefBuilder.build();
@@ -167,7 +181,24 @@ public class RpcServerBuilder {
 
 		}
 		metaService.init(buildApiMeta(metaMethods));
+		webApiMeta = buildApiMeta(webMetaMethods);
 		return serverBuilder.build();
+	}
+
+	// strip the leading "app/" so the registry key is the app-relative "Service/method".
+	static String webKey(String fullMethodName){
+		int slash = fullMethodName.indexOf('/');
+		return slash < 0 ? fullMethodName : fullMethodName.substring(slash + 1);
+	}
+
+	/// ADR-0004: app-relative "Service/method" -> web dispatcher (web services only).
+	public Map<String, WebInvoker> webMethods(){
+		return webMethods;
+	}
+
+	/// ADR-0004: ApiMeta containing only @UnsafeWeb services and their DTO closure.
+	public ApiMeta webApiMeta(){
+		return webApiMeta;
 	}
 
 	public static ApiMeta buildApiMeta(List<RpcMetaMethod> methods){

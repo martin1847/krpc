@@ -1,4 +1,12 @@
 
+# 1.0.0 (Maven Central GA), 2026-06-20
+
+* First general-availability release on Maven Central (group `tech.krpc`), promoted from `1.0.0.rc1`.
+* Build toolchain: pin and track the official Gradle wrapper 8.14.5 (reproducible, checksum-pinned).
+* Quarkus 3.15.2 -> 3.33.2 LTS (Gradle 8.14.5 / Gradle 9 compatible plugin line).
+* grpc-java 1.74.0 -> 1.82.0; Netty unified to 4.1.133.Final across the whole runtime graph.
+* Native: test-server native build on Mandrel 25 / JDK 25 (container build), language level 21.
+
 # 1.0.2 2025-12-09
 
 * 客户端注入bean使用全量命名

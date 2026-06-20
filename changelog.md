@@ -1,4 +1,10 @@
 
+# 1.0.1, 2026-06-20
+
+* Trace propagation migrated from B3 multi-header to **W3C Trace Context** (`traceparent`), opaquely forwarded; `tracestate` + `x-request-id` carried; B3 (`x-b3-*`) no longer emitted or read (ADR-0003). Wire change vs 1.0.0 — sibling clients must adopt W3C for cross-service trace continuity.
+* gRPC/Netty server executor runs on virtual threads (one named virtual thread per RPC; JDK 21, ADR-0002).
+* Build: upgrade to Gradle 9.6.0 (wrapper checksum-pinned); jandex 2.0.0 -> 2.3.0; drop sonarqube plugin; migrate `gradle/upload.gradle` off the removed `Project.exec()` to `providers.exec`.
+
 # 1.0.0 (Maven Central GA), 2026-06-20
 
 * First general-availability release on Maven Central (group `tech.krpc`), promoted from `1.0.0.rc1`.

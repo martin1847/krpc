@@ -238,10 +238,14 @@ handlers may block on IO freely; don't add your own bounded RPC thread pool.
 
 - Wire envelope `OutputProto` uses single-letter fields `c`(code)/`m`(msg)/`bs`(bytes);
   null `msg`/`data` are not written (`ServerResult.java:30-38`).
-- Trace propagation is automatic: server injects B3 MDC
-  (`X-B3-TraceId/SpanId`), client forwards the MDC `traceId`
-  (`ServerContext.java:86-94`, `MethodCallProxyHandler.java:123-129`). Authors
-  don't manage it.
+- Trace propagation is automatic and uses **W3C Trace Context** (ADR-0003):
+  the server reads the inbound `traceparent` header into MDC (parsing
+  `traceId`/`spanId` for the log pattern) and carries `tracestate` + `x-request-id`;
+  the client forwards `traceparent` opaquely on outbound calls
+  (`TraceMeta.java`, `ServerContext.java`, `MethodCallProxyHandler.java`,
+  `PropagateTraceCall.java`). The framework propagates context, it does not start
+  spans. B3 (`x-b3-*`) is no longer emitted or read — a wire change vs 1.0.0;
+  sibling clients must adopt W3C for cross-service trace continuity.
 
 ---
 

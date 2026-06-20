@@ -121,10 +121,11 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
 
         public ClientCall<InputProto,OutputProto> makeCall(CallOptions options){
             var call = channel.newCall(stub.methodDescriptor, options);
-            var traceId = MDC.get(TraceMeta.X_B3_TRACE_ID);
-            if (null != traceId) {
-                //log.debug("Client Propagate Trace : {}",traceId);
-                return new PropagateTraceCall(call, traceId);
+            // ADR-0003: propagate the inbound W3C traceparent to the outbound call.
+            var traceparent = MDC.get(TraceMeta.MDC_TRACEPARENT);
+            if (null != traceparent) {
+                //log.debug("Client Propagate Trace : {}",traceparent);
+                return new PropagateTraceCall(call, traceparent);
             }
             return call;
         }

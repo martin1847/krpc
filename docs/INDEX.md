@@ -6,6 +6,7 @@ This index maps the repository source of truth for KRPC.
 
 - [ADR-0001: Repository Scope And Boundaries](decisions/ADR-0001-repository-scope.md)
 - [ADR-0002: JDK 21 And Virtual Threads](decisions/ADR-0002-jdk21-virtual-threads.md)
+- [ADR-0003: W3C Trace Context Propagation](decisions/ADR-0003-w3c-trace-context.md)
 
 ## Modules
 

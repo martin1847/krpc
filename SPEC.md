@@ -199,14 +199,93 @@ public class PagedQuery<Q> {                 // PagedQuery.java:28-36
 
 ## 8. Authentication / context
 
-JWT from `Authorization: Bearer <jwt>`, else from cookie
-(`CredentialVerify.java:34-59`). In a service impl, read the user via
-`ServerContext` (`ServerContext.java:138-151`):
+Built-in auth verifies a JWT against a remote **JWKS** endpoint. The shape below is
+the standard "require login" recipe — follow it verbatim.
 
-- `ctx.uid()` — required; throws if not authenticated.
-- `ctx.softUid()` — optional; returns null if not authenticated.
+### 8.1 Require login on a service
 
-- **DO:** `uid()` for must-be-logged-in endpoints; `softUid()` for optional auth.
+Credential precedence: method `@RequireCredential` > class `requireCredential` >
+default false (`UnaryMethod.java:59-65`). When required, `ctx.checkCredential()`
+runs before the method and throws (hard) on failure (`UnaryMethod.java:197-199,227-229`).
+
+```java
+@UnsafeWeb(requireCredential = true)     // JWT required for every method
+public interface AccountService { ... }
+
+// or per-method:
+@UnsafeWeb
+public interface AccountService {
+    @UnsafeWeb.RequireCredential          // JWT required for this method only
+    AccountInfo me();
+}
+```
+
+### 8.2 Configure JWKS
+
+```properties
+rpc.server.jwks=<your-jwks-base-url>
+```
+Read by both `rpc-server-spring` and `rpc-server-quarkus`
+(`InitJwsVerify.java:27,30`). If the URL does not end in `.json`, krpc appends
+`.well-known/jwks.json` automatically (`JwsVerify.java:32,62-64`) — so configure the
+base URL, not the full document path. No JWKS set → auth check is skipped entirely
+(`InitJwsVerify.java:56-58` / spring `:51-54`).
+
+### 8.3 ES256 / EC keys only (silent-failure trap)
+
+`loadJwks` loads **only keys with `kty == "EC"`** and ignores everything else with
+**no error** (`JwsVerify.java:90-95`). RS256/RSA keys in the JWKS are silently
+dropped; tokens signed with them later fail with `kid not found`
+(`JwsVerify.java:127-129`). Verification is hard-wired to `SHA256withECDSA` /
+`ES256` (`Es256Jwk.java:35,37,98-106`).
+
+- **DON'T:** publish an RSA/RS256 JWKS and expect it to work — it fails silently at
+  load, loudly at verify.
+- **DO:** sign tokens with ES256 and publish EC (P-256/384/521) keys
+  (`Es256Jwk.java:32-34`).
+
+### 8.4 Token extraction
+
+`Authorization: Bearer <jwt>` is tried first; if absent, the cookie named
+`access-token` (`JwsVerify.DEFAULT_COOKIE_NAME`, `JwsVerify.java:33`;
+extraction `CredentialVerify.java:34-59`; selection `ServerContext.java:125-131`).
+The cookie name is configurable via `rpc.server.jwsCookie`
+(`InitJwsVerify.java:31,42` quarkus / `:28,39` spring).
+
+### 8.5 Reading the user in an impl
+
+```java
+public AccountInfo me() {
+    String userId = ServerContext.current().uid();   // JWT sub
+    return load(userId);
+}
+```
+
+- `ctx.uid()` — returns the JWT `sub`; throws (NPE) if not authenticated, so use
+  only on `requireCredential` endpoints (`ServerContext.java:161-163`).
+- `ctx.softUid()` — returns the `sub` or `null` when not logged in; never throws on
+  missing/invalid token (`ServerContext.java:142-155`).
+
+### 8.6 Key rotation
+
+An unknown `kid` triggers a JWKS refetch (`JwsVerify.java:71-78`), so adding a new
+key to the published JWKS rotates it in — **but** `loadJwks` is throttled to once
+per 5 minutes (`GAP_MILL`, `JwsVerify.java:35,84-86`), so a freshly added `kid` may
+not be picked up until that window elapses.
+
+### 8.7 Production hardening
+
+```properties
+rpc.server.exitOnJwksError=true
+```
+By default a bad/unreachable JWKS URL only logs a warning and leaves auth
+**disabled** (`InitJwsVerify.java:81-87` quarkus / `:76-82` spring) — requests pass
+without a credential check. Set `exitOnJwksError=true` so startup fails loudly
+instead of silently shipping with auth off.
+
+- **DO:** set `exitOnJwksError=true` in prod.
+- **DON'T:** rely on the default in prod — a JWKS outage at boot silently turns
+  authentication off.
 
 ---
 

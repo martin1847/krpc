@@ -27,7 +27,10 @@ import org.slf4j.MDC;
 @Slf4j
 public class ServerContext extends AbstractContext<ServerResult, InputProto, ServerContext> {
 
-    static final ThreadLocal<ServerContext> LOCAL = new ThreadLocal<>();
+    // ADR: per-request ServerContext rides on io.grpc.Context (the call-scoped context
+    // gRPC auto-attaches on its executor) instead of a bare ThreadLocal, so it stays
+    // correct across virtual-thread executors without wrapping.
+    static final io.grpc.Context.Key<ServerContext> SC_KEY = io.grpc.Context.key("krpc-server-context");
 
     static final List<ServerFilter> GLOBAL_FILTERS = new ArrayList<>();
 
@@ -52,7 +55,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
     }
 
     public static ServerContext current() {
-        return LOCAL.get();
+        return SC_KEY.get();
     }
 
     public static String applicationName() {return applicationName;}

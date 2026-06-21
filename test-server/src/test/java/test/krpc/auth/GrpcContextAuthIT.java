@@ -2,6 +2,7 @@ package test.krpc.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,6 +19,9 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.sun.net.httpserver.HttpServer;
 import io.grpc.CallOptions;
@@ -42,6 +46,10 @@ import tech.krpc.server.ServerContext;
 import tech.krpc.server.exe.ThreadPool;
 import tech.krpc.server.jws.Es256Signature;
 import tech.krpc.server.jws.JwsVerify;
+import tech.krpc.internal.InputProto;
+import tech.krpc.internal.SerialEnum;
+import tech.krpc.server.ServerResult;
+import tech.krpc.server.WebInvoker;
 
 /**
  * Real-auth integration test for the ServerContext -> io.grpc.Context migration.
@@ -68,6 +76,8 @@ class GrpcContextAuthIT {
     ExecutorService executor;
     ManagedChannel clientChannel;
     RpcClientFactory clientFactory;
+    RpcServerBuilder serverBuilder; // kept to reach webMethods() for the invokeWeb (Netty-IO) path
+    UidEchoServiceImpl serviceImpl; // kept to assert the service-body call counter
 
     String signedJwt; // valid ES256 JWT with sub == EXPECTED_SUB
 
@@ -106,11 +116,12 @@ class GrpcContextAuthIT {
 
         rpcPort = freePort();
         executor = ThreadPool.newExecutor(APP, 6);
-        rpcServer = new RpcServerBuilder.Builder(APP, rpcPort)
+        serviceImpl = new UidEchoServiceImpl();
+        serverBuilder = new RpcServerBuilder.Builder(APP, rpcPort)
                 .executor(executor)
-                .addService(new UidEchoServiceImpl())
-                .build()
-                .startServer();
+                .addService(serviceImpl)
+                .build();
+        rpcServer = serverBuilder.startServer();
 
         clientChannel = ManagedChannelBuilder.forAddress("127.0.0.1", rpcPort)
                 .usePlaintext()
@@ -146,9 +157,143 @@ class GrpcContextAuthIT {
         var svc = new RpcClientFactory(APP, clientChannel).get(UidEchoService.class);
 
         var ex = assertThrows(StatusRuntimeException.class, svc::whoAmI);
-        // JwsVerify throws UNAUTHENTICATED("requireCredential but empty token"); blocking stub
-        // surfaces it as StatusRuntimeException. Any rejection (non-OK status) is sufficient.
-        assertNotNull(ex.getStatus());
+        // Codex Fix 1: a bare StatusRuntimeException is false-assurance — deleting the gate would
+        // still throw (uid() NPEs on the null credential, wrapped as UNKNOWN). Prove the rejection
+        // came FROM checkCredential: the status must be UNAUTHENTICATED (JwsVerify: empty token)...
+        assertEquals(io.grpc.Status.Code.UNAUTHENTICATED, ex.getStatus().getCode(),
+                "no-token must be rejected by checkCredential (UNAUTHENTICATED), not a wrapped NPE");
+        // ...and the service body must NOT have executed.
+        assertEquals(0, serviceImpl.calls(), "service body ran despite the missing credential");
+
+        // The counter is real and the gate blocked exactly the no-token call: a valid token now
+        // drives the same service and the body runs exactly once.
+        Channel authed = ClientInterceptors.intercept(clientChannel, bearer(signedJwt));
+        var okSvc = new RpcClientFactory(APP, asManaged(authed)).get(UidEchoService.class);
+        var ok = okSvc.whoAmI();
+        assertTrue(ok.isOk(), () -> "expected ok, got code=" + ok.getCode() + " msg=" + ok.getMsg());
+        assertEquals(1, serviceImpl.calls(), "valid token must execute the service body exactly once");
+    }
+
+    @Test
+    void invokeWeb_isolatesContextAcrossConsecutiveRequestsOnSameThread() throws Exception {
+        WebInvoker web = webInvokerFor("whoAmI");
+        // A single reused platform thread stands in for the pooled Netty I/O thread that the
+        // HTTP/agent invokeWeb path runs on. Reusing the thread is what makes isolation testable.
+        ExecutorService io = Executors.newSingleThreadExecutor();
+        try {
+            // 1) valid token -> uid resolves via io.grpc.Context; service body ran once.
+            ServerResult r1 = io.submit(() -> callWeb(web, bearerMetadata(signedJwt)))
+                    .get(10, TimeUnit.SECONDS);
+            assertUid(r1);
+            assertEquals(1, serviceImpl.calls());
+            assertNull(currentContextOn(io),
+                    "ServerContext leaked on the I/O thread after a valid-token web request");
+
+            // 2) no token on the SAME thread -> rejected by checkCredential; body NOT run; #1's
+            //    context did NOT bleed in (the request is freshly absent, then rejected).
+            ExecutionException ee = assertThrows(ExecutionException.class,
+                    () -> io.submit(() -> callWeb(web, new Metadata())).get(10, TimeUnit.SECONDS));
+            assertUnauthenticated(ee.getCause());
+            assertEquals(1, serviceImpl.calls(),
+                    "no-token web request must not execute the service body");
+            assertNull(currentContextOn(io),
+                    "ServerContext leaked on the I/O thread after a no-token web request");
+
+            // 3) valid token again on the SAME thread -> resolves freshly (not bled from #2).
+            ServerResult r3 = io.submit(() -> callWeb(web, bearerMetadata(signedJwt)))
+                    .get(10, TimeUnit.SECONDS);
+            assertUid(r3);
+            assertEquals(2, serviceImpl.calls());
+            assertNull(currentContextOn(io));
+        } finally {
+            io.shutdownNow();
+        }
+    }
+
+    @Test
+    void invokeWeb_restoresCleanContextAfterServiceException() throws Exception {
+        WebInvoker whoAmI = webInvokerFor("whoAmI");
+        WebInvoker boom = webInvokerFor("boom");
+        ExecutorService io = Executors.newSingleThreadExecutor();
+        try {
+            // 1) valid token, but the service body throws. invokeWeb must still run its finally
+            //    (detach) before the exception propagates out — proving no leftover context.
+            ExecutionException ee = assertThrows(ExecutionException.class,
+                    () -> io.submit(() -> callWeb(boom, bearerMetadata(signedJwt)))
+                            .get(10, TimeUnit.SECONDS));
+            assertNotNull(ee.getCause(), "service exception must propagate");
+            assertNull(currentContextOn(io),
+                    "ServerContext leaked on the I/O thread after a service exception");
+
+            // 2) the next request on the SAME thread sees a clean context and resolves correctly.
+            ServerResult r = io.submit(() -> callWeb(whoAmI, bearerMetadata(signedJwt)))
+                    .get(10, TimeUnit.SECONDS);
+            assertUid(r);
+            assertNull(currentContextOn(io));
+        } finally {
+            io.shutdownNow();
+        }
+    }
+
+    // --- AGENT-001 Fix 2 helpers (invokeWeb / Netty-IO path) ----------------------------
+
+    /** The web dispatcher (UnaryMethod) the HTTP/agent path resolves for {@code method}. */
+    private WebInvoker webInvokerFor(String method) {
+        return serverBuilder.webMethods().entrySet().stream()
+                .filter(e -> e.getKey().endsWith("/" + method))
+                .map(java.util.Map.Entry::getValue)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "no web method '" + method + "' in " + serverBuilder.webMethods().keySet()));
+    }
+
+    // invokeWeb declares `throws Throwable`; Callable only permits Exception, so adapt here.
+    private static ServerResult callWeb(WebInvoker web, Metadata headers) throws Exception {
+        try {
+            return web.invokeWeb(jsonInput(), headers);
+        } catch (Exception e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    /** Minimal JSON-serial InputProto; whoAmI/boom take no args so no payload is needed. */
+    private static InputProto jsonInput() {
+        return InputProto.newBuilder().setE(SerialEnum.JSON).build();
+    }
+
+    private static Metadata bearerMetadata(String token) {
+        var md = new Metadata();
+        md.put(Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER), "Bearer " + token);
+        return md;
+    }
+
+    /** Reads ServerContext.current() ON the executor's thread (where invokeWeb just ran). */
+    private static ServerContext currentContextOn(ExecutorService io) throws Exception {
+        return io.submit(ServerContext::current).get(10, TimeUnit.SECONDS);
+    }
+
+    private static void assertUid(ServerResult r) {
+        assertNotNull(r, "web result must not be null");
+        assertEquals(0, r.output.getC(),
+                () -> "expected ok code, got " + r.output.getC() + "/" + r.output.getM());
+        assertEquals("\"" + EXPECTED_SUB + "\"", r.output.getUtf8(),
+                "uid must resolve to the JWT subject on the web/IO path");
+    }
+
+    private static void assertUnauthenticated(Throwable t) {
+        assertNotNull(t, "expected a cause");
+        io.grpc.Status status;
+        if (t instanceof io.grpc.StatusException se) {
+            status = se.getStatus();
+        } else if (t instanceof StatusRuntimeException sre) {
+            status = sre.getStatus();
+        } else {
+            throw new AssertionError("expected a gRPC Status exception, got " + t, t);
+        }
+        assertEquals(io.grpc.Status.Code.UNAUTHENTICATED, status.getCode(),
+                "web no-token must be rejected by checkCredential (UNAUTHENTICATED)");
     }
 
     // --- helpers -----------------------------------------------------------------------

@@ -15,4 +15,10 @@ import tech.krpc.model.RpcResult;
 public interface UidEchoService {
 
     RpcResult<String> whoAmI();
+
+    /**
+     * AGENT-001 Fix 2: a credential-required method whose body throws, used to exercise the
+     * {@code UnaryMethod.invokeWeb} finally/detach path (clean context after a service exception).
+     */
+    RpcResult<String> boom();
 }

@@ -199,8 +199,12 @@ public class PagedQuery<Q> {                 // PagedQuery.java:28-36
 
 ## 8. Authentication / context
 
-Built-in auth verifies a JWT against a remote **JWKS** endpoint. The shape below is
-the standard "require login" recipe — follow it verbatim.
+Built-in auth **verifies** an incoming JWT against a remote **JWKS** endpoint (the
+`uid()` path, once per authenticated request — `Es256Jwk.isValid`). krpc does **not
+issue** tokens while serving RPCs: minting the ES256 JWT and publishing the matching
+EC public JWKS at `rpc.server.jwks` is your **login service's** job (krpc ships
+`Es256Jws`/`Es256Signature` for the signing side if you want it). The recipe below is
+the standard "require login" (verify) side — follow it verbatim.
 
 ### 8.1 Require login on a service
 

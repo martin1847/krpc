@@ -1,4 +1,12 @@
 
+# 1.0.2, 2026-06-22
+
+* Per-request server context migrated from a hand-rolled `ThreadLocal` to gRPC-native **`io.grpc.Context`** (`ServerContext` `SC_KEY`; attach/detach in `UnaryMethod`). Behavior-equivalent, no wire change; gRPC-managed scope, virtual-thread-friendly. Heterogeneously reviewed (codex).
+* Virtual-thread cleanup: dropped Netty `FastThreadLocal` (`ServerContext`, `ClientContext`); `Es256Signature` now creates a `Signature` per call instead of a per-thread cache.
+* **Agent-friendly P0** (ADR-0004): opt-in HTTP `/agent/discover` (web-only `ApiMeta`) + `/agent/invoke` endpoints; hidden services double-filtered, credential not bypassed. Auth/rate-limit are the gateway's responsibility.
+* `extRpcVersion` -> 1.0.1 (depends on the `@ConfigMapping` / Quarkus 3.33-compatible ext libraries now on Central).
+* Docs: SPEC JWT/JWKS auth + native-image reflection sections; ADR-0004.
+
 # 1.0.1, 2026-06-20
 
 * Trace propagation migrated from B3 multi-header to **W3C Trace Context** (`traceparent`), opaquely forwarded; `tracestate` + `x-request-id` carried; B3 (`x-b3-*`) no longer emitted or read (ADR-0003). Wire change vs 1.0.0 — sibling clients must adopt W3C for cross-service trace continuity.

@@ -192,14 +192,15 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     @Override
     public ServerResult invokeWeb(InputProto im, Metadata headers) throws Throwable {
         var ctx = new ServerContext(service, methodName, stub.returnType, im, this::invoke, headers);
+        io.grpc.Context gctx = io.grpc.Context.current().withValue(ServerContext.SC_KEY, ctx);
+        io.grpc.Context prev = gctx.attach();
         try {
-            ServerContext.LOCAL.set(ctx);
             if (requireCredential) {
                 ctx.checkCredential();
             }
             return filterChain.invoke(ctx);
         } finally {
-            ServerContext.LOCAL.remove();
+            gctx.detach(prev);
             MDC.clear();
         }
     }
@@ -220,10 +221,10 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
         //2. https://github.com/grpc/grpc-java/issues/7381
         // https://github.com/LesnyRumcajs/grpc_bench/wiki/2021-05-20-bench-results
+        /// first thing set the Context so that all after method can use
+        io.grpc.Context gctx = io.grpc.Context.current().withValue(ServerContext.SC_KEY, ctx);
+        io.grpc.Context prev = gctx.attach();
         try {
-            /// first thing set the Context so that all after method can use
-            ServerContext.LOCAL.set(ctx);
-
             if(requireCredential){
                 ctx.checkCredential();
             }
@@ -252,7 +253,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             }
             responseObserver.onError(wrapToClient);
         } finally {
-            ServerContext.LOCAL.remove();
+            gctx.detach(prev);
             MDC.clear();
         }
     }

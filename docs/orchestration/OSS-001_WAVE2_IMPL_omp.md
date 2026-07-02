@@ -35,13 +35,14 @@ docs/文本资产，零代码/零发布面变更。依据 STRAT-001 R2 #1 / ADR-
   `RefUtils.java:117-120`（方法过滤）、`:124-150`（HIDDEN_SERVICE `-` 前缀）、
   `RpcResult.java:21-24`（百/千分桶、无负码、禁异常传业务错）——与 SPEC 引用一致。
 - **`gradle build -x test` 绿**（JDK 21 baseline，Gradle 9.6.0 @ /opt/gradle）。
-- **diff 形态**：tracked = README +2 / reference.md +4（仅指针）；untracked = `llms.txt`、
-  `docs-site/static/llms.txt`、`docs/agent-guide.md`、`skills/krpc/SKILL.md`。**零 Java/gradle
-  逻辑变更**，发布模块集不动。
+- **diff 形态**：改动为纯文本资产 —— 修改 `README.md`（+2）/ `docs-site/docs/reference.md`（+4，仅指针），
+  新增 `llms.txt`、`docs-site/static/llms.txt`、`docs/agent-guide.md`、`skills/krpc/SKILL.md`、
+  本 IMPL 文档、`docs/roadmap/active-roadmap.md`（AGENT-001 caveat）。**零 Java/gradle 逻辑变更**，
+  发布模块集不动。
 
 ## 未验证 / 假设
 
-- **未 push、未开 PR、未 commit**（按 guardrail；等 reviewer codex r1+r2 后再定 commit 切分）。
+- **已 commit（5 个独立 docs commit，off `2ff124b`），未 push、未开 PR**（按 guardrail；codex r1 回修后待 r2）。
 - curl 实录在 **JVM 模式 + `quarkus.arc.remove-unused-beans=none`** 下取得（见下方 FINDING）。
   未在 native 模式验证（P0 已知 native reflection-config 未加）。
 - quarkusDev（`gradle :examples:quickstart:run`）在本机因 dev-mode 模型解析

@@ -448,7 +448,27 @@ quarkus.class-loading.removed-resources."tech.krpc.ext\:ext-rpc"=tech/krpc/ext/r
   is absent** (logs "started", then exit 139). Ensure `QUARKUS_DATASOURCE_*` is
   set; JVM mode fails gracefully, native does not.
 
-### 13.5 Reflection coverage (what the framework registers for you)
+### 13.5 io_uring transport (evaluated 2026-07)
+
+Status: evaluated. A flag-gated PoC exists on eval branch `feat/iouring-eval` —
+**not shipped; the default transport stays NIO in native / epoll-or-NIO on JVM.**
+
+- **Netty artifact constraint.** Today's stack (Quarkus 3.33 LTS = Netty 4.1) can
+  only use the ARCHIVED incubator artifact
+  (`io.netty.incubator:netty-incubator-transport-native-io_uring:0.0.26.Final`).
+  The graduated transport (`io.netty.channel.uring`) is Netty-4.2-only, which
+  arrives with Quarkus 4 / Vert.x 5.
+- **Native-image: works.** Flag `KRPC_IOURING`, hand-authored JNI/reflect/resource
+  metadata, `--initialize-at-run-time`; +0.56 MiB image, +1.9 MiB RSS.
+- **Benchmark verdict (aarch64, containerized): 5–6% SLOWER than NIO** on krpc's
+  typical small-message unary path. io_uring's win case (many connections,
+  syscall-bound) is not this profile. Details:
+  workspace `docs/orchestration/IOURING-001_{RESEARCH,BENCH}_omp.md`.
+- **Ops note.** Docker's default seccomp profile blocks io_uring syscalls
+  (`io_uring_setup` → EPERM); running the flag ON in containers needs an allowing
+  seccomp profile.
+
+### 13.6 Reflection coverage (what the framework registers for you)
 
 Native is closed-world: the framework registers reflection at build time, but
 only for what its build-time scan can reach. Know what is and is not covered.
@@ -487,7 +507,7 @@ only for what its build-time scan can reach. Know what is and is not covered.
   `rpc-server-quarkus/src/main/resources/META-INF/native-image/rpc-server/...`).
   You only own the third-party types your DTOs pull in.
 
-### 13.6 Native checklist for a consumer service
+### 13.7 Native checklist for a consumer service
 
 - [ ] **krpc ≤1.0.2 only:** `io.grpc:*` forced to the Quarkus BOM version (root build) — §13.1. (krpc >1.0.2 is aligned; skip.)
 - [ ] **ext-rpc ≤1.0.1 only:** ServerProvider Feature + provider reflection holder + `compileOnly nativeimage` — §13.2.
@@ -495,7 +515,7 @@ only for what its build-time scan can reach. Know what is and is not covered.
 - [ ] Builder image matches Quarkus/JDK line; `package.jar.enabled=false` — §13.4.
 - [ ] Per-service `--initialize-at-run-time` for static-heap violations — §13.4.
 - [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.4.
-- [ ] `ext-rpc` / `ext-mybatis` extensions on the build (DTO reflection) — §13.5.
+- [ ] `ext-rpc` / `ext-mybatis` extensions on the build (DTO reflection) — §13.6.
 
 ---
 

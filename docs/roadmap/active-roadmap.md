@@ -29,6 +29,34 @@ Acceptance Criteria:
 - Wire compatibility across the supported grpc range is stated in `SPEC.md`.
 - `SPEC.md` §13.1 workaround section removed.
 
+## NATIVE-003: io_uring transport revisit
+
+Status: deferred
+
+Capability: adopt Netty's io_uring transport for krpc's native server if and when
+it outperforms NIO on a representative workload
+
+Components:
+
+- `rpc-server` (`IoUringTransport`, `KRPC_IOURING` flag), native metadata
+  (`test-server-iouring` reflect/jni/resource configs)
+- `SPEC.md` §13.5 (evaluation note)
+- eval branch `feat/iouring-eval` (flag-gated PoC)
+
+ADR: N/A (evidence: 2026-07 PoC benchmarked 5–6% SLOWER than NIO on krpc's
+small-message unary path, aarch64 containerized — workspace
+`docs/orchestration/IOURING-001_{RESEARCH,BENCH}_omp.md`)
+
+Gated on: Quarkus 4 / Vert.x 5 (Netty 4.2 graduated `io.netty.channel.uring`
+transport with in-jar native metadata — removes the archived-incubator artifact
+and hand-authored metadata this PoC required).
+
+Acceptance Criteria:
+
+- Re-benchmark on a high-connection-count / streaming workload (io_uring's
+  syscall-bound win case), not the small-message unary path.
+- Adopt only if it wins there; the flag stays default OFF regardless.
+
 ## GOV-001: Establish Repository Governance Baseline
 
 Status: active

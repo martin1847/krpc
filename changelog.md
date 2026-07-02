@@ -1,4 +1,12 @@
 
+# 1.0.3, 2026-07-02
+
+* **grpc aligned to the Quarkus 3.33 LTS BOM: `io.grpc` 1.82.0 -> 1.79.0** (NATIVE-001 Option A). Kills the consumer-side `resolutionStrategy` force previously required for Quarkus native builds; wire behavior unchanged. SPEC §13.1 support matrix.
+* **Netty security wave: 4.1.133 -> 4.1.135.Final.** Closes CVE-2026-47244 + CVE-2026-50560 (HTTP/2 DoS, gRPC hot path) and CVE-2026-50020 (conditional HTTP/1 smuggling). Convergence is build-local (all `io.netty:*` incl. transitive-only `netty-codec-http2`); nothing leaks into published POMs — consumer BOMs stay authoritative. Consumers on Quarkus should adopt BOM 3.33.2.1 (same Netty batch).
+* io_uring transport evaluated (flag-gated PoC on `feat/iouring-eval`, NOT shipped): works in native but 5–6% slower than NIO on the typical small-message unary path; deferred to Quarkus 4 / Netty 4.2 (NATIVE-003). SPEC §13 note.
+* Docs: SPEC §13 rewritten as the native-image consumer SoT (version matrix, server-provider + substitution workarounds pending ext-rpc 1.0.2, build recipe, checklist).
+* Heterogeneously reviewed (codex r1 REQUEST-CHANGES -> fixes -> r2 APPROVE, 0 findings).
+
 # 1.0.2, 2026-06-22
 
 * Per-request server context migrated from a hand-rolled `ThreadLocal` to gRPC-native **`io.grpc.Context`** (`ServerContext` `SC_KEY`; attach/detach in `UnaryMethod`). Behavior-equivalent, no wire change; gRPC-managed scope, virtual-thread-friendly. Heterogeneously reviewed (codex).

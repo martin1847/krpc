@@ -1,5 +1,62 @@
 # Active Roadmap
 
+## NATIVE-001: io.grpc Version Alignment For Quarkus Native Consumers
+
+Status: active
+
+Capability: krpc artifacts consumable in Quarkus native builds without a
+consumer-side grpc version force
+
+Components:
+
+- `gradle.properties` (`grpcVersion=1.82.0`)
+- published POM dependency metadata (`tech.krpc:*`)
+- `SPEC.md` §13.1 (consumer workaround — delete when this completes)
+
+ADR: N/A (evidence: downstream native builds abort during Initializing —
+Quarkus GraalVM substitution `Target_io_grpc_ServiceProviders.loadAll` does not
+match grpc 1.82.0 when krpc's transitive pin overrides the Quarkus BOM's 1.79.0;
+verified 2026-06 on 8 downstream Quarkus 3.33.2 services)
+
+Acceptance Criteria:
+
+- A documented grpc version policy: either align `grpcVersion` with the current
+  Quarkus LTS BOM, or declare the supported Quarkus↔krpc↔grpc matrix and mark
+  `io.grpc:*` so the consumer BOM wins by default (e.g. compatible-range /
+  runtime-provided scope), with the tradeoff recorded.
+- A Quarkus 3.33.x consumer can native-build without a root-build
+  `resolutionStrategy` force on `io.grpc:*`.
+- Wire compatibility across the supported grpc range is stated in `SPEC.md`.
+- `SPEC.md` §13.1 workaround section removed.
+
+## NATIVE-003: io_uring transport revisit
+
+Status: deferred
+
+Capability: adopt Netty's io_uring transport for krpc's native server if and when
+it outperforms NIO on a representative workload
+
+Components:
+
+- `rpc-server` (`IoUringTransport`, `KRPC_IOURING` flag), native metadata
+  (`test-server-iouring` reflect/jni/resource configs)
+- `SPEC.md` §13.5 (evaluation note)
+- eval branch `feat/iouring-eval` (flag-gated PoC)
+
+ADR: N/A (evidence: 2026-07 PoC benchmarked 5–6% SLOWER than NIO on krpc's
+small-message unary path, aarch64 containerized — workspace
+`docs/orchestration/IOURING-001_{RESEARCH,BENCH}_omp.md`)
+
+Gated on: Quarkus 4 / Vert.x 5 (Netty 4.2 graduated `io.netty.channel.uring`
+transport with in-jar native metadata — removes the archived-incubator artifact
+and hand-authored metadata this PoC required).
+
+Acceptance Criteria:
+
+- Re-benchmark on a high-connection-count / streaming workload (io_uring's
+  syscall-bound win case), not the small-message unary path.
+- Adopt only if it wins there; the flag stays default OFF regardless.
+
 ## GOV-001: Establish Repository Governance Baseline
 
 Status: active

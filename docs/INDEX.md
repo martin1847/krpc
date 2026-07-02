@@ -23,6 +23,8 @@ This index maps the repository source of truth for KRPC.
 
 - [Development Spec](../SPEC.md) — authoring handbook for humans and coding
   agents (method contract, errors, auth, native image §13)
+- [Support Policy](support-policy.md) — version/support lifecycle; SPEC §13.1 is
+  the canonical version matrix
 
 ## Plans
 

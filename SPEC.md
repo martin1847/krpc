@@ -389,50 +389,25 @@ substitution matches the class shape.
 aborts during Initializing): force `io.grpc:*` back to the BOM version in the root
 build — `configurations.all { resolutionStrategy.eachDependency { if (it.requested.group == 'io.grpc') it.useVersion '1.79.0' } }`.
 
-### 13.2 Server-side gRPC provider not registered [gap → NATIVE-002]
+### 13.2 Server-side native support — use `ext-rpc` ≥ 1.0.2 (NATIVE-002, shipped)
 
-krpc talks to io.grpc directly (not via quarkus-grpc), and Quarkus builds native
-images with `-H:-UseServiceLoaderFeature` — so grpc's `ServiceLoader` lookups
-find nothing unless someone registers the providers. krpc only covers the
-CLIENT side: `rpc-client/.../ext/GraalvmBuild.java:14-18` build-time-initializes
-`ManagedChannelProvider` / `NameResolverRegistry` / `LoadBalancerRegistry`. The
-server-side counterpart (`rpc-server-quarkus/.../GraalvmBuild.java`) is entirely
-commented out, so `io.grpc.ServerRegistry` is empty in the image and the native
-server dies at boot with
-`ManagedChannelProvider$ProviderNotFoundException: No functional server found`.
+Since `tech.krpc.ext:ext-rpc` **1.0.2**, the Quarkus extension registers everything a
+native SERVER needs with zero per-service glue: the deployment processor emits
+reflective registration for the grpc provider impls and a build-time GraalVM
+`Feature` that bakes `io.grpc.ServerProvider.provider()` into the image heap
+(krpc itself only covers the client side —
+`rpc-client/.../ext/GraalvmBuild.java:14-18`). It also gates its grpc-netty
+substitutions on `quarkus-grpc-common` absence, so they no longer collide with
+Quarkus's own.
 
-Consumer workaround (per service, proven on 8 services) — two small classes +
-one build flag:
+**On `ext-rpc` ≤ 1.0.1 only**, a native server dies at boot with
+`ManagedChannelProvider$ProviderNotFoundException: No functional server found`
+and duplicate-substitution aborts; either upgrade, or apply the legacy trio
+(per-service `ServerProvider` Feature + `@RegisterForReflection` provider holder +
+`quarkus.class-loading.removed-resources` strip) — recipe preserved in the
+`v1.0.3` tag of this file and in `ext-rpc` PR #2.
 
-1. A GraalVM `Feature` whose `beforeAnalysis` calls `io.grpc.ServerProvider.provider()`
-   (bakes the server provider list into the image heap), wired via
-   `quarkus.native.additional-build-args=--features=<pkg>.NettyServerProviderFeature`.
-2. An `@RegisterForReflection(classNames = {"io.grpc.netty.NettyServerProvider",
-   "io.grpc.netty.NettyChannelProvider", "io.grpc.netty.UdsNettyChannelProvider",
-   "io.grpc.internal.PickFirstLoadBalancerProvider",
-   "io.grpc.internal.DnsNameResolverProvider"})` holder so grpc's runtime
-   ServiceLoader can instantiate them.
-3. `compileOnly "org.graalvm.sdk:nativeimage"` (Feature API is build-time only).
-
-**Fixed in `ext-rpc` >1.0.1 (NATIVE-002, unreleased).** Still required for published
-`ext-rpc` ≤1.0.1; delete this workaround once the fixed ext-rpc ships.
-
-### 13.3 Stale ext-rpc substitutions collide with Quarkus [gap → NATIVE-002]
-
-`tech.krpc.ext:ext-rpc` ships its own grpc-netty GraalVM substitution classes
-(`tech/krpc/ext/runtime/graal/Target_io_grpc_netty_Utils`,
-`.../GrpcNettySubstitutions`). In a Quarkus app, Quarkus's substitutions are
-authoritative and the duplicates abort the build. Strip them in
-`application.properties`:
-
-```properties
-quarkus.class-loading.removed-resources."tech.krpc.ext\:ext-rpc"=tech/krpc/ext/runtime/graal/Target_io_grpc_netty_Utils.class,tech/krpc/ext/runtime/graal/GrpcNettySubstitutions.class
-```
-
-**Fixed in `ext-rpc` >1.0.1 (NATIVE-002, unreleased).** Still required for published
-`ext-rpc` ≤1.0.1; delete this workaround once the fixed ext-rpc ships.
-
-### 13.4 Build recipe and known runtime issues
+### 13.3 Build recipe and known runtime issues
 
 - Build command: [§12](#12-build-test-release). Native needs
   `-Dquarkus.package.jar.enabled=false` (Gradle can't output both), and the
@@ -446,7 +421,7 @@ quarkus.class-loading.removed-resources."tech.krpc.ext\:ext-rpc"=tech/krpc/ext/r
   is absent** (logs "started", then exit 139). Ensure `QUARKUS_DATASOURCE_*` is
   set; JVM mode fails gracefully, native does not.
 
-### 13.5 io_uring transport (evaluated 2026-07)
+### 13.4 io_uring transport (evaluated 2026-07)
 
 Status: evaluated. A flag-gated PoC exists on eval branch `feat/iouring-eval` —
 **not shipped; the default transport stays NIO in native / epoll-or-NIO on JVM.**
@@ -466,7 +441,7 @@ Status: evaluated. A flag-gated PoC exists on eval branch `feat/iouring-eval` �
   (`io_uring_setup` → EPERM); running the flag ON in containers needs an allowing
   seccomp profile.
 
-### 13.6 Reflection coverage (what the framework registers for you)
+### 13.5 Reflection coverage (what the framework registers for you)
 
 Native is closed-world: the framework registers reflection at build time, but
 only for what its build-time scan can reach. Know what is and is not covered.
@@ -505,15 +480,14 @@ only for what its build-time scan can reach. Know what is and is not covered.
   `rpc-server-quarkus/src/main/resources/META-INF/native-image/rpc-server/...`).
   You only own the third-party types your DTOs pull in.
 
-### 13.7 Native checklist for a consumer service
+### 13.6 Native checklist for a consumer service
 
 - [ ] **krpc ≤1.0.2 only:** `io.grpc:*` forced to the Quarkus BOM version (root build) — §13.1. (krpc >1.0.2 is aligned; skip.)
-- [ ] **ext-rpc ≤1.0.1 only:** ServerProvider Feature + provider reflection holder + `compileOnly nativeimage` — §13.2.
-- [ ] **ext-rpc ≤1.0.1 only:** ext-rpc stale substitutions stripped via `removed-resources` — §13.3.
-- [ ] Builder image matches Quarkus/JDK line; `package.jar.enabled=false` — §13.4.
-- [ ] Per-service `--initialize-at-run-time` for static-heap violations — §13.4.
-- [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.4.
-- [ ] `ext-rpc` / `ext-mybatis` extensions on the build (DTO reflection) — §13.6.
+- [ ] `ext-rpc` ≥ 1.0.2 on the build (server-side native support; ≤1.0.1 needs the legacy trio) — §13.2.
+- [ ] Builder image matches Quarkus/JDK line; `package.jar.enabled=false` — §13.3.
+- [ ] Per-service `--initialize-at-run-time` for static-heap violations — §13.3.
+- [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.3.
+- [ ] `ext-rpc` / `ext-mybatis` extensions on the build (DTO reflection) — §13.5.
 
 ---
 

@@ -1,6 +1,7 @@
 package test.krpc.stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -101,46 +102,67 @@ class MaxConcurrentCallsIT {
     void overCapCallIsQueuedNotRejected_andConcurrencyStaysBounded() throws Exception {
         var svc = new RpcClientFactory(APP, channel).get(BlockingCapService.class);
 
-        // Fire CALLS (=3) unary calls concurrently on the one channel. Each blocks server-side
-        // until we open the gate. Two "started" barriers let us confirm both client threads have
-        // actually issued their call before we wait on server-side entry.
-        CountDownLatch clientStarted = new CountDownLatch(CALLS);
+        // (1) Fire exactly CAP calls and wait until ALL of them are confirmed parked inside the
+        // service body. entered is a CountDownLatch(CAP) counted down from within occupy(), so
+        // awaitEntered only trips once CAP request bodies are actually running and blocked on the
+        // release gate. If it times out the cap starved us below N (a regression the other way),
+        // so it is an assertion, not a silent skip.
         List<Future<RpcResult<Integer>>> futures = new ArrayList<>();
-        for (int i = 0; i < CALLS; i++) {
-            futures.add(clientPool.submit(() -> {
-                clientStarted.countDown();
-                return svc.occupy();
-            }));
+        for (int i = 0; i < CAP; i++) {
+            futures.add(clientPool.submit(svc::occupy));
         }
-        assertTrue(clientStarted.await(10, TimeUnit.SECONDS),
-                "all client call threads should have been scheduled");
-
-        // Wait until CAP (=2) requests are actually blocked inside the service body. Under the
-        // cap this is guaranteed: the client opens exactly CAP streams and queues the rest. If
-        // this await ever times out, the cap starved us below N (a regression in the other
-        // direction), so it is an assertion, not a silent skip.
         assertTrue(impl.awaitEntered(10, TimeUnit.SECONDS),
-                "expected " + CAP + " concurrent requests to enter the service body");
-
-        // (b) THE MEANINGFUL ASSERTION. With CAP streams blocked and the (CAP+1)th still queued
-        // client-side, the peak concurrency the server ever saw must be <= CAP. If the cap were
-        // removed, the client would open all CALLS streams at once; they would all pile up on the
-        // release gate (which we still hold), and the high-water mark would climb to CALLS (=3).
-        // A pure "all calls succeed" check would pass even with no cap — this is what proves the
-        // cap actually bounded the in-flight streams.
-        assertTrue(impl.highWater() <= CAP,
-                () -> "high-water concurrency " + impl.highWater() + " exceeded cap " + CAP
-                        + " — the per-connection stream cap did not bound in-flight streams");
-        // Exact peak: the two admitted streams are both blocked right now.
+                "expected " + CAP + " concurrent requests to enter and park in the service body");
         assertEquals(CAP, impl.highWater(),
-                "expected exactly the cap in flight while the over-cap call is queued");
+                "expected exactly the cap in flight once all CAP calls are parked");
 
-        // Release the gate; the two blocked calls return, freeing slots so the queued (CAP+1)th
-        // call opens its stream and completes.
+        // (2) NOW fire the over-cap (CAP+1'th) call on the SAME channel. All CAP stream slots on
+        // the one HTTP/2 connection are held by the parked calls, so grpc-netty cannot open a
+        // stream for this one — it must queue it at the transport (SETTINGS_MAX_CONCURRENT_STREAMS).
+        // We confirm the client thread actually ran and issued the call before watching, so the
+        // bounded wait below measures a call that HAS been dispatched, not one still sitting in
+        // the executor queue.
+        CountDownLatch overCapStarted = new CountDownLatch(1);
+        Future<RpcResult<Integer>> overCap = clientPool.submit(() -> {
+            overCapStarted.countDown();
+            return svc.occupy();
+        });
+        futures.add(overCap);
+        assertTrue(overCapStarted.await(10, TimeUnit.SECONDS),
+                "over-cap client thread should have been scheduled and issued its call");
+
+        // (3) THE RACE-KILLER: a BOUNDED WAIT instead of a single-instant peek. The old test read
+        // high-water once right after awaitEntered — but at that instant the (CAP+1)th call might
+        // simply not have arrived yet even with NO cap, so a broken cap could slip through as a
+        // false green. Here we poll high-water for a window far longer than loopback stream-open
+        // latency (microseconds). With the cap absent the over-cap stream would open, its body
+        // would enter occupy(), and high-water would climb to CAP+1 well within this window — and
+        // because we assert on EVERY poll across the WHOLE window, the poll is guaranteed to
+        // observe the CAP+1 and go red. Staying pinned at CAP for the entire window is only
+        // possible if the excess stream is genuinely parked at the transport. Under the cap the
+        // CAP parked calls hold in-flight at exactly CAP (blocked on a gate we control), so this
+        // window is deterministically green — no timing race in either direction.
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500);
+        while (System.nanoTime() < deadline) {
+            final int hw = impl.highWater();
+            assertEquals(CAP, hw,
+                    () -> "high-water reached " + hw + " while the over-cap call was outstanding — "
+                            + "the per-connection stream cap failed to park the excess stream at "
+                            + "the transport (expected it pinned at " + CAP + ")");
+            // While the gate is held no occupy() can return; if the over-cap future has completed
+            // it was REJECTED, not queued — the backpressure contract (queue, never reject) broke.
+            assertFalse(overCap.isDone(),
+                    "over-cap call settled while the release gate was still held — it must be "
+                            + "parked at the transport (backpressure), not rejected");
+            Thread.sleep(20);
+        }
+
+        // (4) Open the gate. The CAP parked calls return, freeing stream slots, so the queued
+        // over-cap call finally opens its stream and completes.
         impl.releaseAll();
 
-        // (a) & (c): every call — including the over-cap one — returns a normal successful result.
-        // No StatusRuntimeException: the excess stream was QUEUED (backpressure), never rejected.
+        // Every call — including the over-cap one — returns a normal successful result. No
+        // StatusRuntimeException: the excess stream was QUEUED (backpressure), never rejected.
         int oks = 0;
         for (int i = 0; i < CALLS; i++) {
             RpcResult<Integer> res;
@@ -160,10 +182,10 @@ class MaxConcurrentCallsIT {
         }
         assertEquals(CALLS, oks, "all " + CALLS + " calls must ultimately succeed");
 
-        // Defensive: even after all calls drained, the peak never exceeded the cap. Post-release
-        // the (CAP+1)th runs after the first two have already decremented, so it never overlaps
-        // beyond CAP — final high-water stays == CAP under the cap, but would be CALLS without it.
-        assertTrue(impl.highWater() <= CAP,
+        // The recorded peak never exceeded the cap. Post-release the over-cap body only enters
+        // after a prior stream has closed (freeing a slot), so it never overlaps beyond CAP — the
+        // final high-water stays == CAP under the cap, but would be CALLS (=CAP+1) without it.
+        assertEquals(CAP, impl.highWater(),
                 () -> "final high-water " + impl.highWater() + " exceeded cap " + CAP);
     }
 

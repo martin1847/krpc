@@ -87,7 +87,8 @@ Acceptance Criteria:
 
 ## AGENT-001: Agent-Friendly Introspection And MCP Surface
 
-Status: active  (P0 delivered on `dev`, security-reviewed; P1 not started)
+Status: active  (P0 delivered on `dev`, security-reviewed; P1 MCP bridge implemented on
+`feat/mcp-bridge`, pending final review + merge)
 
 Capability: Expose KRPC's runtime self-description to AI agents (discover → call)
 
@@ -97,35 +98,31 @@ Components:
 - `rpc-client` (`GeneralizeClient`)
 - `http-server` (HTTP discover/invoke endpoints)
 - `rpc-api` (`@UnsafeWeb` `agentTool` attribute, `@Doc`)
-- new runtime MCP module (P1)
+- `rpc-server-quarkus` MCP bridge (`McpHandler`/`McpSchema`/`McpToolRegistry`, P1 — a
+  thin bridge on the P0 http-server host, not a separate module; ADR-0004 revised)
 
 ADR: ADR-0004
 
 Phases (sequenced P0 → P1):
 
-- **P0 (DONE, on `dev`)** — HTTP `listApis()` discovery endpoint + generic HTTP
-  invoke endpoint (HTTP analogue of `GeneralizeClient`); `WebMethodRegistry` +
-  `UnaryMethod.invokeWeb`. Hidden services double-filtered, credential not bypassed,
-  filter chain single-pass. Security review APPROVE (0 blocking). JVM-mode only —
-  native reflection-config for the new handlers not yet added.
-  - **Caveat (bean removal):** the `AgentDiscoverHandler` / `AgentInvokeHandler`
-    beans are discovered reflectively (`HttpHandlerExpose` scans `getBeans(Object,
-    Any)`), so Quarkus Arc's default `remove-unused-beans=all` strips them as
-    unused and the HTTP server logs `Skip HTTP Server , no Handlers found.` — the
-    endpoints are then absent in a **default Quarkus consumer** (including
-    `examples/quickstart`). Reproduce the working surface with
-    `-Dquarkus.arc.remove-unused-beans=none`. The unit tests instantiate the
-    handlers with `new`, so they never exercise the container path and did not
-    catch this. Fix is folded into P1 as its prerequisite first step (below).
-- **P1** — Runtime MCP server module generated from live `ApiMeta`, Streamable
-  HTTP transport, **feature switch default OFF**. Tools = methods opted in via
-  `@UnsafeWeb(agentTool=true)` (default `false`).
-  - **Prerequisite (first step):** make the P0 handler beans survive default Arc
-    bean removal (e.g. a `rpc-server-quarkus` deployment module emitting
-    `UnremovableBeanBuildItem` / `AdditionalBeanBuildItem().setUnremovable()`,
-    `@Unremovable` on the handlers, or an explicit `Instance<GetHandler>` /
-    `Instance<PostHandler<?>>` reference), so agent endpoints are reachable in a
-    default consumer before the MCP bridge builds on them.
+- **P0 (DONE, on `dev`; bean-removal + native gaps closed on `feat/mcp-bridge`)** —
+  HTTP `listApis()` discovery endpoint + generic HTTP invoke endpoint (HTTP analogue
+  of `GeneralizeClient`); `WebMethodRegistry` + `UnaryMethod.invokeWeb`. Hidden
+  services double-filtered, credential not bypassed, filter chain single-pass.
+  Security review APPROVE (0 blocking).
+  - **Bean-removal caveat: FIXED.** `AgentDiscoverHandler`/`AgentInvokeHandler` now
+    carry `@io.quarkus.arc.Unremovable`, so they survive Arc's default
+    `remove-unused-beans=all` and the endpoints are reachable in a default consumer
+    (JVM + native), no consumer action. Container-level `@QuarkusTest` added.
+  - **Native: DONE.** `AgentInvokeRequest` reflection-config added; native build +
+    boot verified (Mandrel 25/JDK25) with the agent endpoints reachable.
+- **P1 (IMPLEMENTED on `feat/mcp-bridge`, pending review + merge)** — MCP Streamable
+  HTTP bridge (`POST /mcp`, spec 2025-06-18, JSON-RPC 2.0), **not** a standalone
+  module: a thin bridge on the P0 http-server host (ADR-0004 revised). `tools/list`
+  generated from live `ApiMeta`; `tools/call` via the same `invokeWeb` path
+  (credential not bypassed). Tools = `@UnsafeWeb(agentTool=true)` subset only.
+  **Feature switch `rpc.server.mcp.enabled` (env `KRPC_MCP`) default OFF** = zero new
+  surface. No third-party MCP SDK. Verified JVM + native real-client handshake.
 
 Acceptance Criteria:
 

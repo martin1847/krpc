@@ -32,8 +32,8 @@ public interface RpcConstants {
 
     // ADR-0004 / D2 (2026-07-03): app-layer defence-in-depth for CVE-2026-47244
     // (HTTP/2 concurrent-stream DoS). Netty gRPC server caps concurrent calls per
-    // connection; 0 = unlimited (pre-1.0.4 behaviour). Consumers override via
-    // rpc.server.maxConcurrentCallsPerConnection.
+    // connection; 0 = unlimited (pre-1.0.4 behaviour), negative = config error (fail-fast).
+    // Consumers override via rpc.server.maxConcurrentCallsPerConnection.
     int DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION = 2000;
 
     //int HTTP1_PORT = 80;

@@ -21,6 +21,14 @@ public @interface UnsafeWeb {
     boolean requireCredential() default false;
 
     /**
+     * ADR-0004 (AGENT-001 P1): opt this service's methods into the MCP tool surface
+     * ({@code POST /mcp} tools/list + tools/call). Default false — agent-tool exposure
+     * is a deliberate subset of web exposure, never implied by {@code @UnsafeWeb} alone.
+     * The {@code /agent/discover} web view is unaffected by this flag.
+     */
+    boolean agentTool() default false;
+
+    /**
      * 制定单个方法需要Credential
      */
     @Documented

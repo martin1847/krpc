@@ -32,11 +32,12 @@ endpoints speak plain HTTP/1.1 JSON that any HTTP client can call.
   (hidden) prefix and **never** appear in discovery and **cannot** be invoked
   (unknown and hidden resolve identically to a not-found, with no internal
   disclosure).
-- **There is no narrower "agent tool" subset yet.** ADR-0004 specifies
-  `@UnsafeWeb(agentTool=true)` as the opt-in that would make the agent surface a
-  deliberate *subset* of the web surface — but that is a **P1 design that is
-  accepted, not yet built**. Today (P0) the agent surface equals the web surface.
-  Do not assume an `agentTool` gate exists.
+- **The `agentTool` subset is the MCP surface (now built, P1).**
+  `@UnsafeWeb(agentTool=true)` opts a service into the MCP tool surface (`POST /mcp`,
+  see [MCP bridge](#mcp-bridge-post-mcp) below) — a **deliberate subset** of the web
+  surface. `@UnsafeWeb` alone does **not** create an MCP tool. The `/agent/discover`
+  and `/agent/invoke` views here are **unaffected** by `agentTool` — they still show
+  the full `@UnsafeWeb` set. The two surfaces are intentionally distinct.
 - **Credential is not bypassed relative to gRPC.** `/agent/invoke` forwards the
   `Authorization: Bearer <jwt>` header into the **same credential check as a normal
   gRPC call**, so an `@UnsafeWeb(requireCredential=true)` service is checked no
@@ -80,19 +81,16 @@ endpoints speak plain HTTP/1.1 JSON that any HTTP client can call.
 Run against the [`examples/quickstart`](../examples/quickstart/) service
 (`@UnsafeWeb` `HelloService`, no DB, no JWT).
 
-> **Prerequisite (known P0 limitation).** The two handler beans are discovered
-> reflectively, so Quarkus Arc's default unused-bean removal strips them and the
-> HTTP server logs `Skip HTTP Server , no Handlers found.` — the endpoints are then
-> absent. Until this is addressed, build the app with unused-bean removal off so
-> the handlers are retained (JVM mode only; native reflection-config for these
-> handlers is also not added yet):
+> **Build & run.** The handler beans carry `@io.quarkus.arc.Unremovable`, so they
+> survive Quarkus Arc's default unused-bean removal — the endpoints are reachable in
+> a **default consumer**, JVM and native, with no consumer action:
 >
 > ```bash
-> gradle :examples:quickstart:quarkusBuild -x test -Dquarkus.arc.remove-unused-beans=none
+> gradle :examples:quickstart:quarkusBuild -x test
 > java -jar examples/quickstart/build/quarkus-app/quarkus-run.jar
 > ```
 >
-> Startup then logs the surface coming up:
+> Startup logs the surface coming up:
 >
 > ```text
 > HttpHandlerExpose  GET [/agent/discover]
@@ -100,6 +98,9 @@ Run against the [`examples/quickstart`](../examples/quickstart/) service
 > HttpHandlerExpose  ***** 【 DEV 】 HTTP Server 2 endpoints  on 8080
 > RpcServiceExpose   ***** 【 DEV 】 RpcServer expose 1 services on 50051
 > ```
+>
+> (With the MCP bridge enabled — `KRPC_MCP=true` — the POST line also lists `/mcp`
+> and the count is 3; see [MCP bridge](#mcp-bridge-post-mcp).)
 
 ### 1. Discover
 
@@ -182,12 +183,47 @@ curl -X POST http://127.0.0.1:8080/agent/invoke \
 A hidden (non-`@UnsafeWeb`) service returns the identical `code:5` response — the
 agent cannot distinguish "does not exist" from "exists but hidden", by design.
 
-## What is not here (P1, not built)
+## MCP bridge (`POST /mcp`)
 
-- **Native MCP server.** ADR-0004 P1 is a runtime MCP module generated from live
-  `ApiMeta`, Streamable HTTP, feature switch default OFF. **Not started.**
-- **`@UnsafeWeb(agentTool=true)` opt-in.** The agent-tool subset gate above.
-- **In-core auth / rate limiting.** Deferred to the gateway (ADR-0004).
+The same server also speaks [MCP](https://modelcontextprotocol.io) (spec
+`2025-06-18`, JSON-RPC 2.0 over Streamable HTTP) on the same `8080` host —
+**default OFF**, enabled with `rpc.server.mcp.enabled=true` (env `KRPC_MCP=true`).
+MCP tools are the **`@UnsafeWeb(agentTool=true)` subset only**; `@UnsafeWeb` alone
+does not create a tool. `tools/call` runs the identical credential + filter dispatch
+as `/agent/invoke` (credential not bypassed). Full contract: [SPEC §12.2](../SPEC.md#122-mcp-bridge-agent-tools-over-post-mcp).
+
+Run the quickstart with the flag on, then handshake with any MCP client (or curl):
+
+```bash
+KRPC_MCP=true java -jar examples/quickstart/build/quarkus-app/quarkus-run.jar
+```
+
+```bash
+H=(-H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
+# 1. initialize
+curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}'
+# -> {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"krpc","version":"1.0.0"}}}
+
+# 2. initialized notification -> HTTP 202, empty body
+curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+# 3. tools/list -> Hello_hello with input/outputSchema (name required, minLength 1 from @NotBlank)
+curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+# 4. tools/call -> content + structuredContent (RpcResult data, unwrapped)
+curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"Hello_hello","arguments":{"name":"mcp"}}}'
+# -> {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"message\":\"Hello, mcp!\",...}"}],"isError":false,"structuredContent":{"message":"Hello, mcp!","timestamp":...}}}
+```
+
+With MCP OFF (default), `POST /mcp` is absent (`404`) and the surface is byte-for-byte
+the P0 two-endpoint set above.
+
+## Still deferred to the gateway
+
+- **In-core auth / rate limiting.** Both the agent surface and the MCP bridge leave
+  authn/throttling to the gateway (ADR-0004); MCP's OAuth 2.1 mapping likewise.
 
 See [ADR-0004](decisions/ADR-0004-agent-friendly-introspection.md) and the
 [active roadmap](roadmap/active-roadmap.md) AGENT-001 entry for phasing.

@@ -368,14 +368,49 @@ rpc.server.maxConcurrentCallsPerConnection=2000
 ```
 App-layer defence-in-depth against HTTP/2 concurrent-stream flooding
 (CVE-2026-47244), complementing the transport-layer Netty 1.0.3 bump. Read by
-`rpc-server-quarkus` (`RpcServiceExpose`) and `rpc-server-spring`
-(`RpcServiceExposer`, relaxed binding → env / `rpc.server.max-concurrent-calls-per-connection`);
-applied on the Netty gRPC `ServerBuilder` in `RpcServerBuilder.init()`.
-The value is advertised to clients as HTTP/2 `SETTINGS_MAX_CONCURRENT_STREAMS`, so
-a client exceeding it on a **single channel** is **back-pressure queued** — excess
-streams wait client-side until capacity frees, they are **not** failed. Set `0` to
-restore the pre-1.0.4 unlimited behaviour. Non-Netty gRPC providers (none ship by
-default) ignore the cap with a warning rather than failing.
+`rpc-server-quarkus` (`RpcServiceExpose`, env `RPC_SERVER_MAXCONCURRENTCALLSPERCONNECTION`
+via SmallRye's default mapping) and `rpc-server-spring` (`RpcServiceExposer`, relaxed
+binding — `rpc.server.max-concurrent-calls-per-connection` / env also work); applied on
+the Netty gRPC `ServerBuilder` in `RpcServerBuilder.init()`. The value is advertised to
+clients as HTTP/2 `SETTINGS_MAX_CONCURRENT_STREAMS`, so a client exceeding it on a
+**single channel** is **back-pressure queued** — excess streams wait client-side until
+capacity frees, they are **not** failed. `0` (the only unlimited value) restores the
+pre-1.0.4 behaviour; a **negative value fails fast** as a config error. Non-Netty gRPC
+providers (none ship by default) ignore the cap with a warning rather than failing.
+
+### 12.2 MCP bridge (agent tools over `POST /mcp`)
+
+ADR-0004 P1: a hand-written [Model Context Protocol](https://modelcontextprotocol.io)
+bridge (spec `2025-06-18`, JSON-RPC 2.0 over Streamable HTTP), on the same netty
+HTTP host as `/agent/*` (`http.port`, default `8080`). No third-party MCP SDK; no
+new module or Central artifact.
+
+```properties
+# Default OFF = byte-level zero new surface (the /mcp path is not even registered).
+rpc.server.mcp.enabled=true
+```
+Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
+`RPC_SERVER_MCP_ENABLED`. Read by `rpc-server-quarkus` (`McpHandler`).
+
+- **Tools = the `@UnsafeWeb(agentTool=true)` subset only.** `agentTool` (TYPE-level,
+  default `false`) is a **deliberate subset of web exposure** — `@UnsafeWeb` alone
+  does **not** create a tool. `/agent/discover` is unaffected (its web-filtered view
+  is unchanged); the two surfaces are distinct. ON with no `agentTool` method = an
+  empty `tools` list (valid).
+- **Tool name** = `Service_method` (underscore-joined; matches the client-enforced
+  `^[a-zA-Z0-9_-]+$`). `inputSchema`/`outputSchema` are JSON Schema derived from the
+  DTO type tree + jakarta constraints (`@NotBlank`→`required`+`minLength`, `@Size`,
+  `@Min`/`@Max`, `@Pattern`, `@Email`) + `@Doc`; `outputSchema` is the
+  `RpcResult<T>`-unwrapped `T`.
+- **`tools/call` runs the identical dispatch as `/agent/invoke`** (`WebInvoker.invokeWeb`):
+  the credential check is **not bypassed**, and only agentTool methods resolve
+  (unknown/non-agentTool/hidden → JSON-RPC `-32602`). Success → `content` text +
+  `structuredContent` (unwrapped `data`); a non-zero `RpcResult.code` or a thrown
+  credential/system error → `isError:true`.
+- **Methods**: `initialize`, `notifications/initialized` (→ HTTP 202), `tools/list`,
+  `tools/call`, `ping`. Transport is JSON-response mode only (one JSON object per
+  POST); SSE is spec-optional and not used (krpc tools are unary). Auth/rate-limit
+  remain the gateway's responsibility, same as the P0 agent surface.
 
 ---
 

@@ -49,6 +49,11 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     public static final String TYPE_JSON   = "application/json; charset=UTF-8";
     public static final String SERVER_NAME = "Netty";
 
+    // ADR-0004 (AGENT-001 P1): a handler may set this response header to override the
+    // default HTTP 200 (e.g. MCP notifications -> 202). It is consumed by writeHandler
+    // and never written to the wire.
+    public static final String STATUS_OVERRIDE_HEADER = "x-krpc-http-status";
+
     protected final Map<String, PostHandler> postMap = new HashMap<>();
 
     protected final Map<String, GetHandler> getHanlderMap = new HashMap<>();
@@ -98,11 +103,24 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         List<AsciiHeader> extHeaders = new ArrayList<AsciiHeader>();
         try {
             var bytes = handler.handle(dto, extHeaders, requestHeaders);
-            writeResponse(ctx, HttpResponseStatus.OK, handler.contextType(), bytes, extHeaders);
+            var status = extractStatusOverride(extHeaders);
+            writeResponse(ctx, status, handler.contextType(), bytes, extHeaders);
         } catch (final Exception ex) {
             log.error("handler " + handler.path() + " error", ex);
             writeInternalServerError(ctx, handler.contextType(), ex.getMessage());
         }
+    }
+
+    // ADR-0004 (AGENT-001 P1): pull the status-override sentinel out of the response
+    // headers (so it is not written to the wire) and map it to the HTTP status; default 200.
+    private static HttpResponseStatus extractStatusOverride(List<AsciiHeader> extHeaders) {
+        for (int i = 0; i < extHeaders.size(); i++) {
+            if (extHeaders.get(i).name.contentEqualsIgnoreCase(STATUS_OVERRIDE_HEADER)) {
+                var code = Integer.parseInt(extHeaders.remove(i).value);
+                return HttpResponseStatus.valueOf(code);
+            }
+        }
+        return HttpResponseStatus.OK;
     }
     //
     //void writeRpcResult(ChannelHandlerContext ctx, FullHttpRequest request,

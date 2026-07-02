@@ -8,6 +8,12 @@ P0 fix package (AGENT-001, ADR-0004) — makes the already-shipped agent surface
 * **`AgentInvokeHandler` javadoc corrected**: not-found/forbidden surface as JSON `code:5` (gRPC `NOT_FOUND`), not HTTP `404` (the netty transport only emits 200/404/500 at the status line; errors ride the JSON `code`).
 * **Server concurrent-call cap (CVE-2026-47244 app-layer defence-in-depth, D2).** The Netty gRPC server now sets `maxConcurrentCallsPerConnection`, new config `rpc.server.maxConcurrentCallsPerConnection` (**default 2000**, `0` = unlimited = pre-1.0.4 behaviour). Advertised as HTTP/2 `SETTINGS_MAX_CONCURRENT_STREAMS`, so a high-concurrency single-channel client is **back-pressure queued** (excess streams wait client-side), not failed. Complements the 1.0.3 Netty 4.1.135 bump (transport-layer fix) with an app-layer bound. SPEC §12.1. Integration test asserts the over-cap call queues (not rejected) and in-flight concurrency stays ≤ cap.
 
+P1 MCP bridge (AGENT-001, ADR-0004 P1 re-scoped to a thin bridge) — flag-gated, default OFF:
+
+* **MCP Streamable HTTP bridge (`POST /mcp`).** Hand-written Model Context Protocol endpoint (spec `2025-06-18`, JSON-RPC 2.0) on the existing `http-server` netty host, same process as `/agent/*` — no third-party MCP SDK, no new module or Central artifact. `tools/list` is generated from the live `ApiMeta` (`inputSchema`/`outputSchema` from the DTO type tree + jakarta constraints + `@Doc`, `RpcResult<T>` unwrapped); `tools/call` dispatches through the same `WebMethodRegistry.invokeWeb` path as `/agent/invoke` (credential **not** bypassed). Methods: `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `ping`; JSON-response mode (no SSE). Gated by `rpc.server.mcp.enabled` (env `KRPC_MCP`), **default OFF = byte-level zero new surface**. Verified JVM + native (Mandrel 25/JDK25) real-client handshake; OFF path regression (P0 curl replay) intact. SPEC §12.2, `docs/agent-guide.md`.
+* **`@UnsafeWeb(agentTool=true)` opt-in** (default `false`): MCP tools are a strict subset of `@UnsafeWeb` — the `/agent/discover` web view is unchanged, the two surfaces are distinct. ON with no agentTool method = empty tools list.
+* **ADR-0004 revised** (status stays accepted): P1 re-scoped from a standalone runtime MCP module to a thin bridge on P0; records the SDK evaluation (official `io.modelcontextprotocol.sdk:mcp` is Reactor + servlet/spring, not embeddable in krpc's native-zero-glue model → hand-written) and the JSON-only/no-SSE transport decision.
+
 
 # 1.0.3, 2026-07-02
 

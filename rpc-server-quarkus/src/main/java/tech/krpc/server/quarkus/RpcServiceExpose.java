@@ -69,6 +69,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @Inject
     tech.krpc.server.agent.WebMethodRegistry webMethodRegistry;
 
+    @Inject
+    tech.krpc.server.agent.McpToolRegistry mcpToolRegistry;
+
     @ConfigProperty(name = "rpc.server.app")//,defaultValue = NULL
     Optional<String> app;
 
@@ -78,8 +81,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @ConfigProperty(name = "rpc.server.defaultExecutor",defaultValue = "false")
     boolean defaultExecutor;
 
-    // D2 (2026-07-03): CVE-2026-47244 app-layer cap. env KRPC_MAX_CONCURRENT_CALLS_PER_CONNECTION
-    // via SmallRye relaxed mapping. Default 2000; 0 = unlimited (pre-1.0.4 behaviour).
+    // D2 (2026-07-03): CVE-2026-47244 app-layer cap. env override via SmallRye's default
+    // mapping: RPC_SERVER_MAXCONCURRENTCALLSPERCONNECTION. Default 2000; 0 = unlimited
+    // (pre-1.0.4 behaviour); negative fails fast (RpcServerBuilder).
     @ConfigProperty(name = "rpc.server.maxConcurrentCallsPerConnection",
             defaultValue = RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION + "")
     int maxConcurrentCallsPerConnection;
@@ -225,6 +229,8 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         var rpcServerBuilder = proxyServerBuilder.build();
         // ADR-0004 (AGENT-001 P0): hand the web-only dispatch surface to the HTTP agent endpoints.
         webMethodRegistry.init(rpcServerBuilder.webMethods(), rpcServerBuilder.webApiMeta());
+        // ADR-0004 (AGENT-001 P1): hand the agentTool subset to the MCP bridge.
+        mcpToolRegistry.init(rpcServerBuilder.mcpMethods(), rpcServerBuilder.mcpApiMeta());
         server = rpcServerBuilder.startServer();
         return i;
     }

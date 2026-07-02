@@ -45,6 +45,9 @@ public class RpcServerBuilder {
 	// HTTP discover/invoke endpoints. Hidden services are never added here.
 	private final Map<String, WebInvoker> webMethods = new HashMap<>();
 	private ApiMeta                       webApiMeta;
+	// ADR-0004 (AGENT-001 P1): MCP tool subset — only @UnsafeWeb(agentTool=true) methods.
+	private final Map<String, WebInvoker> mcpMethods = new HashMap<>();
+	private ApiMeta                       mcpApiMeta;
 //	private final static Marshaller<Object> RESPONSE_MARSHALLER = new ResponseMarshaller();
 //	private final static Marshaller<InputMessage> REQUEST_MARSHALLER =
 //			ProtoLiteUtils.marshaller(InputMessage.getDefaultInstance());
@@ -91,8 +94,13 @@ public class RpcServerBuilder {
 			return this;
 		}
 
-		/// D2: cap concurrent calls per HTTP/2 connection (0 = unlimited).
+		/// D2: cap concurrent calls per HTTP/2 connection. 0 = unlimited (the only
+		/// unlimited value); a negative value is a configuration error and fails fast.
 		public Builder maxConcurrentCallsPerConnection(int max) {
+			if (max < 0) {
+				throw new IllegalArgumentException(
+						"rpc.server.maxConcurrentCallsPerConnection must be >= 0 (0 = unlimited), got " + max);
+			}
 			this.maxConcurrentCallsPerConnection = max;
 			return this;
 		}
@@ -153,6 +161,7 @@ public class RpcServerBuilder {
 		var publicMetaService = new MServiceImpl();
 		var metaMethods = new ArrayList<RpcMetaMethod>();
 		var webMetaMethods = new ArrayList<RpcMetaMethod>();
+		var mcpMetaMethods = new ArrayList<RpcMetaMethod>();
 		services.put(metaService,Collections.emptyList());
 		services.put(publicMetaService,Collections.emptyList());
 
@@ -181,6 +190,8 @@ public class RpcServerBuilder {
 				// ADR-0004: web exposure == @UnsafeWeb. Hidden services keep the '-' prefix
 				// in their service name and are never registered into the web surface.
 				boolean web = clz.isAnnotationPresent(UnsafeWeb.class);
+				// ADR-0004 (AGENT-001 P1): agentTool is a strict subset of web — MCP tools only.
+				boolean agentTool = web && ((UnsafeWeb) clz.getAnnotation(UnsafeWeb.class)).agentTool();
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
@@ -189,8 +200,13 @@ public class RpcServerBuilder {
 						metaMethods.add(toMeta(stub,attr));
 					}
 					if(needMeta && web){
-						webMethods.put(webKey(stub.methodDescriptor.getFullMethodName()), methodInvokation);
+						var webKey = webKey(stub.methodDescriptor.getFullMethodName());
+						webMethods.put(webKey, methodInvokation);
 						webMetaMethods.add(toMeta(stub,attr));
+						if(agentTool){
+							mcpMethods.put(webKey, methodInvokation);
+							mcpMetaMethods.add(toMeta(stub,attr));
+						}
 					}
 				}
 				var srv = serviceDefBuilder.build();
@@ -210,6 +226,7 @@ public class RpcServerBuilder {
 		}
 		metaService.init(buildApiMeta(metaMethods));
 		webApiMeta = buildApiMeta(webMetaMethods);
+		mcpApiMeta = buildApiMeta(mcpMetaMethods);
 		return serverBuilder.build();
 	}
 
@@ -227,6 +244,16 @@ public class RpcServerBuilder {
 	/// ADR-0004: ApiMeta containing only @UnsafeWeb services and their DTO closure.
 	public ApiMeta webApiMeta(){
 		return webApiMeta;
+	}
+
+	/// ADR-0004 (AGENT-001 P1): "Service/method" -> dispatcher for @UnsafeWeb(agentTool=true) only.
+	public Map<String, WebInvoker> mcpMethods(){
+		return mcpMethods;
+	}
+
+	/// ADR-0004 (AGENT-001 P1): ApiMeta containing only agentTool services (MCP tools/list source).
+	public ApiMeta mcpApiMeta(){
+		return mcpApiMeta;
 	}
 
 	public static ApiMeta buildApiMeta(List<RpcMetaMethod> methods){

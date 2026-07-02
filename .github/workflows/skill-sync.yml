@@ -1,0 +1,20 @@
+# Guards the self-contained skill bundle: skills/krpc/references/SPEC.md must be a
+# verbatim copy of the repo-root SPEC.md (single source of truth, zero drift).
+name: skill-spec-sync
+on:
+  push:
+    branches: [dev]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SPEC.md bundled copy must match root
+        run: |
+          if ! diff -q SPEC.md skills/krpc/references/SPEC.md; then
+            echo "::error::skills/krpc/references/SPEC.md is out of sync with SPEC.md — run: cp SPEC.md skills/krpc/references/SPEC.md"
+            exit 1
+          fi

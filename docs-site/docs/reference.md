@@ -15,6 +15,10 @@ differ, the **linked document wins**.
   authoring handbook: method contract, `RpcResult` envelope, soft/hard error
   model, DTO rules, `@RpcService` naming, `@UnsafeWeb`, validation, auth/JWKS,
   and native-image (§13).
+- **[Agent Guide](https://github.com/martin1847/krpc/blob/dev/docs/agent-guide.md)**
+  — how an AI agent discovers and calls KRPC services over HTTP (P0
+  `/agent/discover` + `/agent/invoke`), with a real transcript. The portable
+  quick-reference is the [krpc skill](https://github.com/martin1847/krpc/blob/dev/skills/krpc/SKILL.md).
 
 ## Lifecycle & Security
 

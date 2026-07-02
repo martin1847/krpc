@@ -1,0 +1,51 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommitsDisabled"
+  ],
+  "timezone": "Asia/Shanghai",
+  "schedule": ["before 5am on monday"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "labels": ["dependencies"],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["dependencies", "security"],
+    "schedule": ["at any time"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "description": "Baseline: everything else on the gentle weekly cadence, batched by update type. Listed FIRST so the dedicated grpc/netty/quarkus groups below override it (Renovate merges packageRules in order — later rules win).",
+      "matchManagers": ["gradle"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "gradle minor/patch"
+    },
+    {
+      "description": "gRPC: version is pinned to the Quarkus LTS BOM (ADR NATIVE-001, Option A). Group so a maintainer reviews the bump in lockstep with the Quarkus LTS train — never automerge.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": ["/^io\\.grpc/"],
+      "groupName": "grpc",
+      "automerge": false,
+      "prPriority": 3
+    },
+    {
+      "description": "Netty: CVE-driven floor kept build-local (nettyGrpcVersion). Group so security-relevant bumps land in one reviewable PR.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": ["/^io\\.netty/"],
+      "groupName": "netty",
+      "automerge": false,
+      "prPriority": 3
+    },
+    {
+      "description": "Quarkus: BOM + platform + extensions move together; a bump usually implies a matching grpc/netty realignment.",
+      "matchManagers": ["gradle"],
+      "matchPackageNames": ["/^io\\.quarkus/"],
+      "groupName": "quarkus",
+      "automerge": false,
+      "prPriority": 3
+    }
+  ]
+}

@@ -3,13 +3,11 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 String gitConfig(String key) {
-    def output = new ByteArrayOutputStream()
-    exec {
+    def execOutput = providers.exec {
         commandLine 'git', 'config', '--get', key
-        standardOutput = output
         ignoreExitValue = true
     }
-    output.toString().trim()
+    execOutput.standardOutput.asText.get().trim()
 }
 
 Map<String, String> githubMetadata() {

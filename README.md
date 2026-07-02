@@ -6,6 +6,8 @@ KRPC is an interface-first RPC framework for cloud-native services.
 
 Write a Java interface, publish it as the API contract, and let KRPC handle RPC transport, validation, metadata, and client generation. Service authors do not need to write proto files for normal business APIs.
 
+**AI agent?** Install the [krpc skill](skills/krpc/SKILL.md) and read the [agent guide](docs/agent-guide.md) to discover and call KRPC services over HTTP.
+
 ## What It Does
 
 - Uses gRPC / HTTP/2 as the transport.
@@ -39,12 +41,12 @@ KRPC is used in production in e-commerce, education, and local service products.
 - JDK 21
 - Gradle
 
-Latest version: `1.0.0`
+Latest version: `1.0.3` (see the [support policy](docs/support-policy.md) for the version/support matrix and [SPEC.md](SPEC.md) for the authoring handbook).
 
 ```gradle
-implementation "tech.krpc:rpc-api:1.0.0"
-implementation "tech.krpc:rpc-client:1.0.0"
-implementation "tech.krpc:rpc-server:1.0.0"
+implementation "tech.krpc:rpc-api:1.0.3"
+implementation "tech.krpc:rpc-client:1.0.3"
+implementation "tech.krpc:rpc-server:1.0.3"
 ```
 
 ## Define An API
@@ -57,7 +59,7 @@ plugins {
 }
 
 dependencies {
-    api "tech.krpc:rpc-api:1.0.0"
+    api "tech.krpc:rpc-api:1.0.3"
 }
 ```
 
@@ -95,7 +97,7 @@ Add the API and server runtime:
 ```gradle
 dependencies {
     implementation project(":your-api")
-    implementation "tech.krpc:rpc-server:1.0.0"
+    implementation "tech.krpc:rpc-server:1.0.3"
 }
 ```
 
@@ -141,6 +143,22 @@ Use soft errors for business failures:
 - Client: check `isOk()` before reading data.
 
 Use exceptions for system failures, security failures, validation failures, and unexpected runtime errors.
+
+## Quickstart (5 minutes)
+
+The fastest way to see KRPC run — a single module, no database, no JWT:
+
+```bash
+gradle :examples:quickstart:run
+```
+
+Then call it:
+
+```bash
+rpcurl http://127.0.0.1:50051/quickstart/Hello/hello -d '{"name":"krpc"}'
+```
+
+See [`examples/quickstart/`](examples/quickstart/README.md) for the walkthrough.
 
 ## Run Existing Demo
 

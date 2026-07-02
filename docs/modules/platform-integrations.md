@@ -31,6 +31,7 @@
 
 - Document integration ownership so framework support does not drift into core runtime modules. Status: active
 - Keep Spring, Quarkus, GraalVM native-image, HTTP gateway, and test/demo behavior aligned with the JDK 21 baseline. Status: active
+- Close the native-image consumer gaps found downstream 2026-06: grpc version alignment (NATIVE-001, krpc roadmap) and server-side provider registration upstreamed into ext-rpc (NATIVE-002, workspace roadmap). Consumer-facing truth: `SPEC.md` §13. Status: active
 
 ### Deferred / Obsolete
 

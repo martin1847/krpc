@@ -39,12 +39,12 @@ KRPC 已用于电商、教育、本地生活等生产场景。
 - JDK 21
 - Gradle
 
-当前版本：`1.0.0`
+当前版本：`1.0.3`（版本与支持矩阵见[支持政策](docs/support-policy.md)，编写规范见 [SPEC.md](SPEC.md)）。
 
 ```gradle
-implementation "tech.krpc:rpc-api:1.0.0"
-implementation "tech.krpc:rpc-client:1.0.0"
-implementation "tech.krpc:rpc-server:1.0.0"
+implementation "tech.krpc:rpc-api:1.0.3"
+implementation "tech.krpc:rpc-client:1.0.3"
+implementation "tech.krpc:rpc-server:1.0.3"
 ```
 
 ## 定义 API
@@ -57,7 +57,7 @@ plugins {
 }
 
 dependencies {
-    api "tech.krpc:rpc-api:1.0.0"
+    api "tech.krpc:rpc-api:1.0.3"
 }
 ```
 
@@ -95,7 +95,7 @@ API 规则：
 ```gradle
 dependencies {
     implementation project(":your-api")
-    implementation "tech.krpc:rpc-server:1.0.0"
+    implementation "tech.krpc:rpc-server:1.0.3"
 }
 ```
 

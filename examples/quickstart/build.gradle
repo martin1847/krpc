@@ -1,0 +1,30 @@
+// KRPC 5-minute quickstart — a single, DB-free, JWT-free @RpcService.
+// Deliberately NOT published: it does not apply gradle/upload.gradle, so it
+// produces no Maven publication and never enters the Maven Central bundle.
+plugins {
+    id 'io.quarkus' version "$quarkusMiniSupport"
+}
+
+group = "tech.krpc.examples"
+
+dependencies {
+    // Brings rpc-api + rpc-common + rpc-server + http-server (all `api`), and
+    // ext-rpc on the runtime classpath (Quarkus discovers the extension).
+    implementation project(':rpc-server-quarkus')
+
+    implementation platform("io.quarkus.platform:quarkus-bom:${quarkusMiniSupport}")
+    implementation "io.quarkus:quarkus-arc"
+    implementation "io.quarkus:quarkus-netty"
+    // jakarta.validation support for the @NotBlank demo (SPEC §7).
+    implementation "io.quarkus:quarkus-hibernate-validator"
+
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+}
+
+// Convenience alias so `gradle :examples:quickstart:run` starts the server in
+// Quarkus dev mode (live reload; Ctrl-C to stop).
+tasks.register('run') {
+    group = 'application'
+    description = 'Run the quickstart in Quarkus dev mode (Ctrl-C to stop).'
+    dependsOn 'quarkusDev'
+}

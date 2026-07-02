@@ -18,6 +18,7 @@ import tech.krpc.server.invoke.DynamicInvoke;
 import tech.krpc.server.invoke.GenericValidator;
 import tech.krpc.server.invoke.NormalValidator;
 import tech.krpc.util.RefUtils;
+import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
@@ -26,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 
 @Slf4j
-public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto> {
+public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputProto, OutputProto>, WebInvoker {
     private final Class                                    service;
     private final MethodStub                               stub;
     private final FilterChain<ServerResult, ServerContext> filterChain;
@@ -182,6 +183,28 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         return new ServerResult(res, bytesWrite ? ServerWriter.BYTES : Serial.Instance.get(req.getArg().getEValue()));
     }
 
+    /**
+     * ADR-0004 (AGENT-001 P0): synchronous web/agent entry that reuses the exact gRPC
+     * credential + filter-chain dispatch of {@link #invoke(InputProto, StreamObserver)},
+     * minus the gRPC StreamObserver wiring. Single-sources the security path so the HTTP
+     * invoke endpoint can never bypass {@code requireCredential} or the filter chain.
+     */
+    @Override
+    public ServerResult invokeWeb(InputProto im, Metadata headers) throws Throwable {
+        var ctx = new ServerContext(service, methodName, stub.returnType, im, this::invoke, headers);
+        io.grpc.Context gctx = io.grpc.Context.current().withValue(ServerContext.SC_KEY, ctx);
+        io.grpc.Context prev = gctx.attach();
+        try {
+            if (requireCredential) {
+                ctx.checkCredential();
+            }
+            return filterChain.invoke(ctx);
+        } finally {
+            gctx.detach(prev);
+            MDC.clear();
+        }
+    }
+
     static final int MAX_ERROR_LENGTH = 100;
     // https://github.com/openzipkin/brave
     // https://quarkus.io/guides/logging
@@ -198,10 +221,10 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
 
         //2. https://github.com/grpc/grpc-java/issues/7381
         // https://github.com/LesnyRumcajs/grpc_bench/wiki/2021-05-20-bench-results
+        /// first thing set the Context so that all after method can use
+        io.grpc.Context gctx = io.grpc.Context.current().withValue(ServerContext.SC_KEY, ctx);
+        io.grpc.Context prev = gctx.attach();
         try {
-            /// first thing set the Context so that all after method can use
-            ServerContext.LOCAL.set(ctx);
-
             if(requireCredential){
                 ctx.checkCredential();
             }
@@ -230,7 +253,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             }
             responseObserver.onError(wrapToClient);
         } finally {
-            ServerContext.LOCAL.remove();
+            gctx.detach(prev);
             MDC.clear();
         }
     }

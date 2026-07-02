@@ -7,7 +7,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.grpc.CallOptions;
-import io.netty.util.concurrent.FastThreadLocal;
 import lombok.Data;
 import tech.krpc.common.AbstractContext;
 import tech.krpc.common.FilterChain;
@@ -22,9 +21,9 @@ import tech.krpc.model.RpcResult;
 @Data
 public class ClientContext extends AbstractContext<ClientResult, Object[], ClientContext> {
 
-    static final FastThreadLocal<ClientContext> LOCAL = new FastThreadLocal<>();
+    static final ThreadLocal<ClientContext> LOCAL = new ThreadLocal<>();
 
-    static final FastThreadLocal<CallOptions> OPTION_LOCAL = new FastThreadLocal<>();
+    static final ThreadLocal<CallOptions> OPTION_LOCAL = new ThreadLocal<>();
 
     static final List<ClientFilter> GLOBAL_FILTERS = new ArrayList<>();
 

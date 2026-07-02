@@ -15,7 +15,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
-import io.netty.util.concurrent.FastThreadLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -26,11 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Es256Signature {
 
-    final FastThreadLocal<Signature> sigLocal;
+    final ECPrivateKey privateKey;
 
     public Es256Signature(String pri64) {
-        ECPrivateKey privateKey;
-
         try {
             var bytes = Base64.getUrlDecoder().decode(pri64.trim());
             var privSpec = new PKCS8EncodedKeySpec(bytes);
@@ -40,31 +37,17 @@ public class Es256Signature {
             log.error("error get privateKey: " + pri64, e);
             throw new RuntimeException(e);
         }
-
-        //sigLocal = ThreadLocal.withInitial(() -> {
-        sigLocal = new FastThreadLocal<>() {
-            @Override
-            protected Signature initialValue(){
-                try {
-                    var sig = Signature.getInstance(Es256Jwk.SING_ALGORITHM);
-                    sig.initSign(privateKey);
-                    return sig;
-                } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-                    log.error("error get Signature: ", e);
-                    throw new RuntimeException(e);
-                }
-            }
-        };
     }
 
     public String sign(String header64, String payload64) {
         try {
             String jwtNoSign = header64 + '.' + payload64;
-            var sig = sigLocal.get();
+            var sig = Signature.getInstance(Es256Jwk.SING_ALGORITHM);
+            sig.initSign(privateKey);
             sig.update(jwtNoSign.getBytes(StandardCharsets.UTF_8));
             var signature = Es256Jwk.der2joseConcat(sig.sign());
             return jwtNoSign + '.' + base64(signature);
-        } catch (SignatureException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             throw new RuntimeException(e);
         }
     }

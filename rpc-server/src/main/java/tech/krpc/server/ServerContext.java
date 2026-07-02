@@ -4,7 +4,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.netty.util.concurrent.FastThreadLocal;
 import jakarta.validation.Validator;
 
 import tech.krpc.common.AbstractContext;
@@ -28,7 +27,10 @@ import org.slf4j.MDC;
 @Slf4j
 public class ServerContext extends AbstractContext<ServerResult, InputProto, ServerContext> {
 
-    static final FastThreadLocal<ServerContext> LOCAL = new FastThreadLocal<>();
+    // ADR: per-request ServerContext rides on io.grpc.Context (the call-scoped context
+    // gRPC auto-attaches on its executor) instead of a bare ThreadLocal, so it stays
+    // correct across virtual-thread executors without wrapping.
+    static final io.grpc.Context.Key<ServerContext> SC_KEY = io.grpc.Context.key("krpc-server-context");
 
     static final List<ServerFilter> GLOBAL_FILTERS = new ArrayList<>();
 
@@ -53,7 +55,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
     }
 
     public static ServerContext current() {
-        return LOCAL.get();
+        return SC_KEY.get();
     }
 
     public static String applicationName() {return applicationName;}
@@ -84,13 +86,17 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         super(service, method, resDto, arg, lastChain);
         this.headers = headers;
         injectMdc(headers, HttpConst.CLIENT_ID_HEADER,CLIENT_ID);
-        if(injectMdc(headers, TraceMeta.X_B3_TRACE_ID,TraceMeta.TRACE_ID)){
-            injectMdc(headers, TraceMeta.X_B3_SPAN_ID,TraceMeta.SPAN_ID);
-            injectMdc(headers, TraceMeta.X_B3_PARENT_SPAN_ID,TraceMeta.PARENT_SPAN_ID);
+        // ADR-0003: parse inbound W3C traceparent, expose traceId/spanId to the log layout.
+        var traceparent = headers.get(TraceMeta.TRACEPARENT_KEY);
+        if(null != traceparent){
+            MDC.put(TraceMeta.MDC_TRACEPARENT, traceparent);
+            var ids = TraceMeta.parse(traceparent);
+            if(null != ids){
+                MDC.put(TraceMeta.MDC_TRACE_ID, ids[0]);
+                MDC.put(TraceMeta.MDC_SPAN_ID, ids[1]);
+            }
+            injectMdc(headers, TraceMeta.TRACESTATE,TraceMeta.TRACESTATE_KEY);
             injectMdc(headers, TraceMeta.X_REQUEST_ID,TraceMeta.REQUEST_ID);
-
-            injectMdc(headers, TraceMeta.X_B3_SAMPLED,TraceMeta.SAMPLED);
-            injectMdc(headers, TraceMeta.X_B3_DEBUG_FLAG,TraceMeta.DEBUG_FLAG);
         }
     }
 
@@ -101,7 +107,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
     }
 
     public String logTrace() {
-        return ":" + headers.get(TraceMeta.TRACE_ID) + ":" + headers.get(TraceMeta.SPAN_ID);
+        return ":" + headers.get(TraceMeta.TRACEPARENT_KEY);
     }
 
     public Metadata getResponseHeaders() {

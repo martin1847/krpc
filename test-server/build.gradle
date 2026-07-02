@@ -81,14 +81,9 @@ compileJava {
     options.compilerArgs << '-parameters'
 }
 
-quarkusBuild {
-
-    nativeArgs {
-//        containerBuild = true //--static
-//        buildImage = "quay.io/quarkus/ubi-quarkus-native-image:21.1.0-java11"
-        additionalBuildArgs ="-Ob"//--report-unsupported-elements-at-runtime"//"--verbose"
-    }
-}
+// Native build args are configured via quarkus.native.additional-build-args in
+// application.properties (-Ob). The commented additionalBuildArgs2 block below is kept for
+// reference (Netty substitutions) and is intentionally inactive.
 
 //To use GraalVM CE LTS, you may want to change your `JAVA_HOME`:
 //  export JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-ce-lts-java11-20.3.1/Contents/Home

@@ -1,4 +1,34 @@
 
+# 1.0.3, 2026-07-02
+
+* **grpc aligned to the Quarkus 3.33 LTS BOM: `io.grpc` 1.82.0 -> 1.79.0** (NATIVE-001 Option A). Kills the consumer-side `resolutionStrategy` force previously required for Quarkus native builds; wire behavior unchanged. SPEC §13.1 support matrix.
+* **Netty security wave: 4.1.133 -> 4.1.135.Final.** Closes CVE-2026-47244 + CVE-2026-50560 (HTTP/2 DoS, gRPC hot path) and CVE-2026-50020 (conditional HTTP/1 smuggling). Convergence is build-local (all `io.netty:*` incl. transitive-only `netty-codec-http2`); nothing leaks into published POMs — consumer BOMs stay authoritative. Consumers on Quarkus should adopt BOM 3.33.2.1 (same Netty batch).
+* io_uring transport evaluated (flag-gated PoC on `feat/iouring-eval`, NOT shipped): works in native but 5–6% slower than NIO on the typical small-message unary path; deferred to Quarkus 4 / Netty 4.2 (NATIVE-003). SPEC §13 note.
+* Docs: SPEC §13 rewritten as the native-image consumer SoT (version matrix, server-provider + substitution workarounds pending ext-rpc 1.0.2, build recipe, checklist).
+* Heterogeneously reviewed (codex r1 REQUEST-CHANGES -> fixes -> r2 APPROVE, 0 findings).
+
+# 1.0.2, 2026-06-22
+
+* Per-request server context migrated from a hand-rolled `ThreadLocal` to gRPC-native **`io.grpc.Context`** (`ServerContext` `SC_KEY`; attach/detach in `UnaryMethod`). Behavior-equivalent, no wire change; gRPC-managed scope, virtual-thread-friendly. Heterogeneously reviewed (codex).
+* Virtual-thread cleanup: dropped Netty `FastThreadLocal` (`ServerContext`, `ClientContext`); `Es256Signature` now creates a `Signature` per call instead of a per-thread cache.
+* **Agent-friendly P0** (ADR-0004): opt-in HTTP `/agent/discover` (web-only `ApiMeta`) + `/agent/invoke` endpoints; hidden services double-filtered, credential not bypassed. Auth/rate-limit are the gateway's responsibility.
+* `extRpcVersion` -> 1.0.1 (depends on the `@ConfigMapping` / Quarkus 3.33-compatible ext libraries now on Central).
+* Docs: SPEC JWT/JWKS auth + native-image reflection sections; ADR-0004.
+
+# 1.0.1, 2026-06-20
+
+* Trace propagation migrated from B3 multi-header to **W3C Trace Context** (`traceparent`), opaquely forwarded; `tracestate` + `x-request-id` carried; B3 (`x-b3-*`) no longer emitted or read (ADR-0003). Wire change vs 1.0.0 — sibling clients must adopt W3C for cross-service trace continuity.
+* gRPC/Netty server executor runs on virtual threads (one named virtual thread per RPC; JDK 21, ADR-0002).
+* Build: upgrade to Gradle 9.6.0 (wrapper checksum-pinned); jandex 2.0.0 -> 2.3.0; drop sonarqube plugin; migrate `gradle/upload.gradle` off the removed `Project.exec()` to `providers.exec`.
+
+# 1.0.0 (Maven Central GA), 2026-06-20
+
+* First general-availability release on Maven Central (group `tech.krpc`), promoted from `1.0.0.rc1`.
+* Build toolchain: pin and track the official Gradle wrapper 8.14.5 (reproducible, checksum-pinned).
+* Quarkus 3.15.2 -> 3.33.2 LTS (Gradle 8.14.5 / Gradle 9 compatible plugin line).
+* grpc-java 1.74.0 -> 1.82.0; Netty unified to 4.1.133.Final across the whole runtime graph.
+* Native: test-server native build on Mandrel 25 / JDK 25 (container build), language level 21.
+
 # 1.0.2 2025-12-09
 
 * 客户端注入bean使用全量命名

@@ -12,6 +12,9 @@ dependencies {
 
 
     api project(':rpc-server')
+    // ADR-0004 (AGENT-001 P0): agent HTTP discover/invoke handlers ride the existing
+    // http-server netty transport (GetHandler/PostHandler beans auto-registered by HttpHandlerExpose).
+    api project(':http-server')
 //    implementation "io.grpc:grpc-services:${grpcVersion}"
 
     // just for overridden
@@ -24,6 +27,12 @@ dependencies {
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+    // ADR-0004 (AGENT-001 P0) unit tests: plain JUnit5, no Quarkus boot / no DB.
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "io.grpc:grpc-stub:${grpcVersion}"
+    testImplementation "io.netty:netty-codec-http:$nettyGrpcVersion"
 
 
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
@@ -48,5 +57,9 @@ dependencies {
 
 compileTestJava {
     dependsOn('jandex')
+}
+
+test {
+    useJUnitPlatform()
 }
 

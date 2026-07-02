@@ -3,7 +3,7 @@ plugins {
     id 'java-library'
     id "jacoco"
 //    id 'io.quarkus'  version "$quarkusVersion" apply false
-    id "org.sonarqube" version "3.4.0.2513"
+//    id "org.sonarqube" version "3.4.0.2513" // disabled: 3.x sonarqube plugin is incompatible with Gradle 9
 //    id "io.quarkus.extension"  version "$quarkusPluginVersion"// apply false
 //    id 'maven-publish' //apply false
 }
@@ -40,13 +40,32 @@ subprojects {
     version = "$version"
 
     java{
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     compileJava {
         options.encoding = 'UTF-8'
         options.compilerArgs << '-parameters'
+    }
+
+    // IOURING-001 Phase 1 CVE wave: converge EVERY io.netty:* (incl. transitive-only
+    // netty-codec-http2 / -socks / handler-proxy, which no module declares directly) on
+    // nettyGrpcVersion so the CVE-fixed 4.1.135 reaches codec-http2 (both hot-path HTTP/2 CVEs)
+    // and the single-Netty convergence invariant (c433f3f) holds.
+    //
+    // BUILD-LOCAL ONLY (do NOT import io.netty:netty-bom as a platform): a published platform
+    // import leaks into every module's POM <dependencyManagement> + GMM endorseStrictVersions,
+    // which would suppress a downstream consumer's own BOM. resolutionStrategy.eachDependency runs
+    // at resolution time and is NEVER written to the POM/GMM, so consumers keep BOM precedence
+    // while krpc's own build (JVM + native) still converges on 4.1.135.
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'io.netty') {
+                details.useVersion "$nettyGrpcVersion"
+                details.because 'IOURING-001 CVE wave: single-Netty convergence to 4.1.135 (build-local, not published)'
+            }
+        }
     }
 
     plugins.withId('org.kordamp.gradle.jandex') {

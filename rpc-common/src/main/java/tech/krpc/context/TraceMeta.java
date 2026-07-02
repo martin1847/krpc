@@ -8,31 +8,42 @@ import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
 
 /**
+ * ADR-0003: trace propagation uses W3C Trace Context (traceparent single header),
+ * not B3 multi-header. The framework only forwards the inbound trace context to the
+ * outbound call; it does not create spans.
  *
  * @author martin.cong
  * @version 2022-01-06 21:11
  */
 public interface TraceMeta {
 
-    // https://github.com/openzipkin/b3-propagation#grpc-encoding
+    // https://www.w3.org/TR/trace-context/
     String X_REQUEST_ID = "x-request-id";
-    String X_B3_TRACE_ID = "x-b3-traceid";
-    String X_B3_SPAN_ID = "x-b3-spanid";
-    String X_B3_PARENT_SPAN_ID = "x-b3-parentspanid";
-    String X_B3_SAMPLED = "x-b3-sampled";
+    String TRACEPARENT  = "traceparent";
+    String TRACESTATE   = "tracestate";
 
-    /**
-     * Debug Flag
-     * Debug is encoded as X-B3-Flags: 1.
-     * Absent or any other value can be ignored.
-     * Debug implies an accept decision, so don't also send  the X-B3-Sampled header.
-     */
-    String X_B3_DEBUG_FLAG = "x-b3-flags";
+    // MDC keys: traceparent is propagated verbatim; traceId/spanId are derived for log layout.
+    String MDC_TRACEPARENT = "traceparent";
+    String MDC_TRACE_ID    = "traceId";
+    String MDC_SPAN_ID     = "spanId";
 
     Key<String> REQUEST_ID   = Metadata.Key.of(X_REQUEST_ID, Metadata.ASCII_STRING_MARSHALLER);
-    Key<String> TRACE_ID   = Metadata.Key.of(X_B3_TRACE_ID, Metadata.ASCII_STRING_MARSHALLER);
-    Key<String> SPAN_ID    = Metadata.Key.of(X_B3_SPAN_ID, Metadata.ASCII_STRING_MARSHALLER);
-    Key<String> PARENT_SPAN_ID    = Metadata.Key.of(X_B3_PARENT_SPAN_ID, Metadata.ASCII_STRING_MARSHALLER);
-    Key<String> SAMPLED   = Metadata.Key.of(X_B3_SAMPLED, Metadata.ASCII_STRING_MARSHALLER);
-    Key<String> DEBUG_FLAG   = Metadata.Key.of(X_B3_DEBUG_FLAG, Metadata.ASCII_STRING_MARSHALLER);
+    Key<String> TRACEPARENT_KEY = Metadata.Key.of(TRACEPARENT, Metadata.ASCII_STRING_MARSHALLER);
+    Key<String> TRACESTATE_KEY  = Metadata.Key.of(TRACESTATE, Metadata.ASCII_STRING_MARSHALLER);
+
+    /**
+     * ADR-0003: parse a W3C traceparent header.
+     * Format: {@code version-traceid(32hex)-spanid(16hex)-flags(2hex)}.
+     * Returns {@code [traceId, spanId]}, or null when the input is null or malformed.
+     */
+    static String[] parse(String traceparent) {
+        if (null == traceparent) {
+            return null;
+        }
+        var parts = traceparent.split("-", -1);
+        if (parts.length != 4 || parts[1].length() != 32 || parts[2].length() != 16 || parts[3].length() != 2) {
+            return null;
+        }
+        return new String[]{parts[1], parts[2]};
+    }
 }

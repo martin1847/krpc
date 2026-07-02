@@ -1,5 +1,34 @@
 # Active Roadmap
 
+## NATIVE-001: io.grpc Version Alignment For Quarkus Native Consumers
+
+Status: active
+
+Capability: krpc artifacts consumable in Quarkus native builds without a
+consumer-side grpc version force
+
+Components:
+
+- `gradle.properties` (`grpcVersion=1.82.0`)
+- published POM dependency metadata (`tech.krpc:*`)
+- `SPEC.md` §13.1 (consumer workaround — delete when this completes)
+
+ADR: N/A (evidence: downstream native builds abort during Initializing —
+Quarkus GraalVM substitution `Target_io_grpc_ServiceProviders.loadAll` does not
+match grpc 1.82.0 when krpc's transitive pin overrides the Quarkus BOM's 1.79.0;
+verified 2026-06 on 8 downstream Quarkus 3.33.2 services)
+
+Acceptance Criteria:
+
+- A documented grpc version policy: either align `grpcVersion` with the current
+  Quarkus LTS BOM, or declare the supported Quarkus↔krpc↔grpc matrix and mark
+  `io.grpc:*` so the consumer BOM wins by default (e.g. compatible-range /
+  runtime-provided scope), with the tradeoff recorded.
+- A Quarkus 3.33.x consumer can native-build without a root-build
+  `resolutionStrategy` force on `io.grpc:*`.
+- Wire compatibility across the supported grpc range is stated in `SPEC.md`.
+- `SPEC.md` §13.1 workaround section removed.
+
 ## GOV-001: Establish Repository Governance Baseline
 
 Status: active

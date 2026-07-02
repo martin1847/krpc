@@ -19,6 +19,11 @@ This index maps the repository source of truth for KRPC.
 
 - [Active Roadmap](roadmap/active-roadmap.md)
 
+## Handbook
+
+- [Development Spec](../SPEC.md) — authoring handbook for humans and coding
+  agents (method contract, errors, auth, native image §13)
+
 ## Plans
 
 - [Dependency Bump Plan](plan/2026-05-30-dependency-bump.md)
@@ -36,3 +41,4 @@ This index maps the repository source of truth for KRPC.
 | Framework, native-image, gateway, and tooling integrations | `rpc-client-spring`, `rpc-server-spring`, `rpc-server-quarkus`, `http-server`, `rpcurl`, `test-rpc-gen` | ADR-0001 | GOV-001 |
 | JDK 21 baseline and virtual-thread runtime feature | `rpc-server`, `rpc-client`, `http-server`, integration modules | ADR-0002 | N/A |
 | Agent-friendly introspection (HTTP discover→call, runtime MCP surface) | `rpc-common`, `rpc-server`, `rpc-client`, `http-server`, `rpc-api` | ADR-0004 | AGENT-001 |
+| Quarkus native-image consumer path (grpc alignment, provider registration) | `gradle.properties`, `rpc-server-quarkus`, `SPEC.md` §13 (+ `ext-rpc`, workspace NATIVE-002) | N/A | NATIVE-001 |

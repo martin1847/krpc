@@ -423,7 +423,8 @@ Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
   Full verbatim transcripts (command lines + complete output):
   [`docs/mcp-transcripts/jvm.txt`](https://github.com/martin1847/krpc/blob/f7c8e70/docs/mcp-transcripts/jvm.txt)
   and [`docs/mcp-transcripts/native.txt`](https://github.com/martin1847/krpc/blob/f7c8e70/docs/mcp-transcripts/native.txt)
-  (native includes the boot log). OFF path: `/mcp` absent (404).
+  (native includes the boot log). OFF path (`/mcp` absent, 404) is covered by
+  `McpDisabledQuarkusTest`, not by the transcripts.
 
 ---
 

@@ -49,6 +49,15 @@ subprojects {
         options.compilerArgs << '-parameters'
     }
 
+    // IOURING-001 Phase 1 CVE wave: import the Netty BOM at nettyGrpcVersion so EVERY io.netty:*
+    // (incl. transitive-only netty-codec-http2 / -socks / handler-proxy, which no module declares
+    // directly) converges on one version. Highest-wins beats the Quarkus BOM's non-strict 4.1.133
+    // constraint => lifts codec-http2 (both hot-path HTTP/2 CVEs) to 4.1.135 and preserves the
+    // single-Netty convergence invariant (c433f3f). Constraint-only; adds no dependency.
+    dependencies {
+        implementation platform("io.netty:netty-bom:$nettyGrpcVersion")
+    }
+
     plugins.withId('org.kordamp.gradle.jandex') {
         tasks.named('javadoc') {
             dependsOn(tasks.named('jandex'))

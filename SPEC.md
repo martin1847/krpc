@@ -370,26 +370,24 @@ agents read the same section. Consumer-proven 2026-06 on 8 downstream Quarkus
 are framework defects with roadmap items: apply the workaround now, delete it
 when the item completes.
 
-### 13.1 io.grpc version skew — native build aborts [gap → NATIVE-001]
+### 13.1 io.grpc version alignment — Quarkus LTS support matrix
 
-krpc pins `grpcVersion=1.82.0` (`gradle.properties:14`) and exports it
-transitively. Gradle resolves highest-wins, so in a Quarkus app krpc's 1.82.0
-overrides the Quarkus BOM's io.grpc (1.79.0 on Quarkus 3.33.2). JVM mode
-tolerates the skew; native-image does not — Quarkus's GraalVM substitution
-`Target_io_grpc_ServiceProviders.loadAll` no longer matches the 1.82.0 class
-shape and native-image **aborts during Initializing**. Wire behavior is not
-affected; this is a build-time class-shape conflict only.
+krpc tracks the Quarkus LTS BOM's io.grpc version (Option A, ADR NATIVE-001).
+`gradle.properties` pins `grpcVersion` to what the supported Quarkus LTS ships, so
+a Quarkus consumer's highest-wins resolution converges on a single io.grpc — no
+consumer-side force, and native-image's `Target_io_grpc_ServiceProviders`
+substitution matches the class shape.
 
-Consumer workaround — force ALL `io.grpc:*` back to the BOM version in the root
-build (single point, covers every service):
+| krpc release       | Quarkus LTS | io.grpc | consumer force |
+|--------------------|-------------|---------|----------------|
+| > 1.0.2 (current)  | 3.33.x LTS  | 1.79.0  | none — aligned |
+| ≤ 1.0.2            | 3.33.x LTS  | 1.82.0  | required (below) |
 
-```groovy
-configurations.all {
-    resolutionStrategy.eachDependency { d ->
-        if (d.requested.group == 'io.grpc') { d.useVersion '1.79.0' } // = Quarkus BOM version
-    }
-}
-```
+Bump `grpcVersion` in lockstep when adopting the next Quarkus LTS.
+
+**For krpc ≤1.0.2 only** (ships io.grpc 1.82.0, skewed above the BOM → native-image
+aborts during Initializing): force `io.grpc:*` back to the BOM version in the root
+build — `configurations.all { resolutionStrategy.eachDependency { if (it.requested.group == 'io.grpc') it.useVersion '1.79.0' } }`.
 
 ### 13.2 Server-side gRPC provider not registered [gap → NATIVE-002]
 
@@ -416,6 +414,9 @@ one build flag:
    ServiceLoader can instantiate them.
 3. `compileOnly "org.graalvm.sdk:nativeimage"` (Feature API is build-time only).
 
+**Fixed in `ext-rpc` >1.0.1 (NATIVE-002, unreleased).** Still required for published
+`ext-rpc` ≤1.0.1; delete this workaround once the fixed ext-rpc ships.
+
 ### 13.3 Stale ext-rpc substitutions collide with Quarkus [gap → NATIVE-002]
 
 `tech.krpc.ext:ext-rpc` ships its own grpc-netty GraalVM substitution classes
@@ -427,6 +428,9 @@ authoritative and the duplicates abort the build. Strip them in
 ```properties
 quarkus.class-loading.removed-resources."tech.krpc.ext\:ext-rpc"=tech/krpc/ext/runtime/graal/Target_io_grpc_netty_Utils.class,tech/krpc/ext/runtime/graal/GrpcNettySubstitutions.class
 ```
+
+**Fixed in `ext-rpc` >1.0.1 (NATIVE-002, unreleased).** Still required for published
+`ext-rpc` ≤1.0.1; delete this workaround once the fixed ext-rpc ships.
 
 ### 13.4 Build recipe and known runtime issues
 
@@ -483,9 +487,9 @@ only for what its build-time scan can reach. Know what is and is not covered.
 
 ### 13.6 Native checklist for a consumer service
 
-- [ ] `io.grpc:*` forced to the Quarkus BOM version (root build) — §13.1.
-- [ ] ServerProvider Feature + provider reflection holder + `compileOnly nativeimage` — §13.2.
-- [ ] ext-rpc stale substitutions stripped via `removed-resources` — §13.3.
+- [ ] **krpc ≤1.0.2 only:** `io.grpc:*` forced to the Quarkus BOM version (root build) — §13.1. (krpc >1.0.2 is aligned; skip.)
+- [ ] **ext-rpc ≤1.0.1 only:** ServerProvider Feature + provider reflection holder + `compileOnly nativeimage` — §13.2.
+- [ ] **ext-rpc ≤1.0.1 only:** ext-rpc stale substitutions stripped via `removed-resources` — §13.3.
 - [ ] Builder image matches Quarkus/JDK line; `package.jar.enabled=false` — §13.4.
 - [ ] Per-service `--initialize-at-run-time` for static-heap violations — §13.4.
 - [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.4.

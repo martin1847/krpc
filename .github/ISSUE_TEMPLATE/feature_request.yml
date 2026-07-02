@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a new capability or enhancement for KRPC
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing, please skim the project scope in
+        [ADR-0001](../blob/dev/docs/decisions/ADR-0001-repository-scope.md) —
+        KRPC deliberately delegates service discovery, load balancing, telemetry,
+        ingress TLS, and mesh policy to the platform.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do that KRPC makes hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should KRPC do? Sketch the API/behavior if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you evaluated, and why they fall short.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope-check
+    attributes:
+      label: Scope check
+      options:
+        - label: This is not service discovery, load balancing, telemetry, ingress TLS, or mesh policy (those are out of scope by design).
+          required: true

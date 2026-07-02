@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a defect in KRPC
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. For **security vulnerabilities**, do not use this
+        form — follow [SECURITY.md](../blob/dev/SECURITY.md) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps (ideally a minimal service/interface) that trigger the bug.
+      placeholder: |
+        1. Define interface ...
+        2. Call `app/Service/method` with ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: krpc-version
+    attributes:
+      label: KRPC version
+      placeholder: "1.0.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options:
+        - Quarkus (JVM)
+        - Quarkus (native image)
+        - Spring
+        - Plain Java client
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: JDK / OS
+      placeholder: "JDK 21, Linux x86_64"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste stack traces or logs (redact secrets). Rendered as code.
+      render: shell
+    validations:
+      required: false

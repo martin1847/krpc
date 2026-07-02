@@ -142,6 +142,22 @@ Use soft errors for business failures:
 
 Use exceptions for system failures, security failures, validation failures, and unexpected runtime errors.
 
+## Quickstart (5 minutes)
+
+The fastest way to see KRPC run — a single module, no database, no JWT:
+
+```bash
+gradle :examples:quickstart:run
+```
+
+Then call it:
+
+```bash
+rpcurl http://127.0.0.1:50051/quickstart/Hello/hello -d '{"name":"krpc"}'
+```
+
+See [`examples/quickstart/`](examples/quickstart/README.md) for the walkthrough.
+
 ## Run Existing Demo
 
 The repository includes an integration demo in `test-api` and `test-server`.

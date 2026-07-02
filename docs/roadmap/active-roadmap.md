@@ -108,9 +108,24 @@ Phases (sequenced P0 → P1):
   `UnaryMethod.invokeWeb`. Hidden services double-filtered, credential not bypassed,
   filter chain single-pass. Security review APPROVE (0 blocking). JVM-mode only —
   native reflection-config for the new handlers not yet added.
+  - **Caveat (bean removal):** the `AgentDiscoverHandler` / `AgentInvokeHandler`
+    beans are discovered reflectively (`HttpHandlerExpose` scans `getBeans(Object,
+    Any)`), so Quarkus Arc's default `remove-unused-beans=all` strips them as
+    unused and the HTTP server logs `Skip HTTP Server , no Handlers found.` — the
+    endpoints are then absent in a **default Quarkus consumer** (including
+    `examples/quickstart`). Reproduce the working surface with
+    `-Dquarkus.arc.remove-unused-beans=none`. The unit tests instantiate the
+    handlers with `new`, so they never exercise the container path and did not
+    catch this. Fix is folded into P1 as its prerequisite first step (below).
 - **P1** — Runtime MCP server module generated from live `ApiMeta`, Streamable
   HTTP transport, **feature switch default OFF**. Tools = methods opted in via
   `@UnsafeWeb(agentTool=true)` (default `false`).
+  - **Prerequisite (first step):** make the P0 handler beans survive default Arc
+    bean removal (e.g. a `rpc-server-quarkus` deployment module emitting
+    `UnremovableBeanBuildItem` / `AdditionalBeanBuildItem().setUnremovable()`,
+    `@Unremovable` on the handlers, or an explicit `Instance<GetHandler>` /
+    `Instance<PostHandler<?>>` reference), so agent endpoints are reachable in a
+    default consumer before the MCP bridge builds on them.
 
 Acceptance Criteria:
 

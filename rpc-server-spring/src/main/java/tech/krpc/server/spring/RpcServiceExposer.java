@@ -52,6 +52,11 @@ public class RpcServiceExposer implements ApplicationListener<ApplicationReadyEv
     @Setter
     boolean defaultExecutor = false;
 
+    // D2 (2026-07-03): CVE-2026-47244 app-layer cap. @ConfigurationProperties relaxed
+    // binding maps rpc.server.max-concurrent-calls-per-connection + env. 0 = unlimited.
+    @Setter
+    int maxConcurrentCallsPerConnection = RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION;
+
     static {
         //log.debug("static GraalvmBuild.forNative.....");
         //io.grpc.ManagedChannelProvider$ProviderNotFoundException: No functional server found. Try adding a dependency on the grpc-netty
@@ -76,6 +81,7 @@ public class RpcServiceExposer implements ApplicationListener<ApplicationReadyEv
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
         proxyServerBuilder.executor(executor);
+        proxyServerBuilder.maxConcurrentCallsPerConnection(maxConcurrentCallsPerConnection);
 
         var beans = context.getBeansWithAnnotation(RpcService.class);
         int i = 0;

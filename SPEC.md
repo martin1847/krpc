@@ -360,6 +360,23 @@ Set `version` + `changelog.md` first; `ext-rpc-gen` (group `tech.krpc.ext`) is
 released on its own cycle, not in the krpc bundle. Tag `vX.Y.Z` and cut the
 GitHub release after Central publish succeeds.
 
+### 12.1 Server limits / hardening config
+
+```properties
+# Max concurrent in-flight calls per HTTP/2 connection. Default 2000; 0 = unlimited.
+rpc.server.maxConcurrentCallsPerConnection=2000
+```
+App-layer defence-in-depth against HTTP/2 concurrent-stream flooding
+(CVE-2026-47244), complementing the transport-layer Netty 1.0.3 bump. Read by
+`rpc-server-quarkus` (`RpcServiceExpose`) and `rpc-server-spring`
+(`RpcServiceExposer`, relaxed binding → env / `rpc.server.max-concurrent-calls-per-connection`);
+applied on the Netty gRPC `ServerBuilder` in `RpcServerBuilder.init()`.
+The value is advertised to clients as HTTP/2 `SETTINGS_MAX_CONCURRENT_STREAMS`, so
+a client exceeding it on a **single channel** is **back-pressure queued** — excess
+streams wait client-side until capacity frees, they are **not** failed. Set `0` to
+restore the pre-1.0.4 unlimited behaviour. Non-Netty gRPC providers (none ship by
+default) ignore the cap with a warning rather than failing.
+
 ---
 
 ## 13. Native image (GraalVM)

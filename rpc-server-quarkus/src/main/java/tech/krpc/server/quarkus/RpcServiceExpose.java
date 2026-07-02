@@ -78,6 +78,12 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @ConfigProperty(name = "rpc.server.defaultExecutor",defaultValue = "false")
     boolean defaultExecutor;
 
+    // D2 (2026-07-03): CVE-2026-47244 app-layer cap. env KRPC_MAX_CONCURRENT_CALLS_PER_CONNECTION
+    // via SmallRye relaxed mapping. Default 2000; 0 = unlimited (pre-1.0.4 behaviour).
+    @ConfigProperty(name = "rpc.server.maxConcurrentCallsPerConnection",
+            defaultValue = RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION + "")
+    int maxConcurrentCallsPerConnection;
+
     @PostConstruct
     public void expose() throws Exception {
 
@@ -165,6 +171,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
         proxyServerBuilder.executor(executor);
+        proxyServerBuilder.maxConcurrentCallsPerConnection(maxConcurrentCallsPerConnection);
 
         var bm = CDI.current().getBeanManager();
         //new AnnotationLiteral<Any>() {}

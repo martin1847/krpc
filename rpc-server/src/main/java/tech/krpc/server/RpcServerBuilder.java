@@ -24,6 +24,7 @@ import tech.krpc.util.RefUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.netty.NettyServerBuilder;
 import io.grpc.ServerServiceDefinition;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,6 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RpcServerBuilder {
 	private final int port;
+	// D2 (2026-07-03): concurrent-call cap per HTTP/2 connection; 0 = unlimited.
+	private final int maxConcurrentCallsPerConnection;
 	private final Server server;
 
 	// ADR-0004 (AGENT-001 P0): web-only (@UnsafeWeb) dispatch surface, exposed for the
@@ -55,6 +58,9 @@ public class RpcServerBuilder {
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
 		public static final List<BindableService> PROTO_SERVICE_LIST = new ArrayList<>();
 		Executor executor;
+		// D2 (2026-07-03): default 2000; 0 = unlimited (pre-1.0.4 behaviour).
+		private int maxConcurrentCallsPerConnection =
+				RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION;
 
 		//public final String applicationName;
 
@@ -85,6 +91,12 @@ public class RpcServerBuilder {
 			return this;
 		}
 
+		/// D2: cap concurrent calls per HTTP/2 connection (0 = unlimited).
+		public Builder maxConcurrentCallsPerConnection(int max) {
+			this.maxConcurrentCallsPerConnection = max;
+			return this;
+		}
+
 		public Builder regGlobalFilter(ServerFilter... filters) {
 			for (var filter : filters) {
 				ServerContext.regGlobalFilter(filter);
@@ -105,6 +117,7 @@ public class RpcServerBuilder {
 	
 	private RpcServerBuilder(Builder builder) throws Exception {
 		this.port = builder.port;
+		this.maxConcurrentCallsPerConnection = builder.maxConcurrentCallsPerConnection;
 		this.server = init(builder.services,builder.executor);
 	}
 	
@@ -114,6 +127,21 @@ public class RpcServerBuilder {
 		//System.out.println("========XDS======XDS======XDS=====");
 
 		serverBuilder.executor(executor);
+
+		// D2 (2026-07-03): app-layer defence-in-depth vs CVE-2026-47244 (HTTP/2
+		// stream-flood DoS). maxConcurrentCallsPerConnection lives only on
+		// NettyServerBuilder, not the abstract ServerBuilder; forPort() returns the
+		// Netty provider at runtime (grpc-netty runtimeOnly). instanceof keeps this
+		// compile-safe (grpc-netty compileOnly) and avoids reflection for native.
+		if (maxConcurrentCallsPerConnection > 0) {
+			if (serverBuilder instanceof NettyServerBuilder) {
+				((NettyServerBuilder) serverBuilder)
+						.maxConcurrentCallsPerConnection(maxConcurrentCallsPerConnection);
+			} else {
+				log.warn("maxConcurrentCallsPerConnection={} ignored: server provider {} is not Netty",
+						maxConcurrentCallsPerConnection, serverBuilder.getClass().getName());
+			}
+		}
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);

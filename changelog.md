@@ -1,4 +1,14 @@
 
+# Unreleased (target 1.0.4 / 1.1.0)
+
+P0 fix package (AGENT-001, ADR-0004) — makes the already-shipped agent surface actually work in a default consumer; these are bug fixes, not flag-gated behaviour changes:
+
+* **Agent HTTP endpoints reachable in a default Quarkus consumer.** `AgentDiscoverHandler` / `AgentInvokeHandler` are discovered reflectively by `HttpHandlerExpose` (`getBeans(Object, @Any)`), so Arc's default `remove-unused-beans=all` stripped them and `/agent/discover` + `/agent/invoke` were absent (HTTP server logged `Skip HTTP Server , no Handlers found.`). Both handlers now carry `@io.quarkus.arc.Unremovable`; the endpoints work with zero consumer action. Container-level `@QuarkusTest` added (the prior unit tests instantiated handlers with `new`, bypassing the container, and missed this).
+* **Native reflection metadata for the agent invoke path.** `AgentInvokeRequest` registered in `rpc-server-quarkus` reflection-config so `POST /agent/invoke` deserializes in native mode (the discover `ApiMeta` closure was already covered).
+* **`AgentInvokeHandler` javadoc corrected**: not-found/forbidden surface as JSON `code:5` (gRPC `NOT_FOUND`), not HTTP `404` (the netty transport only emits 200/404/500 at the status line; errors ride the JSON `code`).
+* **Server concurrent-call cap (CVE-2026-47244 app-layer defence-in-depth, D2).** The Netty gRPC server now sets `maxConcurrentCallsPerConnection`, new config `rpc.server.maxConcurrentCallsPerConnection` (**default 2000**, `0` = unlimited = pre-1.0.4 behaviour). Advertised as HTTP/2 `SETTINGS_MAX_CONCURRENT_STREAMS`, so a high-concurrency single-channel client is **back-pressure queued** (excess streams wait client-side), not failed. Complements the 1.0.3 Netty 4.1.135 bump (transport-layer fix) with an app-layer bound. SPEC §12.1. Integration test asserts the over-cap call queues (not rejected) and in-flight concurrency stays ≤ cap.
+
+
 # 1.0.3, 2026-07-02
 
 * **grpc aligned to the Quarkus 3.33 LTS BOM: `io.grpc` 1.82.0 -> 1.79.0** (NATIVE-001 Option A). Kills the consumer-side `resolutionStrategy` force previously required for Quarkus native builds; wire behavior unchanged. SPEC §13.1 support matrix.

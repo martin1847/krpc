@@ -8,5 +8,11 @@
     "name": "tech.krpc.server.jws.Jwks",
     "allPublicConstructors": true,
     "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.server.agent.AgentInvokeRequest",
+    "allPublicConstructors": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true
   }
 ]

@@ -19,6 +19,15 @@ dependencies {
     implementation "io.quarkus:quarkus-hibernate-validator"
 
     runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+
+    // Wave 3 Phase A: container-level regression guard for the agent HTTP endpoints
+    // (@QuarkusTest boots this default consumer under DEFAULT Arc config).
+    // Version-managed by the quarkus-bom imported above. Excluding
+    // quarkus-bootstrap-maven-resolver mirrors test-server: it drags in a guice GMM
+    // "-classes" variant that isn't resolvable from the local Maven cache.
+    testImplementation("io.quarkus:quarkus-junit5") {
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+    }
 }
 
 // Convenience alias so `gradle :examples:quickstart:run` starts the server in

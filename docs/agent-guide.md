@@ -202,9 +202,11 @@ committed:
 - **GraalVM native** (Mandrel 25 / JDK 25, incl. the native boot log):
   [`docs/mcp-transcripts/native.txt`](mcp-transcripts/native.txt)
 
-Each transcript runs two clients: the reference **`@modelcontextprotocol/sdk`** (1.29.0,
-the library the Inspector is built on — it exposes the raw `initialize` result) and the
-official **`@modelcontextprotocol/inspector` CLI** (0.22.0). Boot:
+Each transcript runs two clients with explicit division of labor: `initialize` is
+captured via a **`@modelcontextprotocol/sdk`** (1.29.0) client script — the library the
+Inspector is built on; the Inspector CLI does not print the raw `initialize` result —
+and `tools/list` + `tools/call` via the official **`@modelcontextprotocol/inspector`
+CLI** (0.22.0). Boot:
 
 ```bash
 KRPC_MCP=true java -jar examples/quickstart/build/quarkus-app/quarkus-run.jar

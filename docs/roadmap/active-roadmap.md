@@ -122,9 +122,9 @@ Phases (sequenced P0 → P1):
   generated from live `ApiMeta`; `tools/call` via the same `invokeWeb` path
   (credential not bypassed). Tools = `@UnsafeWeb(agentTool=true)` subset only.
   **Feature switch `rpc.server.mcp.enabled` (env `KRPC_MCP`) default OFF** = zero new
-  surface. No third-party MCP SDK. Verified with real MCP clients (reference
-  `@modelcontextprotocol/sdk` for the raw initialize result + official
-  `@modelcontextprotocol/inspector` CLI): initialize + tools/list + tools/call, JVM +
+  surface. No third-party MCP SDK. Verified with real MCP clients (initialize via a
+  `@modelcontextprotocol/sdk` client script; tools/list + tools/call via the official
+  `@modelcontextprotocol/inspector` CLI): JVM +
   native (Mandrel 25/JDK25); initialize + tools/list byte-identical across both,
   tools/call differs only in the runtime timestamp — verbatim transcripts in
   `docs/mcp-transcripts/{jvm,native}.txt`; GET/mcp→405, unsupported

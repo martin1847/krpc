@@ -409,8 +409,15 @@ Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
   credential/system error → `isError:true`.
 - **Methods**: `initialize`, `notifications/initialized` (→ HTTP 202), `tools/list`,
   `tools/call`, `ping`. Transport is JSON-response mode only (one JSON object per
-  POST); SSE is spec-optional and not used (krpc tools are unary). Auth/rate-limit
-  remain the gateway's responsibility, same as the P0 agent surface.
+  POST); SSE is spec-optional and not used (krpc tools are unary). Per spec 2025-06-18:
+  `GET /mcp` → `405 Method Not Allowed` (`Allow: POST`, no SSE stream offered here);
+  an `MCP-Protocol-Version` header the server does not support → `400`
+  (`initialize` is exempt — it negotiates via the body). Auth/rate-limit remain the
+  gateway's responsibility, same as the P0 agent surface.
+- **Verified** with the official `@modelcontextprotocol/inspector` CLI over Streamable
+  HTTP (`initialize` + `tools/list` + `tools/call`), JVM **and** GraalVM native
+  (Mandrel 25/JDK25) — identical output; transcript in
+  [`docs/agent-guide.md`](agent-guide.md). OFF path: `/mcp` absent (404).
 
 ---
 

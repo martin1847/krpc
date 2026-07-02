@@ -353,4 +353,79 @@ class McpHandlerTest {
         assertEquals("{\"name\":\"neo\"}", addInput.get().getUtf8(),
                 "DTO arguments forwarded verbatim as krpc input");
     }
+
+    // --- protocol-version header (advisory #2 transport: MCP-Protocol-Version) -----------
+
+    /** The value of the STATUS_OVERRIDE header in {@code resHeaders}, or null if absent. */
+    private static String statusOverride(List<AsciiHeader> resHeaders) {
+        for (var h : resHeaders) {
+            if (h.name.contentEqualsIgnoreCase("x-krpc-http-status")) {
+                return h.value;
+            }
+        }
+        return null;
+    }
+
+    private static HttpHeaders withVersion(String version) {
+        return new DefaultHttpHeaders().set("mcp-protocol-version", version);
+    }
+
+    @Test
+    void postAfterInitialize_unsupportedVersionHeader_is400InvalidRequest() {
+        // Spec 2025-06-18: a request (other than initialize) carrying an unsupported
+        // MCP-Protocol-Version MUST be rejected — HTTP 400 + a JSON-RPC INVALID_REQUEST.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+                withVersion("1999-01-01"), resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders),
+                "unsupported MCP-Protocol-Version maps to HTTP 400: " + resHeaders);
+        assertEquals(-32600, errorCode(env),
+                "unsupported version -> JSON-RPC INVALID_REQUEST (-32600)");
+    }
+
+    @Test
+    void postAfterInitialize_supportedVersionHeader_dispatchesNormally() {
+        // A version in SUPPORTED_VERSIONS must pass the gate: no 400, a normal result.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+                withVersion("2025-06-18"), resHeaders);
+
+        assertNull(statusOverride(resHeaders),
+                "supported version adds no status override: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"),
+                "supported version dispatches to a normal result: " + env);
+    }
+
+    @Test
+    void postAfterInitialize_noVersionHeader_dispatchesNormally() {
+        // Absent header -> assume the default, do NOT fail (spec: only present-and-bad is 400).
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders),
+                "no version header adds no status override: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"),
+                "no version header dispatches to a normal result: " + env);
+    }
+
+    @Test
+    void initialize_unsupportedVersionHeader_isExemptFromThe400Gate() {
+        // initialize negotiates the version via the body, so it is exempt from the header
+        // gate: even an unsupported MCP-Protocol-Version header must NOT force a 400.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h,
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}",
+                withVersion("1999-01-01"), resHeaders);
+
+        assertNull(statusOverride(resHeaders),
+                "initialize is exempt: no 400 from a bad version header: " + resHeaders);
+        assertEquals(McpHandler.PROTOCOL_VERSION, result(env).get("protocolVersion"),
+                "initialize still negotiates a normal result");
+    }
 }

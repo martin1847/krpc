@@ -192,33 +192,67 @@ MCP tools are the **`@UnsafeWeb(agentTool=true)` subset only**; `@UnsafeWeb` alo
 does not create a tool. `tools/call` runs the identical credential + filter dispatch
 as `/agent/invoke` (credential not bypassed). Full contract: [SPEC §12.2](../SPEC.md#122-mcp-bridge-agent-tools-over-post-mcp).
 
-Run the quickstart with the flag on, then handshake with any MCP client (or curl):
+### Real MCP-client transcript (`@modelcontextprotocol/inspector` CLI)
+
+Verified with the official MCP Inspector CLI over Streamable HTTP against the
+quickstart, both **JVM and GraalVM native** (Mandrel 25 / JDK 25) — identical output.
+Boot with the flag on:
 
 ```bash
 KRPC_MCP=true java -jar examples/quickstart/build/quarkus-app/quarkus-run.jar
+# native: KRPC_MCP=true ./examples/quickstart/build/quickstart-1.0.3-runner
 ```
 
-```bash
-H=(-H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
-# 1. initialize
-curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}'
-# -> {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"krpc","version":"1.0.0"}}}
+The inspector performs the `initialize` handshake, then `tools/list` — the tool is
+generated from the live `ApiMeta` (`name` required + `minLength:1` derived from
+`@NotBlank`; `outputSchema` is the `RpcResult<HelloReply>`-unwrapped `HelloReply`):
 
-# 2. initialized notification -> HTTP 202, empty body
-curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
-
-# 3. tools/list -> Hello_hello with input/outputSchema (name required, minLength 1 from @NotBlank)
-curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
-
-# 4. tools/call -> content + structuredContent (RpcResult data, unwrapped)
-curl "${H[@]}" -X POST http://127.0.0.1:8080/mcp \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"Hello_hello","arguments":{"name":"mcp"}}}'
-# -> {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"message\":\"Hello, mcp!\",...}"}],"isError":false,"structuredContent":{"message":"Hello, mcp!","timestamp":...}}}
+```console
+$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp \
+    --transport http --method tools/list
+{
+  "tools": [
+    {
+      "name": "Hello_hello",
+      "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "name": { "type": "string", "minLength": 1 } },
+        "required": [ "name" ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "message": { "type": "string" }, "timestamp": { "type": "integer" } }
+      }
+    }
+  ]
+}
 ```
 
-With MCP OFF (default), `POST /mcp` is absent (`404`) and the surface is byte-for-byte
-the P0 two-endpoint set above.
+`tools/call` dispatches through the same credential + filter path as `/agent/invoke`
+and returns both a text content block and the unwrapped `structuredContent`:
+
+```console
+$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp \
+    --transport http --method tools/call --tool-name Hello_hello --tool-arg name=inspector
+{
+  "content": [
+    { "type": "text", "text": "{\"message\":\"Hello, inspector!\",\"timestamp\":1783030370121}" }
+  ],
+  "structuredContent": { "message": "Hello, inspector!", "timestamp": 1783030370121 },
+  "isError": false
+}
+```
+
+Transport details (spec 2025-06-18): `GET /mcp` → `405 Method Not Allowed`
+(`Allow: POST`; JSON-response mode, no SSE stream on this endpoint); an
+`MCP-Protocol-Version` header the server does not support → `400` with a JSON-RPC
+error. The raw JSON-RPC is also curl-able if you prefer — `POST` a single JSON object
+with `Accept: application/json, text/event-stream`; `notifications/initialized` returns
+HTTP `202` with an empty body.
+
+With MCP OFF (default), `POST /mcp` and `GET /mcp` are absent (`404`) and the surface
+is byte-for-byte the P0 two-endpoint set above.
 
 ## Still deferred to the gateway
 

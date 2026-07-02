@@ -53,6 +53,9 @@ public class McpHandler implements PostHandler<String> {
     private static final List<String> SUPPORTED_VERSIONS =
             List.of("2025-06-18", "2025-03-26", "2024-11-05");
 
+    /// Streamable HTTP protocol-version header (spec 2025-06-18).
+    static final String MCP_PROTOCOL_VERSION_HEADER = "mcp-protocol-version";
+
     private static final AsciiString STATUS_HEADER =
             AsciiString.cached(AbstractHttpHandler.STATUS_OVERRIDE_HEADER);
 
@@ -127,6 +130,17 @@ public class McpHandler implements PostHandler<String> {
         Object methodObj = msg.get("method");
         if (!(methodObj instanceof String method)) {
             return bytes(errorResponse(id, INVALID_REQUEST, "Invalid Request: missing method"));
+        }
+
+        // Transport (spec 2025-06-18): the client MUST send MCP-Protocol-Version on every
+        // request after initialize; an invalid/unsupported value MUST be 400. initialize is
+        // exempt (it negotiates via the body). Absent header -> assume default, don't fail.
+        if (!"initialize".equals(method)) {
+            var pv = requestHeaders.get(MCP_PROTOCOL_VERSION_HEADER);
+            if (null != pv && !SUPPORTED_VERSIONS.contains(pv)) {
+                badRequest(resHeader);
+                return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported MCP-Protocol-Version: " + pv));
+            }
         }
 
         // Notifications (no id) get 202 Accepted with an empty body, per Streamable HTTP.
@@ -330,6 +344,10 @@ public class McpHandler implements PostHandler<String> {
 
     private static void accepted(List<AsciiHeader> resHeader) {
         resHeader.add(new AsciiHeader(STATUS_HEADER, "202"));
+    }
+
+    private static void badRequest(List<AsciiHeader> resHeader) {
+        resHeader.add(new AsciiHeader(STATUS_HEADER, "400"));
     }
 
     Metadata toMetadata(HttpHeaders requestHeaders) {

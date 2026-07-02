@@ -140,6 +140,10 @@ build_bundle() {
   [[ "${#staging_dirs[@]}" -gt 0 ]] || die "no module central-staging directories found"
 
   for staging_dir in "${staging_dirs[@]}"; do
+    # ext-rpc-gen releases on its own cycle (SPEC §12) and pins its own version —
+    # bundling it re-uploads an existing GAV and Central rejects the whole bundle
+    # (bit us on the 1.0.0 release). Never include it in the krpc bundle.
+    [[ "$staging_dir" == *"/ext-rpc-gen/"* ]] && continue
     cp -R "$staging_dir"/. "$bundle_dir"/
   done
 

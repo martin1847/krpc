@@ -2,7 +2,8 @@
 
 ## NATIVE-001: io.grpc Version Alignment For Quarkus Native Consumers
 
-Status: active
+Status: completed (shipped in krpc 1.0.3, 2026-07-02 — Option A: grpcVersion tracks the
+Quarkus LTS BOM; SPEC §13.1 matrix is the consumer contract; no consumer force needed)
 
 Capability: krpc artifacts consumable in Quarkus native builds without a
 consumer-side grpc version force

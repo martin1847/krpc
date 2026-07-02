@@ -13,11 +13,16 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["dependencies", "security"],
-    "prPriority": 10,
     "schedule": ["at any time"]
   },
   "osvVulnerabilityAlerts": true,
   "packageRules": [
+    {
+      "description": "Baseline: everything else on the gentle weekly cadence, batched by update type. Listed FIRST so the dedicated grpc/netty/quarkus groups below override it (Renovate merges packageRules in order — later rules win).",
+      "matchManagers": ["gradle"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "gradle minor/patch"
+    },
     {
       "description": "gRPC: version is pinned to the Quarkus LTS BOM (ADR NATIVE-001, Option A). Group so a maintainer reviews the bump in lockstep with the Quarkus LTS train — never automerge.",
       "matchManagers": ["gradle"],
@@ -41,12 +46,6 @@
       "groupName": "quarkus",
       "automerge": false,
       "prPriority": 3
-    },
-    {
-      "description": "Everything else on the gentle weekly cadence, batched by update type.",
-      "matchManagers": ["gradle"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "gradle minor/patch"
     }
   ]
 }

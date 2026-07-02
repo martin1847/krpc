@@ -8,9 +8,12 @@ backports) — committing to multi-year backports as a solo project would be a l
 
 - **The latest release is always supported** — it receives bug fixes and security
   fixes.
-- **The previous minor (N-1) receives security fixes only**, for **90 days** after
-  the next minor ships, **or until the aligned Quarkus LTS reaches EOL** —
-  whichever comes first.
+- **The immediately preceding release receives security fixes only**, for **90
+  days** after its successor ships, **or until the aligned Quarkus LTS reaches
+  EOL** — whichever comes first. krpc currently ships a single `1.0.x` minor
+  line, so "the preceding release" today means the previous **patch** (1.0.2);
+  once a second minor line exists, an older minor drops to security-only under
+  this same rule.
 - Older releases are **end of life**: no fixes, no security backports. Upgrade to a
   supported release.
 
@@ -24,7 +27,7 @@ appear to differ, SPEC §13.1 wins for the version/alignment facts.
 | krpc release | Status | Quarkus LTS | io.grpc | Notes |
 | --- | --- | --- | --- | --- |
 | 1.0.3 | Supported (latest) | 3.33.x LTS | 1.79.0 | Aligned to the Quarkus LTS BOM — no consumer-side grpc force. |
-| 1.0.2 | Security fixes only (N-1) | 3.33.x LTS | 1.82.0 | Ships io.grpc 1.82.0 (above the BOM); native-image consumers must force io.grpc back to 1.79.0 — SPEC §13.1. |
+| 1.0.2 | Security fixes only (previous patch) | 3.33.x LTS | 1.82.0 | Ships io.grpc 1.82.0 (above the BOM); native-image consumers must force io.grpc back to 1.79.0 — SPEC §13.1. |
 | ≤ 1.0.1 | End of life | — | — | Upgrade. |
 
 ## Anchoring: the Quarkus LTS Train
@@ -43,7 +46,7 @@ backport line.
 ## Security Fixes
 
 Security reporting, response targets, and disclosure windows are in
-[SECURITY.md](../SECURITY.md). Security fixes for the N-1 minor follow the window
+[SECURITY.md](../SECURITY.md). Security fixes for the preceding release follow the window
 above; confirmed advisories are published with a GHSA ID and correct `tech.krpc:*`
 coordinates so downstream Dependabot/OSV consumers are alerted.
 

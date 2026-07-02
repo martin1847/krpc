@@ -13,12 +13,11 @@ on:
     paths:
       - 'docs-site/**'
       - '.github/workflows/docs.yml'
-  workflow_dispatch:
 
+# Least privilege at the top level: only the checkout needs repo read.
+# Pages/OIDC write is granted to the deploy job alone (below).
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Allow one concurrent deployment; don't cancel an in-progress production deploy.
 concurrency:
@@ -50,6 +49,9 @@ jobs:
 
   deploy:
     needs: build
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     environment:
       name: github-pages

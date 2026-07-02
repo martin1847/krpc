@@ -380,12 +380,10 @@ substitution matches the class shape.
 
 | krpc release                    | Quarkus LTS | io.grpc | consumer force |
 |---------------------------------|-------------|---------|----------------|
-| next release (this alignment)   | 3.33.x LTS  | 1.79.0  | none — aligned |
+| ≥ 1.0.3 (this alignment)        | 3.33.x LTS  | 1.79.0  | none — aligned |
 | published ≤ 1.0.2               | 3.33.x LTS  | 1.82.0  | required (below) |
 
-(HEAD is still tagged `1.0.2` in `gradle.properties` but already carries the 1.79.0
-alignment; it publishes as the next version bump. Bump `grpcVersion` in lockstep when
-adopting the next Quarkus LTS.)
+(Bump `grpcVersion` in lockstep when adopting the next Quarkus LTS.)
 
 **For published krpc ≤1.0.2 only** (ships io.grpc 1.82.0, skewed above the BOM → native-image
 aborts during Initializing): force `io.grpc:*` back to the BOM version in the root

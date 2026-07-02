@@ -13,12 +13,8 @@ dependencies {
     implementation project(':rpc-server-quarkus')
     implementation project(':rpc-client')
 
-    // IOURING-001 Phase 2 (flag-gated PoC, default OFF): io_uring incubator transport for the
-    // benchmark. classes = the IOUring* Java API; native (linux-aarch_64 classifier for this
-    // OrbStack aarch64 host) = the bundled libnetty_transport_native_io_uring .so. Present in the
-    // image regardless; only exercised when KRPC_IOURING is set at runtime.
-    implementation "io.netty.incubator:netty-incubator-transport-classes-io_uring:${nettyIoUringIncubatorVersion}"
-    runtimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:${nettyIoUringIncubatorVersion}:linux-aarch_64"
+    // IOURING-001 Phase 2: io_uring deps/source/metadata are added ONLY under -PwithIoUring
+    // (see the gated block below). The default build bundles NOTHING io_uring.
 
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
@@ -76,6 +72,27 @@ dependencies {
 
 //    testImplementation "org.jboss.slf4j:slf4j-jboss-logmanager"
 //    testImplementation 'io.rest-assured:rest-assured'
+}
+
+// IOURING-001 Phase 2 — io_uring is OFF by default and gated behind -PwithIoUring so the default
+// native image is byte-identical to Phase 0 (no io_uring classes, no .so, no metadata). Enabling:
+//   gradle :test-server:build -PwithIoUring -Dquarkus.native.enabled=true ...
+// This adds the src/iouring source set (IoUringSupport provider, discovered reflectively by
+// rpc-server's IoUringTransport) into the main jar, the incubator classes + linux-aarch_64 native
+// .so onto the runtime classpath, and the hand-authored native-image metadata (jni/reflect/resource
+// + initialize-at-run-time) that lives under src/iouring/resources. Runtime still requires
+// KRPC_IOURING=1 to actually select io_uring; -PwithIoUring only decides whether it is BUNDLED.
+if (project.hasProperty('withIoUring')) {
+    sourceSets.main.java.srcDir 'src/iouring/java'
+    sourceSets.main.resources.srcDir 'src/iouring/resources'
+    dependencies {
+        // grpc-netty is needed at compile time for IoUringSupport (NettyServerBuilder); it is
+        // already a runtime dep via rpc-server-quarkus, so this only lifts it to compile scope here.
+        implementation "io.grpc:grpc-netty:${grpcVersion}"
+        implementation "io.netty.incubator:netty-incubator-transport-classes-io_uring:${nettyIoUringIncubatorVersion}"
+        runtimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:${nettyIoUringIncubatorVersion}:linux-aarch_64"
+    }
+    logger.lifecycle('[IOURING-001] -PwithIoUring: io_uring transport BUNDLED (runtime flag KRPC_IOURING still required to select it)')
 }
 
 //java {

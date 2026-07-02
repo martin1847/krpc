@@ -109,7 +109,9 @@ public class RpcServerBuilder {
 	}
 	
 	private  Server init(Map<Object,List<ServerFilter>> services,Executor executor) throws Exception {
-		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
+		// IOURING-001 Phase 2: flag-gated transport. Default OFF returns the identical
+		// ServerBuilder.forPort(port); ON (KRPC_IOURING) wires NettyServerBuilder + io_uring.
+		ServerBuilder<?> serverBuilder = IoUringTransport.newServerBuilder(port);
 		//	XdsServerBuilder.forPort(port, InsecureServerCredentials.create());
 		//System.out.println("========XDS======XDS======XDS=====");
 

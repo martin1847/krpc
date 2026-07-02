@@ -13,9 +13,21 @@ dependencies {
     implementation project(':rpc-server-quarkus')
     implementation project(':rpc-client')
 
+    // IOURING-001 Phase 2 (flag-gated PoC, default OFF): io_uring incubator transport for the
+    // benchmark. classes = the IOUring* Java API; native (linux-aarch_64 classifier for this
+    // OrbStack aarch64 host) = the bundled libnetty_transport_native_io_uring .so. Present in the
+    // image regardless; only exercised when KRPC_IOURING is set at runtime.
+    implementation "io.netty.incubator:netty-incubator-transport-classes-io_uring:${nettyIoUringIncubatorVersion}"
+    runtimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:${nettyIoUringIncubatorVersion}:linux-aarch_64"
+
 
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+    // IOURING-001 Phase 2 benchmark load client (test.krpc.bench.LoadClient, src/test): grpc-netty
+    // is the CLIENT transport (fixed across all runs; only the SERVER transport varies).
+    testImplementation "io.grpc:grpc-netty:${grpcVersion}"
+    testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
 
     runtimeOnly "io.quarkus:quarkus-hibernate-validator"
 
@@ -188,3 +200,14 @@ quarkusBuild {
 }
 */
 
+
+// IOURING-001 Phase 2: dump the test runtime classpath so the benchmark LoadClient can run as a
+// plain `java -cp` process many times without per-run Gradle startup overhead.
+tasks.register('dumpTestCp') {
+    dependsOn 'testClasses'
+    doLast {
+        def out = layout.buildDirectory.file('testcp.txt').get().asFile
+        out.text = sourceSets.test.runtimeClasspath.asPath
+        println "testcp -> ${out} (${sourceSets.test.runtimeClasspath.files.size()} entries)"
+    }
+}

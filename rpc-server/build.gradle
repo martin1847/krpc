@@ -13,8 +13,12 @@ dependencies {
 
 
     // implementation'jakarta.enterprise:jakarta.enterprise.cdi-api:2.0.2'
-//    implementation "io.grpc:grpc-netty:${grpcVersion}"
-//    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    // IOURING-001 Phase 2 (flag-gated PoC): compileOnly so the io_uring wiring compiles without
+    // forcing the transport at runtime. rpc-server stays transport-agnostic; default path is
+    // unchanged generic ServerBuilder.forPort. Runtime artifacts (grpc-netty + incubator native
+    // .so) are provided by the deployment module (test-server) only when io_uring is exercised.
+    compileOnly "io.grpc:grpc-netty:${grpcVersion}"
+    compileOnly "io.netty.incubator:netty-incubator-transport-classes-io_uring:${nettyIoUringIncubatorVersion}"
 
 //    implementation "io.quarkus:quarkus-core:$quarkusPlatformVersion"
 //    implementation "io.quarkus:quarkus-builder:$quarkusPlatformVersion"

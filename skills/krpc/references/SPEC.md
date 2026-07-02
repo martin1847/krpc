@@ -414,10 +414,16 @@ Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
   an `MCP-Protocol-Version` header the server does not support → `400`
   (`initialize` is exempt — it negotiates via the body). Auth/rate-limit remain the
   gateway's responsibility, same as the P0 agent surface.
-- **Verified** with the official `@modelcontextprotocol/inspector` CLI over Streamable
-  HTTP (`initialize` + `tools/list` + `tools/call`), JVM **and** GraalVM native
-  (Mandrel 25/JDK25) — identical output; transcript in
-  [`docs/agent-guide.md`](agent-guide.md). OFF path: `/mcp` absent (404).
+- **Verified** with real MCP clients over Streamable HTTP — the reference
+  `@modelcontextprotocol/sdk` (exposes the raw `initialize` result) and the official
+  `@modelcontextprotocol/inspector` CLI — running `initialize` + `tools/list` +
+  `tools/call`, on JVM **and** GraalVM native (Mandrel 25/JDK25); `initialize` +
+  `tools/list` byte-identical across both, `tools/call` differs only in the runtime
+  timestamp.
+  Full verbatim transcripts (command lines + complete output):
+  [`docs/mcp-transcripts/jvm.txt`](https://github.com/martin1847/krpc/blob/dev/docs/mcp-transcripts/jvm.txt)
+  and [`docs/mcp-transcripts/native.txt`](https://github.com/martin1847/krpc/blob/dev/docs/mcp-transcripts/native.txt)
+  (native includes the boot log). OFF path: `/mcp` absent (404).
 
 ---
 

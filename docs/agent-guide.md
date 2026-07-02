@@ -192,57 +192,61 @@ MCP tools are the **`@UnsafeWeb(agentTool=true)` subset only**; `@UnsafeWeb` alo
 does not create a tool. `tools/call` runs the identical credential + filter dispatch
 as `/agent/invoke` (credential not bypassed). Full contract: [SPEC §12.2](../SPEC.md#122-mcp-bridge-agent-tools-over-post-mcp).
 
-### Real MCP-client transcript (`@modelcontextprotocol/inspector` CLI)
+### Real MCP-client transcripts (verbatim, in-repo)
 
-Verified with the official MCP Inspector CLI over Streamable HTTP against the
-quickstart, both **JVM and GraalVM native** (Mandrel 25 / JDK 25) — identical output.
-Boot with the flag on:
+Verified against the quickstart with the flag on, using the official MCP clients over
+Streamable HTTP. Full raw transcripts (command lines + complete output, no elision) are
+committed:
+
+- **JVM** (fast-jar): [`docs/mcp-transcripts/jvm.txt`](mcp-transcripts/jvm.txt)
+- **GraalVM native** (Mandrel 25 / JDK 25, incl. the native boot log):
+  [`docs/mcp-transcripts/native.txt`](mcp-transcripts/native.txt)
+
+Each transcript runs two clients: the reference **`@modelcontextprotocol/sdk`** (1.29.0,
+the library the Inspector is built on — it exposes the raw `initialize` result) and the
+official **`@modelcontextprotocol/inspector` CLI** (0.22.0). Boot:
 
 ```bash
 KRPC_MCP=true java -jar examples/quickstart/build/quarkus-app/quarkus-run.jar
-# native: KRPC_MCP=true ./examples/quickstart/build/quickstart-1.0.3-runner
+# native: docker run -e KRPC_MCP=true -p 8080:8080 \
+#   --entrypoint /work/quickstart-1.0.3-runner ubi9/ubi-minimal
 ```
 
-The inspector performs the `initialize` handshake, then `tools/list` — the tool is
-generated from the live `ApiMeta` (`name` required + `minLength:1` derived from
-`@NotBlank`; `outputSchema` is the `RpcResult<HelloReply>`-unwrapped `HelloReply`):
+**1. `initialize`** — `client.connect()` performs the MCP handshake; the server's
+`InitializeResult` (identical JVM and native):
 
-```console
-$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp \
-    --transport http --method tools/list
-{
-  "tools": [
-    {
-      "name": "Hello_hello",
-      "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
-      "inputSchema": {
-        "type": "object",
-        "properties": { "name": { "type": "string", "minLength": 1 } },
-        "required": [ "name" ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "properties": { "message": { "type": "string" }, "timestamp": { "type": "integer" } }
-      }
-    }
-  ]
-}
+```json
+{ "protocolVersion": "2025-06-18",
+  "serverInfo": { "name": "krpc", "version": "1.0.0" },
+  "capabilities": { "tools": {} } }
 ```
 
-`tools/call` dispatches through the same credential + filter path as `/agent/invoke`
-and returns both a text content block and the unwrapped `structuredContent`:
+**2. `tools/list`** — one tool generated from the live `ApiMeta` (`name` required +
+`minLength:1` from `@NotBlank`; `outputSchema` is the `RpcResult<HelloReply>`-unwrapped
+`HelloReply`):
 
-```console
-$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp \
-    --transport http --method tools/call --tool-name Hello_hello --tool-arg name=inspector
-{
-  "content": [
-    { "type": "text", "text": "{\"message\":\"Hello, inspector!\",\"timestamp\":1783030370121}" }
-  ],
-  "structuredContent": { "message": "Hello, inspector!", "timestamp": 1783030370121 },
-  "isError": false
-}
+```json
+{ "tools": [ { "name": "Hello_hello",
+    "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
+    "inputSchema": { "type": "object",
+      "properties": { "name": { "type": "string", "minLength": 1 } }, "required": [ "name" ] },
+    "outputSchema": { "type": "object",
+      "properties": { "message": { "type": "string" }, "timestamp": { "type": "integer" } } } } ] }
 ```
+
+**3. `tools/call`** `{name: Hello_hello, arguments: {name: "inspector"}}` — dispatches
+through the same credential + filter path as `/agent/invoke`, returns a text content
+block plus the unwrapped `structuredContent`:
+
+```json
+{ "content": [ { "type": "text", "text": "{\"message\":\"Hello, inspector!\",\"timestamp\":1783032434958}" } ],
+  "structuredContent": { "message": "Hello, inspector!", "timestamp": 1783032434958 },
+  "isError": false }
+```
+
+(The `timestamp` above is the exact value from the Inspector-CLI `tools/call` in
+[`native.txt`](mcp-transcripts/native.txt); the JVM run in
+[`jvm.txt`](mcp-transcripts/jvm.txt) differs only in that runtime millisecond.)
 
 Transport details (spec 2025-06-18): `GET /mcp` → `405 Method Not Allowed`
 (`Allow: POST`; JSON-response mode, no SSE stream on this endpoint); an

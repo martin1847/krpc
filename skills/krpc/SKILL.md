@@ -10,7 +10,10 @@ description: "Authoring and calling KRPC (tech.krpc) services. Use when writing 
 > it and `SPEC.md` disagree, **`SPEC.md` wins**. Governance authority is `AGENTS.md`
 > + ADRs (`docs/decisions/`).
 >
-> - Full handbook: `SPEC.md` (repo root, or the release distribution).
+> - Full handbook: **`references/SPEC.md` bundled next to this skill** (verbatim,
+>   release-synced copy of the repo-root `SPEC.md` — CI fails if they diverge), so the
+>   skill stays self-contained when copied into a consumer project. In the krpc repo
+>   itself, the root `SPEC.md` is the canonical copy.
 > - Agents discovering/calling a running service: read `docs/agent-guide.md`.
 > - Native-image consumers: `SPEC.md` §13 + the `krpc-native-build` skill.
 

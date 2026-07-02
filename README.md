@@ -6,6 +6,8 @@ KRPC is an interface-first RPC framework for cloud-native services.
 
 Write a Java interface, publish it as the API contract, and let KRPC handle RPC transport, validation, metadata, and client generation. Service authors do not need to write proto files for normal business APIs.
 
+**AI agent?** Install the [krpc skill](skills/krpc/SKILL.md) and read the [agent guide](docs/agent-guide.md) to discover and call KRPC services over HTTP.
+
 ## What It Does
 
 - Uses gRPC / HTTP/2 as the transport.

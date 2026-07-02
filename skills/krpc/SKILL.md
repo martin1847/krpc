@@ -65,12 +65,15 @@ curl -X POST http://HOST:8080/agent/invoke \
   `quickstart/Hello/hello` as `{"service":"Hello","method":"hello"}`.
 - Errors ride a `code` field in the JSON body (gRPC-style status); the HTTP status
   line stays `200` (transport emits only 200/404/500).
-- **Credential is not bypassed relative to gRPC.** `Authorization: Bearer <jwt>`
-  (or the auth cookie) is forwarded into the same credential check as a normal call;
-  a `requireCredential` service is checked no differently here. Actual **rejection**
-  depends on auth being configured — the check enforces only when a verifier is
-  registered (`rpc.server.jwks` set + loaded); missing/unloadable JWKS with
-  `exitOnJwksError` off silently skips it (SPEC §8.7, `exitOnJwksError=true` in prod).
+- **Credential is not bypassed relative to gRPC.** The `Authorization: Bearer <jwt>`
+  header is forwarded into the same credential check as a normal call; a
+  `requireCredential` service is checked no differently here. The agent path forwards
+  **only** `Authorization` (plus client-id / `traceparent`) — **no `Cookie` header**,
+  so the cookie credential fallback works on the web/gRPC path but **not on the agent
+  surface** (current impl); send a bearer token. Actual **rejection** depends on auth
+  being configured — the check enforces only when a verifier is registered
+  (`rpc.server.jwks` set + loaded); missing/unloadable JWKS with `exitOnJwksError` off
+  silently skips it (SPEC §8.7, `exitOnJwksError=true` in prod).
 - **Auth and rate-limiting are the gateway's job**, not krpc core — put these two
   paths behind a gateway (ADR-0004).
 - **`@UnsafeWeb(agentTool=…)` is not built yet** — a P1 design in ADR-0004. P0 gates

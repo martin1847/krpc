@@ -17,7 +17,7 @@ docs/文本资产，零代码/零发布面变更。依据 STRAT-001 R2 #1 / ADR-
    /agent/invoke，8080 vs 50051）、暴露模型诚实版、请求/响应形状、真实 discover→invoke
    实录、"未建"清单。docs-site 经 `reference.md` 挂链。
 
-指针（每处一行，diff 里唯二的 tracked 改动）：
+指针（每处一行）：
 - `README.md`：intro 后一行 "AI agent? install the krpc skill + agent guide"。
 - `docs-site/docs/reference.md`：Handbook 节加 Agent Guide + skill 链接（= docs-site 挂链）。
 
@@ -42,7 +42,7 @@ docs/文本资产，零代码/零发布面变更。依据 STRAT-001 R2 #1 / ADR-
 
 ## 未验证 / 假设
 
-- **已 commit（5 个独立 docs commit，off `2ff124b`），未 push、未开 PR**（按 guardrail；codex r1 回修后待 r2）。
+- **已 commit（多个独立 docs commit，off `2ff124b`；确切数量见 `git log`），未 push、未开 PR**（按 guardrail；codex 回修中）。
 - curl 实录在 **JVM 模式 + `quarkus.arc.remove-unused-beans=none`** 下取得（见下方 FINDING）。
   未在 native 模式验证（P0 已知 native reflection-config 未加）。
 - quarkusDev（`gradle :examples:quickstart:run`）在本机因 dev-mode 模型解析
@@ -81,13 +81,22 @@ reflection-config 未加"。此 **Arc 移除 caveat 是新发现，任何默认�
 (c) `HttpHandlerExpose` 显式 `@Inject Instance<GetHandler>` / `Instance<PostHandler<?>>`
 建立强引用。建议开 roadmap/issue 承接。
 
+## 附带记录（Wave 3 P0 fix 时顺手，勿在本分支动 Java）
+
+- **`AgentInvokeHandler.java:33-36` 注释与代码不符（codex r2 advisory）**：javadoc 写 not-found/
+  forbidden "surface as `code:404`"，但 `CODE_NOT_FOUND = 5`（:43），实际 body 返回 `{"code":5,…}`
+  （实录已证）。本分支 docs-only，**未动 Java**；Wave 3 修 P0（handler 保留）时顺手把注释 404 改为 5。
+
 ## 措辞纪律自检（disclosure 口径）
 
 - 全套文本无 "complete" 声称（skill/agent-guide/llms.txt 均未用）。
 - `agentTool` 一律标 **accepted-not-built / P1 design**（skill + agent-guide 各一处显式）。
 - @UnsafeWeb 暴露模型写诚实版：**agent 面 = web 面过滤视图**；`agentTool` 严格子集为未建
   P1，引 ADR-0004。
-- 凭据不被绕过、auth/限流为 gateway 职责——按 ADR-0004 原文。
+- 凭据措辞按代码事实（codex r1+r2 回修）：invoke 走与普通调用相同的凭据检查，但**实际拒绝取决于
+  JWKS/auth 是否配置**（verifier 注册才生效，否则静默跳过，SPEC §8.7）；agent 路径仅转发
+  `Authorization`（+ client-id/traceparent），**不转发 Cookie**，故 cookie 凭据回退不适用于 agent 面
+  （`AgentInvokeHandler.toMetadata:113-119`）。auth/限流为 gateway 职责——按 ADR-0004 原文。
 
 ## SoT / 边界
 

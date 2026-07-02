@@ -37,15 +37,19 @@ endpoints speak plain HTTP/1.1 JSON that any HTTP client can call.
   deliberate *subset* of the web surface — but that is a **P1 design that is
   accepted, not yet built**. Today (P0) the agent surface equals the web surface.
   Do not assume an `agentTool` gate exists.
-- **Credential is not bypassed relative to gRPC.** `/agent/invoke` forwards
-  `Authorization: Bearer <jwt>` (and the auth cookie) into the **same credential
-  check as a normal gRPC call**, so an `@UnsafeWeb(requireCredential=true)` service
-  is checked no differently on this path. Whether that check actually **rejects** an
-  unauthenticated call depends on auth being configured: the check enforces only
-  when a credential verifier is registered — i.e. `rpc.server.jwks` is set and
-  loads. With JWKS missing or unloadable and `exitOnJwksError` off, the check
-  **silently skips** (SPEC §8.7). Configure JWKS and set `exitOnJwksError=true` in
-  prod; this path adds no security guarantee beyond what that configuration gives.
+- **Credential is not bypassed relative to gRPC.** `/agent/invoke` forwards the
+  `Authorization: Bearer <jwt>` header into the **same credential check as a normal
+  gRPC call**, so an `@UnsafeWeb(requireCredential=true)` service is checked no
+  differently on this path. Note the agent path forwards **only** `Authorization`
+  (plus client-id and `traceparent`) — it does **not** forward a `Cookie` header, so
+  the cookie-based credential fallback that works on the web/gRPC path is **not
+  available on the agent surface** in the current implementation; send the JWT as a
+  bearer token. Whether the check actually **rejects** an unauthenticated call
+  depends on auth being configured: it enforces only when a credential verifier is
+  registered — i.e. `rpc.server.jwks` is set and loads. With JWKS missing or
+  unloadable and `exitOnJwksError` off, the check **silently skips** (SPEC §8.7).
+  Configure JWKS and set `exitOnJwksError=true` in prod; this path adds no security
+  guarantee beyond what that configuration gives.
 - **Auth and rate-limiting are the gateway's responsibility, not KRPC core.**
   `/agent/discover` exposes the full schema of every `@UnsafeWeb` service to any
   caller, and `/agent/invoke` reaches every `requireCredential=false` `@UnsafeWeb`

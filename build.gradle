@@ -49,13 +49,23 @@ subprojects {
         options.compilerArgs << '-parameters'
     }
 
-    // IOURING-001 Phase 1 CVE wave: import the Netty BOM at nettyGrpcVersion so EVERY io.netty:*
-    // (incl. transitive-only netty-codec-http2 / -socks / handler-proxy, which no module declares
-    // directly) converges on one version. Highest-wins beats the Quarkus BOM's non-strict 4.1.133
-    // constraint => lifts codec-http2 (both hot-path HTTP/2 CVEs) to 4.1.135 and preserves the
-    // single-Netty convergence invariant (c433f3f). Constraint-only; adds no dependency.
-    dependencies {
-        implementation platform("io.netty:netty-bom:$nettyGrpcVersion")
+    // IOURING-001 Phase 1 CVE wave: converge EVERY io.netty:* (incl. transitive-only
+    // netty-codec-http2 / -socks / handler-proxy, which no module declares directly) on
+    // nettyGrpcVersion so the CVE-fixed 4.1.135 reaches codec-http2 (both hot-path HTTP/2 CVEs)
+    // and the single-Netty convergence invariant (c433f3f) holds.
+    //
+    // BUILD-LOCAL ONLY (do NOT import io.netty:netty-bom as a platform): a published platform
+    // import leaks into every module's POM <dependencyManagement> + GMM endorseStrictVersions,
+    // which would suppress a downstream consumer's own BOM. resolutionStrategy.eachDependency runs
+    // at resolution time and is NEVER written to the POM/GMM, so consumers keep BOM precedence
+    // while krpc's own build (JVM + native) still converges on 4.1.135.
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'io.netty') {
+                details.useVersion "$nettyGrpcVersion"
+                details.because 'IOURING-001 CVE wave: single-Netty convergence to 4.1.135 (build-local, not published)'
+            }
+        }
     }
 
     plugins.withId('org.kordamp.gradle.jandex') {

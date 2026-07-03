@@ -32,7 +32,10 @@ public interface CacheManager {
         if(stub.returnType != byte[].class){
             value = message.getUtf8().getBytes(StandardCharsets.UTF_8);
         }else {
-            value = message.getBs();//.toByteArray();
+            // O10 (HARDEN-B2): getBs() hands back OutputProto's internal array by reference.
+            // Clone so a caller mutating the returned byte[] can't poison the cached entry.
+            var bs = message.getBs();
+            value = bs == null ? null : bs.clone();
         }
         set(cacheKey,value,stub.getExpireSeconds());
     }
@@ -49,7 +52,9 @@ public interface CacheManager {
         if(stub.returnType != byte[].class){
             bd.setUtf8(new String(bs,StandardCharsets.UTF_8));
         }else{
-            bd.setBs(bs);
+            // O10 (HARDEN-B2): clone the cached array before handing it out, so THIS caller's
+            // later mutation can't corrupt the shared cache value seen by other threads/calls.
+            bd.setBs(bs.clone());
         }
         return bd.build();
     }
@@ -58,11 +63,20 @@ public interface CacheManager {
     default String cacheKey(MethodStub stub,
                     InputProto input){
 
-        var json = input.getUtf8();
-        String paramKey  = json;
-        if(json.length()>KEY_MAX_SIZE_UNDIGEST){
-            paramKey = json.substring(0,32)+"---"+ SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8));
-        }
+        // C2 (HARDEN-B2): key on the explicit dataCase tristate, never a "utf8 non-empty" heuristic.
+        // setUtf8("") has dataCase == UTF8 but an empty payload; the old heuristic folded it onto the
+        // NOT_SET ("n:") key, so an empty-string arg collided with a no-arg call. Branch on dataCase
+        // so UTF8 / BS / DATA_NOT_SET never share a key and byte[] payloads never collapse together.
+        String paramKey = switch (input.getDataCase()) {
+            case UTF8 -> {
+                var json = input.getUtf8();
+                yield "u:" + (json.length() > KEY_MAX_SIZE_UNDIGEST
+                        ? json.substring(0, 32) + "---" + SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8))
+                        : json);
+            }
+            case BS -> "b:" + SimpleMD5.md5(input.getBs());
+            case DATA_NOT_SET -> "n:";
+        };
         return stub.methodDescriptor.getFullMethodName()+":"+paramKey;
     }
 

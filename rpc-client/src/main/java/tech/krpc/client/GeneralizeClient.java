@@ -44,7 +44,9 @@ public class GeneralizeClient {
         if (null != inputJson && inputJson.length() > 0) {
             input.setUtf8(inputJson);
         }
-        var call = channel.newCall(md, CallOptions.DEFAULT);
+        // O2 (HARDEN-B2): generalize/rpcurl path shares the one default-deadline authority so a
+        // hung upstream can't block forever (0/negative config = unlimited = old behaviour).
+        var call = channel.newCall(md, ClientDeadline.apply(CallOptions.DEFAULT));
 
         var headerForwardCall = new SimpleForwardingClientCall<>(call){
             @Override

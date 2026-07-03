@@ -224,6 +224,12 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
      * pipelined bytes) and re-armed once the queue drains.
      */
     private static void drain(ChannelHandlerContext ctx, ConnState st) {
+        if (st.closed) {
+            // HARDEN-B4 fix round 2: channel already inactive — drop any queued work and never
+            // dispatch on a closed channel (see channelInactive). The queue must be released.
+            st.queue.clear();
+            return;
+        }
         if (st.active) {
             return;
         }
@@ -322,6 +328,23 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         ctx.close();
     }
 
+    // HARDEN-B4 fix round 2: without this a client that disconnects while request A is in flight and
+    // B/C are queued leaks the queued tasks — drain() frees a slot only when A's response is written,
+    // so if A hangs the queued work stays pinned forever, and if A completes the next task would be
+    // dispatched on an already-dead channel. On channel close mark the ConnState closed, drop the
+    // queued tasks, and clear active so the state releases cleanly; drain()/writeResponse then refuse
+    // to dispatch or write on the closed channel. Runs on the eventLoop, like all ConnState access.
+    @Override
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+        ConnState st = ctx.channel().attr(STATE).get();
+        if (null != st) {
+            st.closed = true;
+            st.queue.clear();
+            st.active = false;
+        }
+        super.channelInactive(ctx);
+    }
+
     // AUD-omp-52: the pipeline's IdleStateHandler fires this when a connection has been read-idle
     // past HttpServer.READ_IDLE_SECONDS. Close it so a stalled/slow-loris client stops pinning a
     // worker. Non-idle user events are passed through unchanged.
@@ -368,6 +391,13 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             final HttpResponseStatus status,
             final String contentType,
             byte[] bytes, List<AsciiHeader> extHeaders) {
+        // HARDEN-B4 fix round 2: the connection may have closed after this response was scheduled (a
+        // handler runs on a virtual thread, so the channel can die while its write is in flight).
+        // Never write to a closed channel. This single write chokepoint guards both the handler and
+        // the error response paths. See channelInactive.
+        if (!ctx.channel().isActive()) {
+            return;
+        }
 
         //final byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
         if (null == bytes) {
@@ -430,6 +460,9 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     private static final class ConnState {
         final Deque<RequestTask> queue = new ArrayDeque<>();
         boolean active;
+        // HARDEN-B4 fix round 2: set once the channel goes inactive. Guards drain()/writeResponse so
+        // queued work is dropped (never dispatched) and nothing is written to a closed channel.
+        boolean closed;
     }
 
     /**

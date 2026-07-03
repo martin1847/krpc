@@ -44,6 +44,7 @@ class UnaryCallObserverIdempotencyTest {
         int sendMessageCount;
         boolean cancelled;              // drives isCancelled(); set by the test
         boolean throwOnFirstClose;      // simulate close() failing on a broken/cancelled call
+        boolean throwOnSend;            // simulate send failing on a call the transport already closed
 
         private boolean closed;
         private boolean firstCloseSeen;
@@ -55,7 +56,11 @@ class UnaryCallObserverIdempotencyTest {
 
         @Override
         public void sendHeaders(Metadata headers) {
-            // headers are irrelevant to the terminal-method contract under test
+            // O5 fix-round-1: a send on a call the transport already closed throws — mirror real gRPC.
+            if (throwOnSend) {
+                throw new IllegalStateException("call already closed");
+            }
+            // otherwise headers are irrelevant to the terminal-method contract under test
         }
 
         @Override
@@ -178,9 +183,9 @@ class UnaryCallObserverIdempotencyTest {
 
     @Test
     void onCompletedThrowingClose_leavesGuardSet_soLaterOnErrorIsNoOp() {
-        // The UnaryMethod catch path: onCompleted()'s close() throws. Because `completed` is set
-        // BEFORE close(), a following onError() sees the guard and is a no-op — it must NOT attempt a
-        // second close (which pre-fix would either throw or overwrite the status from the catch block).
+        // The UnaryMethod catch path: onCompleted()'s close() throws. Because the single `terminal`
+        // gate is latched BEFORE close(), a following onError() sees it set and is a no-op — it must
+        // NOT attempt a second close (which pre-fix would throw or overwrite the catch-block status).
         var fake = new FakeServerCall();
         fake.throwOnFirstClose = true;
         var obs = new UnaryCallObserver(fake, new Metadata());
@@ -191,6 +196,39 @@ class UnaryCallObserverIdempotencyTest {
 
         assertDoesNotThrow(() -> obs.onError(new RuntimeException("late")));
         assertEquals(1, fake.closeAttempts, "no second close attempt after a throwing onCompleted");
+        assertEquals(0, fake.closeCount);
+    }
+
+    @Test
+    void onNextSendThrows_thenOnError_isNoOp_firstSendErrorNotMasked() {
+        // THE O5 RED LINE (fix-round-1). Pre-fix, onNext's send set NEITHER aborted nor completed, so
+        // when a send threw (call already closed transport-side) the outer UnaryMethod catch called
+        // onError → a SECOND close() → IllegalStateException("call already closed"), masking the real
+        // send failure. The single terminal gate is now latched by the failing send, so onError no-ops.
+        var fake = new FakeServerCall();
+        fake.throwOnSend = true; // the call is already closed; the very first send throws
+        var obs = new UnaryCallObserver(fake, new Metadata());
+
+        // onNext dereferences ServerContext.current() for the response headers, so attach a context.
+        var sc = new ServerContext(null, null, null, null, null, new Metadata());
+        io.grpc.Context gctx = io.grpc.Context.current().withValue(ServerContext.SC_KEY, sc);
+        io.grpc.Context prev = gctx.attach();
+        RuntimeException firstError;
+        try {
+            var out = OutputProto.newBuilder().build();
+            // the FIRST real error is the send failure — it must propagate, not be swallowed.
+            firstError = assertThrows(RuntimeException.class, () -> obs.onNext(out));
+        } finally {
+            gctx.detach(prev);
+        }
+        assertEquals("call already closed", firstError.getMessage(),
+                "the first real error (the failed send) must propagate unmasked");
+
+        // The outer unary catch now fires onError(...). It MUST be a no-op: no second close attempt,
+        // no escaping IllegalStateException.
+        assertDoesNotThrow(() -> obs.onError(new RuntimeException("wrapped send failure")));
+        assertEquals(0, fake.closeAttempts,
+                "a call already dead on send must not be closed again by onError");
         assertEquals(0, fake.closeCount);
     }
 }

@@ -100,14 +100,28 @@ public class RpcResult<DTO> implements Serializable {
         return res;
     }
 
+    // C3 (fix-round-1): the code>0 invariant must hold on EVERY error factory, not just error(int,msg).
+    // error(CommonCode.OK) / any zero-or-negative CommonCode built a code==0 "error" — an envelope that
+    // isOk()==true yet was authored as a failure. Reject it at construction.
     public static <T> RpcResult<T> error(CommonCode it) {
+        Objects.requireNonNull(it, "RpcResult.error(CommonCode): code must be non-null");
+        if (it.value <= 0) {
+            throw new IllegalArgumentException("RpcResult.error(CommonCode): code must be > 0 (0 is OK, negatives unsupported), got " + it.name() + "=" + it.value);
+        }
         RpcResult<T> res = new RpcResult<>();
         res.code = it.value;
         res.msg = it.name();
         return res;
     }
 
+    // C3 (fix-round-1): forwarding an OK result as an "error" is the same contract break as the no-arg
+    // error() reinterpret — the forwarded envelope carries no error (code==0). Reject it here too so no
+    // error factory can mint a code<=0 failure.
     public static <T> RpcResult<T> error(RpcResult<?> error) {
+        Objects.requireNonNull(error, "RpcResult.error(RpcResult): result must be non-null");
+        if (error.code <= 0) {
+            throw new IllegalArgumentException("RpcResult.error(RpcResult): source is not a failure (code must be > 0), got code=" + error.code);
+        }
         return (RpcResult<T>) error;
     }
 

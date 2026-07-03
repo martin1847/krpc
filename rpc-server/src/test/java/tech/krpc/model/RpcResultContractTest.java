@@ -42,6 +42,34 @@ class RpcResultContractTest {
     }
 
     @Test
+    void error_commonCode_rejectsOk() {
+        // C3 (fix-round-1): error(CommonCode.OK) built a code==0 "error" — an envelope that isOk()==true
+        // yet authored as a failure. The code>0 invariant must hold on the single-arg overload too.
+        assertThrows(IllegalArgumentException.class, () -> RpcResult.error(CommonCode.OK));
+    }
+
+    @Test
+    void error_commonCode_allowsFailureCode() {
+        RpcResult<String> r = RpcResult.error(CommonCode.INTERNAL);
+        assertEquals(CommonCode.INTERNAL.value, r.getCode());
+        assertEquals("INTERNAL", r.getMsg());
+    }
+
+    @Test
+    void error_forwardStatic_rejectsOkResult() {
+        // C3 (fix-round-1): forwarding an OK result as an error carries no error (code==0) — same
+        // break as the no-arg error(). The static forward overload must reject it too.
+        RpcResult<String> ok = RpcResult.ok("d");
+        assertThrows(IllegalArgumentException.class, () -> RpcResult.error(ok));
+    }
+
+    @Test
+    void error_forwardStatic_allowsFailure_preservesCode() {
+        RpcResult<Integer> forwarded = RpcResult.error(RpcResult.<String>error(7, "e"));
+        assertEquals(7, forwarded.getCode());
+    }
+
+    @Test
     void error_forwardGuard_rejectsOkResult() {
         // error() on an OK result carries no error to forward — a silent contract break pre-fix.
         RpcResult<String> ok = RpcResult.ok("d");

@@ -73,6 +73,16 @@ class RefUtilsFailFastTest {
         }
     }
 
+    @RpcService
+    interface StaticHelperLegalService {
+        RpcResult<String> real();
+
+        // legal ENDPOINT signature (RpcResult return, 0 params) but static ⇒ a helper, not an endpoint.
+        static RpcResult<String> helper() {
+            return null;
+        }
+    }
+
     @Test
     void legalService_registersEndpoints_noThrow() {
         List<MethodStub> stubs = RefUtils.toRpcMethods("app", LegalService.class);
@@ -96,12 +106,27 @@ class RefUtilsFailFastTest {
     }
 
     @Test
-    void defaultHelperWithLegalSig_isRegistered_noThrow() {
-        // A default method with a legal endpoint signature is not an endpoint declaration, so it is
-        // never signature-checked — and being RpcResult<..>/≤1-param it still lands in the list.
+    void defaultHelperWithLegalSig_isNotRegistered() {
+        // C9 (fix-round-1): a default method is a HELPER (carries a body), never an endpoint — even
+        // with a legal endpoint signature. It must NOT be registered (pre-fix it slipped in because
+        // the filter kept any RpcResult<..>/≤1-param method). The real endpoint still registers.
         List<MethodStub> stubs = assertDoesNotThrow(
                 () -> RefUtils.toRpcMethods("app", DefaultHelperLegalService.class));
         assertTrue(containsMethod(stubs, "real"), "the real endpoint must be registered");
+        assertFalse(containsMethod(stubs, "helper"),
+                "a default helper (legal sig or not) must NOT be registered as an endpoint");
+    }
+
+    @Test
+    void staticHelperWithLegalSig_isNotRegistered() {
+        // C9 (fix-round-1) RED LINE: a legal-signature `static RpcResult<T> helper()` passed the
+        // illegal-check (static ⇒ exempt) AND the old registration filter (RpcResult, 0 params), so it
+        // was registered as a phantom endpoint. It must NOT be — static methods are helpers, not RPCs.
+        List<MethodStub> stubs = assertDoesNotThrow(
+                () -> RefUtils.toRpcMethods("app", StaticHelperLegalService.class));
+        assertTrue(containsMethod(stubs, "real"), "the real endpoint must be registered");
+        assertFalse(containsMethod(stubs, "helper"),
+                "a legal-signature static helper must NOT be registered as an endpoint");
     }
 
     @Test

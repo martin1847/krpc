@@ -135,8 +135,13 @@ public abstract class RefUtils {
             }
         }
 
+        // C9 (fix-round-1): register ONLY declared endpoints. The old filter kept any `RpcResult`/≤1-param
+        // method, but getMethods() also returns interface static/default methods — a legal-signature
+        // `static RpcResult<T> helper()` slipped through as a phantom endpoint. isDeclaredRpcEndpoint is the
+        // single source of truth for "is an endpoint" (excludes static/default/Object); the fail-fast loop
+        // above already proved every declared endpoint has a legal signature, so no re-check is needed here.
         return Stream.of(clz.getMethods())
-                .filter(m -> m.getReturnType() == RpcResult.class && m.getParameterCount() <= 1)
+                .filter(RefUtils::isDeclaredRpcEndpoint)
                 .map(m -> new MethodStub(grpcServive,rpcServiceName, m))
                 .collect(Collectors.toList());
 

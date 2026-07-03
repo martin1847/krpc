@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
+import io.netty.handler.timeout.IdleStateEvent;
 import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -212,6 +213,19 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
         log.error("exceptionCaught : close ChannelHandlerContext ctx ", cause);
         ctx.close();
+    }
+
+    // AUD-omp-52: the pipeline's IdleStateHandler fires this when a connection has been read-idle
+    // past HttpServer.READ_IDLE_SECONDS. Close it so a stalled/slow-loris client stops pinning a
+    // worker. Non-idle user events are passed through unchanged.
+    @Override
+    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        if (evt instanceof IdleStateEvent) {
+            log.debug("closing read-idle connection {}", ctx.channel().remoteAddress());
+            ctx.close();
+            return;
+        }
+        super.userEventTriggered(ctx, evt);
     }
 
     private static void writeNotFound(ChannelHandlerContext ctx, String uri) {

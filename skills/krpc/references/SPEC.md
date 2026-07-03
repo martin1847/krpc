@@ -1,5 +1,10 @@
 # KRPC Development Spec
 
+<!-- CANONICAL. This root SPEC.md is the source of truth. A byte-identical copy is
+     bundled at skills/krpc/references/SPEC.md so the `krpc` agent skill stays
+     self-contained when copied into a consumer project — edit THIS file; CI
+     (.github/workflows/skill-sync.yml) fails if the mirror drifts. -->
+
 A tool-agnostic handbook for any coding agent (Claude, Codex, …) **writing or
 calling KRPC services**. It encodes the framework's authoring conventions with
 code evidence (`file:line`). Governance/architecture authority lives in

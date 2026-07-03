@@ -14,6 +14,7 @@
 package tech.krpc.server.jws;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -355,6 +356,150 @@ class JwsVerifyHardenTest {
         verify.loadJwks();
         assertVerifyOk(verify, jwt(k2, validClaims("u")),
                 "after recovery a newly-served K2 token verifies immediately (window not stuck)");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 15. B1 (fix-round-1): degenerate 64-byte signature (all-zero R or all-zero S) ⇒ UNAUTHENTICATED.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void degenerateSignature_allZeroRorS_isUnauthenticated() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+
+        // Positive control: the untampered canonical signature still verifies — the new degenerate
+        // guards must not reject legitimate R||S signatures.
+        String valid = jwt(k1, validClaims("u"));
+        assertVerifyOk(verify, valid, "untampered token still verifies (guards don't break canonical sigs)");
+
+        // R nonzero, S all zero: length 64 clears the length guard, then jws2der's S-scan reaches
+        // k==0 (pre-fix it indexed one past the array → AIOOBE that escaped as UNKNOWN). Contract:
+        // IllegalArgumentException → UNAUTHENTICATED.
+        byte[] sZero = new byte[64];
+        sZero[0] = 5;
+        assertVerifyCode(verify, reSign(valid, Es256Signature.base64(sZero)),
+                Status.Code.UNAUTHENTICATED,
+                "all-zero-S 64-byte signature ⇒ UNAUTHENTICATED (regression: was UNKNOWN)");
+
+        // R all zero, S nonzero: pre-fix a zero-length DER integer → SignatureException → PERMISSION_DENIED.
+        // Contract: IllegalArgumentException → UNAUTHENTICATED.
+        byte[] rZero = new byte[64];
+        rZero[32] = 5;
+        assertVerifyCode(verify, reSign(valid, Es256Signature.base64(rZero)),
+                Status.Code.UNAUTHENTICATED,
+                "all-zero-R 64-byte signature ⇒ UNAUTHENTICATED (regression: was PERMISSION_DENIED)");
+
+        // Direct primitive guard (mirrors test 9's assertThrows): jws2der itself rejects both arrays.
+        assertThrows(IllegalArgumentException.class, () -> Es256Jwk.jws2der(sZero),
+                "jws2der must reject an all-zero-S concat");
+        assertThrows(IllegalArgumentException.class, () -> Es256Jwk.jws2der(rZero),
+                "jws2der must reject an all-zero-R concat");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 16. B2 (fix-round-1): valid-signature token whose header omits kid ⇒ UNAUTHENTICATED.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void missingKid_isUnauthenticated() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+
+        // Header JSON carries alg but NO kid → getKeyId() == null. Pre-fix: jwksCache.get(null) NPEs
+        // (ConcurrentHashMap forbids null keys) → UNKNOWN. The signature is genuinely valid (signed
+        // with k1 over the same header/payload), so only the missing-kid guard can reject it.
+        String headerNoKid = b64("{\"alg\":\"ES256\"}");
+        String token = new Es256Signature(k1.priB64).sign(headerNoKid, b64(validClaims("u")));
+
+        assertVerifyCode(verify, token, Status.Code.UNAUTHENTICATED,
+                "token missing kid ⇒ UNAUTHENTICATED (regression: was NPE → UNKNOWN)");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 17. B3 (fix-round-1): ready + zero-usable-keys refresh REVOKES (no throw, stays ready, denied).
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void revocation_emptyOrNullKeysRefresh_revokesButStaysReady() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+        String token = jwt(k1, validClaims("u"));
+        assertVerifyOk(verify, token, "baseline: token verifies while K1 is served");
+
+        // Empty keys array on an ALREADY-ready verifier = full revocation. doFetch must REPLACE the
+        // live map with an empty one and RETURN — a throw would be swallowed by maybeRefetch, leaving
+        // the STALE keyset live and the revoked token still verifying (the bug this fixes).
+        currentJwks = "{\"keys\":[]}";
+        assertDoesNotThrow(verify::loadJwks,
+                "empty-keys refresh on a ready verifier must NOT throw (else stale keys stay live)");
+        assertTrue(verify.isReady(),
+                "revocation keeps the verifier ready (fail-closed gate not reopened → NOT UNAVAILABLE)");
+        assertVerifyCode(verify, token, Status.Code.PERMISSION_DENIED,
+                "after empty-keys revocation the previously-valid token is denied (kid now missing)");
+
+        // Same for null keys ({} → jwks.keys == null): no NPE, no throw, still ready, still revoked.
+        currentJwks = "{}";
+        assertDoesNotThrow(verify::loadJwks,
+                "null-keys refresh on a ready verifier must NOT throw (no NPE on jwks.keys)");
+        assertTrue(verify.isReady(), "null-keys revocation keeps the verifier ready");
+        assertVerifyCode(verify, token, Status.Code.PERMISSION_DENIED,
+                "after null-keys revocation the previously-valid token is denied");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 18. advisory (fix-round-1): aud may be a single JSON string (RFC 7519), not only an array.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void singleStringAudience_acceptedOrCleanlyRejected() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1)).requiredAudiences(List.of("api-x"));
+        long exp = nowSec() + 3600;
+
+        // Matching single-STRING aud ⇒ OK. Pre-fix: (List) cast on a String → ClassCastException → UNKNOWN.
+        assertVerifyOk(verify, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"aud\":\"api-x\"}"),
+                "single-string aud matching requiredAudiences ⇒ OK (regression: was CCE → UNKNOWN)");
+
+        // Non-matching single-STRING aud ⇒ clean UNAUTHENTICATED (not UNKNOWN).
+        assertVerifyCode(verify, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"aud\":\"other\"}"),
+                Status.Code.UNAUTHENTICATED,
+                "single-string aud disjoint from requiredAudiences ⇒ UNAUTHENTICATED");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 19. advisory (fix-round-1): a slow-drip body is bounded by bodyReadTimeoutMillis — loadJwks
+    //     throws at the read deadline (not the 2s stall / 10s request timeout) and stays fail-closed.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void stalledBody_boundedByReadTimeout_failsClosed() throws Exception {
+        // Inline server (NOT the shared startJwks handler, which writes immediately): promise 1000
+        // bytes, deliver only a few, then sleep 2s so the client's readNBytes blocks mid-body.
+        HttpServer slow = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        slow.createContext(JWKS_PATH, ex -> {
+            ex.getResponseHeaders().add("Content-Type", "application/json");
+            ex.sendResponseHeaders(200, 1000);
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write("{\"keys\"".getBytes(UTF_8));
+                os.flush();
+                Thread.sleep(2000);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        slow.start();
+        try {
+            String url = "http://127.0.0.1:" + slow.getAddress().getPort() + JWKS_PATH;
+            JwsVerify verify = new JwsVerify(url);
+            verify.bodyReadTimeoutMillis = 300;
+
+            long start = System.nanoTime();
+            assertThrows(RuntimeException.class, verify::loadJwks,
+                    "a stalled response body must make loadJwks throw at the read deadline");
+            long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+
+            assertTrue(elapsedMs < 1500,
+                    () -> "loadJwks must return at the ~300ms read deadline, not the 2s stall / 10s "
+                            + "request timeout; elapsed=" + elapsedMs + "ms");
+            assertFalse(verify.isReady(), "a stalled fetch must leave the verifier fail-closed (not ready)");
+        } finally {
+            slow.stop(0);
+        }
     }
 
     // ==========================================================================================

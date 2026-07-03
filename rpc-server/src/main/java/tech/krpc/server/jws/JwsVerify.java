@@ -4,6 +4,7 @@
  */
 package tech.krpc.server.jws;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -18,7 +19,14 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -53,6 +61,13 @@ public class JwsVerify implements CredentialVerify {
     static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     static final int MAX_JWKS_BYTES = 1 << 20; // 1 MiB
+
+    // advisory (HARDEN-B1 fix-round-1): wall-clock deadline for CONSUMING the response body. The
+    // HttpClient request timeout only covers up to the response headers; a slow-drip body needs its
+    // own bound. Default = REQUEST_TIMEOUT; package-private + non-final so tests can shorten it.
+    static final ExecutorService BODY_READ_POOL =
+            Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("jwks-body-", 0).factory());
+    long bodyReadTimeoutMillis = REQUEST_TIMEOUT.toMillis();
 
     // O1 (HARDEN-B1): background fail-closed retry backoff — gentle so an IdP blip doesn't
     // hammer it; grows to a ceiling. See bootstrap()/startBackgroundRetry().
@@ -195,7 +210,10 @@ public class JwsVerify implements CredentialVerify {
     /**
      * C4/O3/O-sec-47 (HARDEN-B1): fetch JWKS with timeout + body cap, then REBUILD the keyset map
      * (replace, not merge). Advances {@link #lastTryFetch} on every attempt and, only on success,
-     * {@link #lastOkFetch} and {@link #ready}. Empty/null keys ⇒ fail-closed (throws), never NPE.
+     * {@link #lastOkFetch} (and {@link #ready} on the first load). B3 (fix-round-1): a successful
+     * fetch yielding ZERO usable keys is a REVOCATION — when already ready it REPLACES the live map
+     * with an empty one and returns (fail-closed, no throw so maybeRefetch can't keep stale keys);
+     * before the first success it throws and stays not-ready. Never NPEs on null keys.
      * Caller MUST hold {@link #fetchLock}.
      */
     void doFetch() {
@@ -213,7 +231,11 @@ public class JwsVerify implements CredentialVerify {
             byte[] body;
             try (InputStream in = resp.body()) {
                 // C4 (HARDEN-B1): read at most MAX_JWKS_BYTES+1; overflow ⇒ reject (anti-OOM).
-                body = in.readNBytes(MAX_JWKS_BYTES + 1);
+                // advisory (HARDEN-B1 fix-round-1): the 1 MiB cap bounds SIZE but ofInputStream +
+                // readNBytes has no wall clock (the HttpClient request timeout only covers up to the
+                // response headers) — a hostile IdP could drip the body forever and pin this thread.
+                // Read under an explicit deadline; on timeout close the stream to abort the read.
+                body = readBodyBounded(in);
             }
             if (body.length > MAX_JWKS_BYTES) {
                 throw new RuntimeException("jwks body exceeds " + MAX_JWKS_BYTES + " bytes");
@@ -221,24 +243,40 @@ public class JwsVerify implements CredentialVerify {
             var json = new String(body, StandardCharsets.UTF_8);
             var jwks = JsonUtils.parse(json, Jwks.class);
 
-            // O-sec-47 (HARDEN-B1): guard null/empty keys — treat as a failed fetch (fail-closed),
-            // do NOT clear a good keyset and do NOT NPE on jwks.keys.
-            if (jwks == null || jwks.keys == null || jwks.keys.isEmpty()) {
-                throw new RuntimeException("jwks has no keys");
-            }
-
-            // O3 (HARDEN-B1): build a fresh map and REPLACE the reference (revocation/rotation).
+            // O3/O-sec-47 (HARDEN-B1): build the fresh keyset from the fetched document.
             var rebuilt = new ConcurrentHashMap<String, ECPublicKey>();
-            for (var jwk : jwks.keys) {
-                if (Es256Jwk.ELLIPTIC_CURVE.equals(jwk.get(Jwks.KEY_TYPE))) {
-                    var ecKey = new Es256Jwk(jwk);
-                    rebuilt.put(ecKey.kid, ecKey.toECPublicKey());
+            if (jwks != null && jwks.keys != null) {
+                for (var jwk : jwks.keys) {
+                    if (Es256Jwk.ELLIPTIC_CURVE.equals(jwk.get(Jwks.KEY_TYPE))) {
+                        var ecKey = new Es256Jwk(jwk);
+                        rebuilt.put(ecKey.kid, ecKey.toECPublicKey());
+                    }
                 }
             }
+
+            // B3 (HARDEN-B1 fix-round-1): a SUCCESSFUL fetch that definitively yields ZERO usable
+            // keys (empty/null keys array, or only non-EC entries) is NOT a fetch failure — it is
+            // a REVOCATION signal ("all keys withdrawn"). Two cases, split on readiness:
+            //   • already ready: REPLACE the live map with the empty one and fail closed — every
+            //     kid now misses → PERMISSION_DENIED. Crucially we must NOT throw here: a throw is
+            //     swallowed by maybeRefetch(), which would leave the STALE keyset live and keep
+            //     serving revoked tokens (the regression this fixes / O3). It was a real fetch, so
+            //     advance lastOkFetch; ready stays true.
+            //   • not yet ready (bootstrap): stay fail-closed + not-ready and THROW, so scheme (b)
+            //     aborts startup and scheme (a) keeps the background retry running (→ UNAVAILABLE).
             if (rebuilt.isEmpty()) {
-                throw new RuntimeException("jwks has no usable EC keys");
+                if (ready) {
+                    jwksCache = rebuilt;
+                    lastJwks = jwks;
+                    lastOkFetch = System.currentTimeMillis();
+                    log.warn("!!! JWKS fetched with NO usable keys — treating as full revocation, "
+                            + "failing CLOSED (every token now rejected) : {}", url);
+                    return;
+                }
+                throw new RuntimeException("jwks has no usable keys");
             }
 
+            // O3 (HARDEN-B1): REPLACE the reference (revocation/rotation), never merge.
             jwksCache = rebuilt;
             lastJwks = jwks;
             lastOkFetch = System.currentTimeMillis();
@@ -251,6 +289,38 @@ public class JwsVerify implements CredentialVerify {
             // checked exceptions from send()/toECPublicKey() → uniform runtime failure.
             log.error("error fetch jwks : {} : {}", url, e.getMessage());
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * advisory (HARDEN-B1 fix-round-1): read at most {@code MAX_JWKS_BYTES+1} bytes under a
+     * wall-clock deadline ({@link #bodyReadTimeoutMillis}). Runs the blocking read on a virtual
+     * thread; if it overruns, the source stream is closed to unblock it and a failure is thrown so
+     * the fetch is treated as failed (last-known-good keyset kept). Caller MUST hold the fetch lock.
+     */
+    byte[] readBodyBounded(InputStream in) {
+        var task = CompletableFuture.supplyAsync(() -> {
+            try {
+                return in.readNBytes(MAX_JWKS_BYTES + 1);
+            } catch (IOException e) {
+                throw new CompletionException(e);
+            }
+        }, BODY_READ_POOL);
+        try {
+            return task.get(bodyReadTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException te) {
+            try {
+                in.close(); // abort the blocked readNBytes on the worker VT
+            } catch (IOException ignore) {
+                // best-effort; the read task is already doomed
+            }
+            task.cancel(true);
+            throw new RuntimeException("jwks body read timed out after " + bodyReadTimeoutMillis + "ms");
+        } catch (ExecutionException ee) {
+            throw new RuntimeException(ee.getCause());
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("jwks body read interrupted");
         }
     }
 
@@ -345,6 +415,14 @@ public class JwsVerify implements CredentialVerify {
             signature = Base64.getUrlDecoder().decode(jws.sign64());
         } catch (RuntimeException e) {
             throw malformed("malformed token", e);
+        }
+
+        // B2 (HARDEN-B1 fix-round-1): a well-formed header JSON with no `kid` yields kid == null.
+        // useKey → jwksCache.get(null) NPEs on ConcurrentHashMap (null keys forbidden), and that
+        // NPE escapes verify() as UNKNOWN. Reject a missing/blank kid up front as UNAUTHENTICATED
+        // (malformed token), never touching the map.
+        if (null == kid || kid.isBlank()) {
+            throw malformed("token missing kid", null);
         }
 
         var key = useKey(kid);

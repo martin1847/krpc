@@ -181,12 +181,28 @@ public class Es256Jwk {
      */
     public static byte[] jws2der(byte[] jwsSignature)  {
 
+        // O-sec-16 (HARDEN-B1 fix-round-1): jws2der is only ever reached with an already
+        // length-checked 64-byte concat, but keep it self-defending — an odd/short array would
+        // desync the R/S offsets. Reject as IllegalArgumentException so verify()'s catch maps it
+        // to UNAUTHENTICATED, never an AIOOBE that escapes to UNKNOWN.
+        if (jwsSignature == null || jwsSignature.length == 0 || (jwsSignature.length & 1) != 0) {
+            throw new IllegalArgumentException(
+                    "invalid ES256 concat length: " + (jwsSignature == null ? "null" : jwsSignature.length));
+        }
+
         int rawLen = jwsSignature.length / 2;
 
         int i = rawLen;
 
         while ((i > 0) && (jwsSignature[rawLen - i] == 0)) {
             i--;
+        }
+
+        // O-sec-16 (HARDEN-B1 fix-round-1): a degenerate all-zero R (i == 0) is an invalid ECDSA
+        // signature. Left unguarded it emits a zero-length DER integer → SignatureException →
+        // PERMISSION_DENIED. Reject it here as malformed (IllegalArgumentException → UNAUTHENTICATED).
+        if (i == 0) {
+            throw new IllegalArgumentException("degenerate ES256 signature: R is all zero");
         }
 
         int j = i;
@@ -199,6 +215,13 @@ public class Es256Jwk {
 
         while ((k > 0) && (jwsSignature[2 * rawLen - k] == 0)) {
             k--;
+        }
+
+        // O-sec-16 (HARDEN-B1 fix-round-1): a degenerate all-zero S (k == 0) is invalid AND, left
+        // unguarded, indexes jwsSignature[2*rawLen] one past the end → AIOOBE that escapes the
+        // verify() catch as UNKNOWN. Reject as malformed here (→ UNAUTHENTICATED).
+        if (k == 0) {
+            throw new IllegalArgumentException("degenerate ES256 signature: S is all zero");
         }
 
         int l = k;

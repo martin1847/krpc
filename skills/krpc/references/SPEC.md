@@ -277,8 +277,13 @@ An unknown `kid` triggers a JWKS refetch on a short **30 s** backoff
 **hit**, JWKS is refreshed in the background at most once per **5 min**
 (`GAP_MILL`) — and each successful fetch **rebuilds** the keyset (replace, not
 merge), so a key **removed** from the published JWKS stops verifying within that
-window (revocation works). A **failed** refetch keeps the last-known-good keyset
-serving and does **not** burn the 5-min window (`JwsVerify.java`, O3/O4).
+serving and does **not** burn the 5-min window (`JwsVerify.java`, O3/O4). A successful
+fetch that returns **zero usable keys** (`{"keys":[]}`, null keys, or only non-EC
+entries) on an already-ready verifier is treated as **full revocation** — the live
+keyset is replaced with an empty map so every `kid` misses and is rejected
+`PERMISSION_DENIED` (fail-closed), rather than the empty result being dropped and the
+stale keyset kept alive (HARDEN-B1 fix-round-1, O3). Before the first successful load,
+an empty/null-keys document instead keeps the verifier not-ready → `UNAVAILABLE`.
 
 ### 8.7 Production hardening — fail-closed by default
 
@@ -313,16 +318,20 @@ rpc.server.exitOnJwksError=true
   `nbf` is more than 60 s in the future is rejected `UNAUTHENTICATED` (HARDEN-B1,
   behaviour change; tokens without `nbf` are unaffected).
 - **`aud`** validation is **opt-in, default OFF** (behaviour unchanged for single-`aud`
-  deployments). Set a comma-separated allow-list to enable:
+  deployments). Per RFC 7519 the token's `aud` may be a single string **or** an array;
+  both are accepted (a single-string `aud` no longer errors). Set a comma-separated
+  allow-list to enable:
 
 ```properties
 # optional: reject tokens whose aud does not intersect this list. empty = off.
 rpc.server.jwsAudiences=api-gateway,internal
 ```
 
-- Malformed tokens (bad structure / base64 / JSON / missing `exp`) and
-  non-canonical signatures (not exactly 64 raw bytes, incl. bare ASN.1/DER) are
-  rejected `UNAUTHENTICATED` and logged at DEBUG only (no per-token stack-trace flood).
+- Malformed tokens (bad structure / base64 / JSON / missing `exp` / missing `kid`) and
+  non-canonical signatures (not exactly 64 raw bytes, incl. bare ASN.1/DER and
+  degenerate all-zero-R / all-zero-S concat forms) are rejected `UNAUTHENTICATED` and
+  logged at DEBUG only (no per-token stack-trace flood). No malformed/empty/failed path
+  escapes as gRPC `UNKNOWN` (HARDEN-B1 fix-round-1).
 
 ---
 

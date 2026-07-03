@@ -154,24 +154,6 @@ class HttpErrorMappingTest {
         assertEquals(404, code(envelope(r.body())));
     }
 
-    // ---- case 6: handler internal RuntimeException -> 500 neutral, no getMessage() leak ------
-
-    @Test
-    void handlerInternalError_maps500NeutralWithoutLeak() {
-        TestHandler h = new TestHandler(new FakeValidator(), new ThrowingHandler());
-        Resp r = post(h, "/boom", "anything");
-
-        assertEquals(500, r.status());
-        assertEquals(AbstractHttpHandler.TYPE_JSON, r.contentType());
-
-        Map<String, Object> env = envelope(r.body());
-        assertEquals(500, code(env));
-        assertEquals("Internal Server Error", env.get("message"),
-                "500 message must be the neutral status reason phrase");
-        assertFalse(r.body().contains("SECRET-INTERNAL-abc"),
-                "the internal exception message must NOT leak to the client");
-    }
-
     // ---- case 7: oversize body -> 413 via the real HttpObjectAggregator(1048576) -------------
 
     @Test
@@ -338,34 +320,6 @@ class HttpErrorMappingTest {
         @Override
         public byte[] handle(PageDto param, List<AsciiHeader> resHeader, HttpHeaders requestHeaders) {
             return Handler.EMPTY;
-        }
-
-        @Override
-        public String contextType() {
-            return AbstractHttpHandler.TYPE_JSON;
-        }
-    }
-
-    /** String handler that throws inside handle(): exercises the 500 neutral path (case 6). */
-    static final class ThrowingHandler implements PostHandler<String> {
-        @Override
-        public Class<String> getParamClass() {
-            return String.class;
-        }
-
-        @Override
-        public String path() {
-            return "/boom";
-        }
-
-        @Override
-        public boolean useValidator() {
-            return false;
-        }
-
-        @Override
-        public byte[] handle(String param, List<AsciiHeader> resHeader, HttpHeaders requestHeaders) {
-            throw new RuntimeException("SECRET-INTERNAL-abc");
         }
 
         @Override

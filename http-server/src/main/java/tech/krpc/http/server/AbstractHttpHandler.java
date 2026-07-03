@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -60,6 +62,13 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     protected final Map<String, PostHandler> postMap = new HashMap<>();
 
     protected final Map<String, GetHandler> getHanlderMap = new HashMap<>();
+
+    // O6 + AUD-omp-09: business logic must NOT run on the netty NIO worker eventLoop — a blocking
+    // handler (DB / downstream call) there starves the whole front door (workerGroup is bounded).
+    // Each request's handle() is dispatched to a virtual thread; the response write is scheduled
+    // back onto the channel's eventLoop (netty threading model: writes belong to the eventLoop,
+    // never a foreign thread). Virtual threads are daemon, so no explicit shutdown is needed.
+    static final ExecutorService HANDLER_VT = Executors.newVirtualThreadPerTaskExecutor();
 
     public abstract Validator getValidator();
 
@@ -123,17 +132,45 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     }
 
     <ParamDTO> void writeHandler(ChannelHandlerContext ctx, Handler<ParamDTO> handler, ParamDTO dto, HttpHeaders requestHeaders) {
-        List<AsciiHeader> extHeaders = new ArrayList<AsciiHeader>();
-        try {
-            var bytes = handler.handle(dto, extHeaders, requestHeaders);
-            var status = extractStatusOverride(extHeaders);
-            writeResponse(ctx, status, handler.contextType(), bytes, extHeaders);
-        } catch (final Exception ex) {
-            // C7 + AUD-omp-21: never echo ex.getMessage() to an agent/MCP client — the internal
-            // reason stays in the log only; the client gets a neutral 500 JSON envelope.
-            log.error("handler " + handler.path() + " error", ex);
-            writeError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, null);
-        }
+        // O6 backpressure: stop reading further requests on THIS connection before handing off to a
+        // virtual thread, so a slow handler cannot pull an unbounded backlog off the socket — bounds
+        // in-flight blocking work to <=1 per connection. autoRead is re-enabled on the eventLoop
+        // once the response is queued (setAutoRead(true) re-arms the read). All autoRead / write
+        // calls stay on the eventLoop; only handle() runs on the VT. dto/extHeaders/requestHeaders
+        // are already materialized off the request ByteBuf, so the VT touches nothing refcounted.
+        ctx.channel().config().setAutoRead(false);
+        HANDLER_VT.execute(() -> {
+            HttpResponseStatus status;
+            String contentType;
+            byte[] bytes;
+            List<AsciiHeader> extHeaders = new ArrayList<AsciiHeader>();
+            try {
+                bytes = handler.handle(dto, extHeaders, requestHeaders);
+                status = extractStatusOverride(extHeaders);
+                contentType = handler.contextType();
+            } catch (final Throwable ex) {
+                // C7 + AUD-omp-21: never echo ex.getMessage() — internal reason stays in the log;
+                // client gets a neutral 500 JSON envelope. Catch Throwable so the response AND the
+                // autoRead re-enable below are guaranteed even on an Error.
+                log.error("handler " + handler.path() + " error", ex);
+                status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+                contentType = TYPE_JSON;
+                bytes = errorBody(status, null);
+                extHeaders = null;
+            }
+            final HttpResponseStatus fStatus = status;
+            final String fContentType = contentType;
+            final byte[] fBytes = bytes;
+            final List<AsciiHeader> fExtHeaders = extHeaders;
+            ctx.channel().eventLoop().execute(() -> {
+                try {
+                    writeResponse(ctx, fStatus, fContentType, fBytes, fExtHeaders);
+                } finally {
+                    // Re-arm reads for the next request on this connection (false->true fires read()).
+                    ctx.channel().config().setAutoRead(true);
+                }
+            });
+        });
     }
 
     // ADR-0004 (AGENT-001 P1): pull the status-override sentinel out of the response
@@ -235,20 +272,23 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     }
 
     /**
-     * Writes an error as a uniform JSON envelope {@code {"code":<status>,"message":<msg>}} with
-     * {@code content-type: application/json} (C7: body and content-type always match). A null
+     * Builds a uniform JSON error envelope {@code {"code":<status>,"message":<msg>}} (C7). A null
      * message falls back to the status reason phrase. AUD-omp-21: callers pass only client-safe
      * text — internal reasons stay in the log — so nothing sensitive reaches the wire.
      */
-    private static void writeError(final ChannelHandlerContext ctx, final HttpResponseStatus status, String msg) {
+    private static byte[] errorBody(final HttpResponseStatus status, String msg) {
         if (null == msg) {
             msg = status.reasonPhrase();
         }
         var envelope = new LinkedHashMap<String, Object>();
         envelope.put("code", status.code());
         envelope.put("message", msg);
-        var body = JsonUtils.stringify(envelope).getBytes(StandardCharsets.UTF_8);
-        writeResponse(ctx, status, TYPE_JSON, body, null);
+        return JsonUtils.stringify(envelope).getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** Writes {@link #errorBody} with {@code content-type: application/json} (body/type always match). */
+    private static void writeError(final ChannelHandlerContext ctx, final HttpResponseStatus status, String msg) {
+        writeResponse(ctx, status, TYPE_JSON, errorBody(status, msg), null);
     }
 
     /**

@@ -9,6 +9,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,6 +34,7 @@ import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.krpc.util.JsonUtils;
+import tech.krpc.util.JsonDecodeException;
 
 /**
  *
@@ -84,7 +86,27 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             // post with parameters
             var postHandler = postMap.get(query.rawPath());
             if (null != postHandler) {
-                var dto = parsePost(request, postHandler);
+                final Object dto;
+                try {
+                    dto = parsePost(request, postHandler);
+                } catch (JsonDecodeException ex) {
+                    // AUD-omp-20/omp-21: parsePost's JsonUtils.parse ran BEFORE writeHandler's
+                    // try, so a malformed body escaped to exceptionCaught -> ctx.close() -> a bare
+                    // connection reset with no HTTP response. Now it is a 400 JSON here. Message is
+                    // JsonDecodeException's neutral text; Jackson internals stay in the cause/log.
+                    log.warn("bad request body on {}: {}", postHandler.path(), ex.getMessage());
+                    writeError(ctx, HttpResponseStatus.BAD_REQUEST, ex.getMessage());
+                    return;
+                } catch (HttpError ex) {
+                    // Missing body / validation failure -> 400 (C7 + AUD-omp-21).
+                    writeError(ctx, ex.status, ex.getMessage());
+                    return;
+                } catch (RuntimeException ex) {
+                    // Any other parse-time failure: neutral 500, never a silent close.
+                    log.error("parse error on {}", postHandler.path(), ex);
+                    writeError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, null);
+                    return;
+                }
 
                 if (!query.rawQuery().isEmpty() && dto instanceof QueryStringAware) {
                     ((QueryStringAware) dto).setQueryString(query);
@@ -106,8 +128,10 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             var status = extractStatusOverride(extHeaders);
             writeResponse(ctx, status, handler.contextType(), bytes, extHeaders);
         } catch (final Exception ex) {
+            // C7 + AUD-omp-21: never echo ex.getMessage() to an agent/MCP client — the internal
+            // reason stays in the log only; the client gets a neutral 500 JSON envelope.
             log.error("handler " + handler.path() + " error", ex);
-            writeInternalServerError(ctx, handler.contextType(), ex.getMessage());
+            writeError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, null);
         }
     }
 
@@ -151,6 +175,12 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
 
         String jsonBody = request.content().toString(CharsetUtil.UTF_8);
         if (null == jsonBody || jsonBody.isBlank()) {
+            // AUD-omp-21: a validating endpoint requires a body. Returning null let the handler
+            // dereference null -> 500; reject up-front as 400 instead. String and no-validator
+            // handlers keep accepting an empty body (null flows to the handler as before).
+            if (post.useValidator()) {
+                throw new HttpError(HttpResponseStatus.BAD_REQUEST, "request body is required");
+            }
             return null;
         }
         if (String.class == post.getParamClass()) {
@@ -161,12 +191,18 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         if (post.useValidator()) {
             var violationSet = getValidator().validate(input);
             if (violationSet.size() > 0) {
-                //400: StatusCode.INVALID_ARGUMENT 3;
-                throw new RuntimeException(
-                        input.getClass().getSimpleName() + " : " + violationSet.stream()
-                                .map(it -> it.getPropertyPath() + "=" + it.getInvalidValue() + "(" + it.getMessage() + ")")
-                                .collect(Collectors.joining(";"))
-                );
+                // C7 + AUD-omp-21: 400 INVALID_ARGUMENT. The client-facing message carries only
+                // field path + constraint message (never getInvalidValue(), which can be PII); the
+                // full detail incl. the rejected value goes to the server log only.
+                var safe = violationSet.stream()
+                        .map(it -> it.getPropertyPath() + " " + it.getMessage())
+                        .collect(Collectors.joining("; "));
+                var detail = violationSet.stream()
+                        .map(it -> it.getPropertyPath() + "=" + it.getInvalidValue() + "(" + it.getMessage() + ")")
+                        .collect(Collectors.joining(";"));
+                log.warn("validation failed on {}: {}", post.path(), detail);
+                throw new HttpError(HttpResponseStatus.BAD_REQUEST,
+                        input.getClass().getSimpleName() + " invalid: " + safe);
             }
         }
         return input;
@@ -179,28 +215,26 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     }
 
     private static void writeNotFound(ChannelHandlerContext ctx, String uri) {
-
-        var status = HttpResponseStatus.NOT_FOUND;
-        writeResponse(ctx, status, TYPE_PLAIN,
-                ("{\"code\":404,\"message\":\"" + uri + " , " + status.reasonPhrase() + "\"}").getBytes(StandardCharsets.UTF_8)
-                , null);
+        // C7: 404 as a JSON envelope with a matching content-type (was a PLAIN header wrapping a
+        // JSON body). Echoing the not-found URI discloses nothing sensitive.
+        writeError(ctx, HttpResponseStatus.NOT_FOUND, uri + " not found");
     }
 
     /**
-     * Writes a 500 Internal Server Error response.
-     *
-     * @param ctx The channel context.
+     * Writes an error as a uniform JSON envelope {@code {"code":<status>,"message":<msg>}} with
+     * {@code content-type: application/json} (C7: body and content-type always match). A null
+     * message falls back to the status reason phrase. AUD-omp-21: callers pass only client-safe
+     * text — internal reasons stay in the log — so nothing sensitive reaches the wire.
      */
-    private static void writeInternalServerError(
-            final ChannelHandlerContext ctx, String contextType, String msg) {
-        var status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+    private static void writeError(final ChannelHandlerContext ctx, final HttpResponseStatus status, String msg) {
         if (null == msg) {
             msg = status.reasonPhrase();
         }
-        if (null == contextType) {
-            contextType = TYPE_PLAIN;
-        }
-        writeResponse(ctx, status, contextType, msg.getBytes(StandardCharsets.UTF_8), null);
+        var envelope = new LinkedHashMap<String, Object>();
+        envelope.put("code", status.code());
+        envelope.put("message", msg);
+        var body = JsonUtils.stringify(envelope).getBytes(StandardCharsets.UTF_8);
+        writeResponse(ctx, status, TYPE_JSON, body, null);
     }
 
     /**
@@ -254,6 +288,19 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         ctx.write(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.CONTINUE));
+    }
+
+    /**
+     * Internal signal for a client-side (4xx) failure raised during request parsing/validation.
+     * Carries the HTTP status + a client-safe message; caught in channelRead0 and mapped to a JSON
+     * error envelope, so it never reaches netty's exceptionCaught / a bare connection reset.
+     */
+    private static final class HttpError extends RuntimeException {
+        final HttpResponseStatus status;
+        HttpError(HttpResponseStatus status, String message) {
+            super(message);
+            this.status = status;
+        }
     }
 
 }

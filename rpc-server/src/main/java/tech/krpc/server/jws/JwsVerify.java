@@ -448,8 +448,10 @@ public class JwsVerify implements CredentialVerify {
         // Number is required, and the (Number) casts in getExpiresAt/getNotBefore/getClientHashLong
         // (and the (List) cast behind getAudience) throw a ClassCastException. Pre-fix that CCE
         // escaped verify() as UNKNOWN; catching every type-sensitive claim here (not just exp)
-        // closes exp/nbf/chl/aud and any future numeric claim in one place. StatusException is
-        // CHECKED (not a RuntimeException), so the auth rejections thrown below sail through this
+        // closes exp/nbf/chl/aud and any future numeric claim in one place. This block also
+        // encloses extVerify.afterSignCheck (see below) so a custom ExtVerify reading iat (or any
+        // other claim) cannot escape as UNKNOWN either. StatusException is CHECKED (not a
+        // RuntimeException), so the auth rejections thrown below / by extVerify sail through this
         // catch unchanged — only the type/parse faults are remapped to UNAUTHENTICATED.
         try {
             jws.parsePayload();
@@ -486,11 +488,17 @@ public class JwsVerify implements CredentialVerify {
                     throw Status.UNAUTHENTICATED.withDescription("Token forge : " + cid).asException();
                 }
             }
+
+            // HARDEN-B1 fix-round-3 (AUDIT-001): extVerify runs INSIDE this catch on purpose. A
+            // custom ExtVerify reading any claim (e.g. iat via getIssuedAt's raw (Number) cast) can
+            // throw ClassCastException/NPE on a malformed type; enclosing it here maps that to
+            // UNAUTHENTICATED instead of letting it escape verify() as UNKNOWN. StatusException is
+            // checked, so a legitimate auth rejection thrown by extVerify sails through unchanged.
+            // INVARIANT: moving this call out of the catch reopens the UNKNOWN escape.
+            extVerify.afterSignCheck(jws, isCookie);
         } catch (RuntimeException e) {
             throw malformed("malformed claim", e);
         }
-
-        extVerify.afterSignCheck(jws, isCookie);
 
         return jws;
     }

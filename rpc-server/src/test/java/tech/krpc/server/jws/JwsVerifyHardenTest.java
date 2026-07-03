@@ -553,6 +553,59 @@ class JwsVerifyHardenTest {
                 "string chl (bindClient) ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
     }
 
+    // ------------------------------------------------------------------------------------------
+    // 21. HARDEN-B1 fix-round-3 (STRUCTURAL closeout): a CUSTOM ExtVerify reading iat must not let
+    //     a malformed iat escape as UNKNOWN. Pre-fix extVerify.afterSignCheck ran AFTER the claim
+    //     catch closed, so getIssuedAt()'s raw (Number) cast (CCE on string/array/object) or a
+    //     null iat (.longValue() NPE on missing/null) escaped verify() as UNKNOWN. The fix widens
+    //     the catch to ENCLOSE extVerify. INVARIANT GUARD: this test also pins that structure —
+    //     move extVerify.afterSignCheck back OUT of the catch and every malformed case below turns
+    //     UNKNOWN → RED. It closes the whole class of "future ExtVerify reads claim X" escapes, not
+    //     just iat: any claim read inside afterSignCheck now fails CLOSED as UNAUTHENTICATED.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void customExtVerifyReadingIat_malformedIat_mapsToUnauthenticated_notUnknown() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+        long exp = nowSec() + 3600;
+
+        // A custom ExtVerify that READS iat and USES it: getIssuedAt() throws CCE on a non-Number
+        // iat (string/array/object); a missing/null iat returns null → .longValue() NPEs. Both are
+        // RuntimeExceptions that verify() MUST catch and remap to UNAUTHENTICATED — never UNKNOWN.
+        ExtVerify iatReader = (jws, isCookie) -> {
+            Number iat = jws.getIssuedAt();
+            if (iat.longValue() < 0) {
+                throw Status.UNAUTHENTICATED.withDescription("negative iat").asException();
+            }
+        };
+        JwsVerify ext = new JwsVerify(verify.getUrl(), JwsVerify.DEFAULT_COOKIE_NAME, iatReader, false);
+        ext.loadJwks();
+
+        // Positive control: a well-formed NUMERIC iat runs the ExtVerify to completion and PASSES —
+        // proves the ExtVerify actually executes (the fix didn't just swallow it) and a legitimate
+        // token is not collateral damage of the widened catch.
+        assertVerifyOk(ext, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"iat\":" + nowSec() + "}"),
+                "numeric iat runs the custom ExtVerify and passes (proves ext actually executes)");
+
+        // string / array / object iat → getIssuedAt()'s (Number) cast throws CCE inside extVerify.
+        assertVerifyCode(ext, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"iat\":\"nope\"}"),
+                Status.Code.UNAUTHENTICATED,
+                "string iat read by custom ExtVerify ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+        assertVerifyCode(ext, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"iat\":[1,2,3]}"),
+                Status.Code.UNAUTHENTICATED,
+                "array iat read by custom ExtVerify ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+        assertVerifyCode(ext, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"iat\":{\"x\":1}}"),
+                Status.Code.UNAUTHENTICATED,
+                "object iat read by custom ExtVerify ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+        // missing / null iat → getIssuedAt() returns null → .longValue() NPE inside extVerify.
+        assertVerifyCode(ext, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + "}"),
+                Status.Code.UNAUTHENTICATED,
+                "missing iat read by custom ExtVerify ⇒ UNAUTHENTICATED (regression: was NPE → UNKNOWN)");
+        assertVerifyCode(ext, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"iat\":null}"),
+                Status.Code.UNAUTHENTICATED,
+                "null iat read by custom ExtVerify ⇒ UNAUTHENTICATED (regression: was NPE → UNKNOWN)");
+    }
+
     // ==========================================================================================
     // Harness (inlined from GrpcContextAuthIT — do NOT import it).
     // ==========================================================================================

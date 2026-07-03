@@ -3,6 +3,7 @@ package tech.krpc.server;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import tech.krpc.annotation.RpcService;
@@ -290,6 +292,38 @@ public class RpcServerBuilder {
 
 	public Server startServer() throws IOException {
 		return server.start();
+	}
+
+	/// C6 + AUD-omp-11: default graceful-shutdown grace period. New calls stop being accepted at once;
+	/// in-flight RPCs get this long to drain before a hard shutdownNow() cuts them off.
+	public static final Duration DEFAULT_SHUTDOWN_GRACE = Duration.ofSeconds(30);
+
+	/// C6 + AUD-omp-11: instance convenience — graceful shutdown of the server this builder started.
+	public void shutdown(Duration grace) {
+		shutdown(server, grace);
+	}
+
+	/// C6 + AUD-omp-11: THE single graceful-shutdown authority. Both the spring and quarkus exposers
+	/// (and any future host) route their PreDestroy/@PreDestroy here instead of each hand-rolling a
+	/// shutdownNow() — keeping the drain contract in one place (same de-dup discipline as HARDEN-B1
+	/// JwsVerify.bootstrapAndRegister). Contract: initiate an orderly shutdown (stop accepting new
+	/// calls), await in-flight RPCs up to {@code grace}, then shutdownNow() as a backstop for anything
+	/// still running. Null/already-terminated servers are a no-op. Interruption falls through to the
+	/// hard stop so a shutdown hook can never hang.
+	public static void shutdown(Server server, Duration grace) {
+		if (server == null || server.isTerminated()) {
+			return;
+		}
+		server.shutdown();
+		try {
+			if (!server.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
+				log.warn("RpcServer did not drain within {} — forcing shutdownNow()", grace);
+				server.shutdownNow();
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			server.shutdownNow();
+		}
 	}
 	
 }

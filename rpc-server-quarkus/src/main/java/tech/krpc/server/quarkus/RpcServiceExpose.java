@@ -125,8 +125,10 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @PreDestroy
     public void shutdown() {
         var waitTask = 0;
+        // C6 + AUD-omp-11: graceful drain via the single shutdown authority (was a bare shutdownNow()
+        // that cut in-flight RPCs). Server drains first, THEN the executor is released.
         if (null != server) {
-            server.shutdownNow();
+            RpcServerBuilder.shutdown(server, RpcServerBuilder.DEFAULT_SHUTDOWN_GRACE);
         }
         if(null != executor){
             waitTask = executor.shutdownNow().size();

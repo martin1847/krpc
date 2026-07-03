@@ -4,6 +4,7 @@ package tech.krpc.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
@@ -114,11 +115,57 @@ public abstract class RefUtils {
         RpcService grpcServive = (RpcService) clz.getDeclaredAnnotation(RpcService.class);
         String rpcServiceName = rpcServiceName(appName,clz);
 
+        // C9 + AUD-omp-09: fail-fast on a mis-declared RPC method instead of silently dropping it.
+        // Pre-fix, a method whose return isn't RpcResult<…> or which takes >1 param was just filtered
+        // out — the service started clean, the method vanished, and calls failed to resolve only at
+        // runtime (SPEC §1 landmine). An ABSTRACT public method (a genuine endpoint declaration) with
+        // an illegal signature is now a hard error at discovery. default/static methods are the
+        // sanctioned escape hatch for helpers and are exempt; Object redeclarations (toString/…) too.
+        for (Method m : clz.getMethods()) {
+            if (!isDeclaredRpcEndpoint(m)) {
+                continue;
+            }
+            if (m.getReturnType() != RpcResult.class || m.getParameterCount() > 1) {
+                throw new IllegalStateException(
+                        "@RpcService " + clz.getName() + ": method '" + m.getName()
+                        + "' has an illegal signature — an RPC method MUST be `RpcResult<Dto> m(OneDto)`"
+                        + " or `RpcResult<Dto> m()` (return RpcResult, ≤1 param). Got return="
+                        + m.getReturnType().getSimpleName() + ", params=" + m.getParameterCount()
+                        + ". Make it a default/static helper if it is not an endpoint. (SPEC §1)");
+            }
+        }
+
+        // C9 (fix-round-1): register ONLY declared endpoints. The old filter kept any `RpcResult`/≤1-param
+        // method, but getMethods() also returns interface static/default methods — a legal-signature
+        // `static RpcResult<T> helper()` slipped through as a phantom endpoint. isDeclaredRpcEndpoint is the
+        // single source of truth for "is an endpoint" (excludes static/default/Object); the fail-fast loop
+        // above already proved every declared endpoint has a legal signature, so no re-check is needed here.
         return Stream.of(clz.getMethods())
-                .filter(m -> m.getReturnType() == RpcResult.class && m.getParameterCount() <= 1)
+                .filter(RefUtils::isDeclaredRpcEndpoint)
                 .map(m -> new MethodStub(grpcServive,rpcServiceName, m))
                 .collect(Collectors.toList());
 
+    }
+
+    // C9 + AUD-omp-09: a "declared RPC endpoint" is an abstract, non-static public interface method
+    // that is NOT a redeclared Object method. default/static methods carry a body (helpers), so they
+    // are never endpoints. Object methods (equals/hashCode/toString) an interface may redeclare for
+    // docs are exempt. Only these declared endpoints are signature-checked (fail-fast) above.
+    private static boolean isDeclaredRpcEndpoint(Method m) {
+        int mod = m.getModifiers();
+        if (m.isDefault() || Modifier.isStatic(mod)) {
+            return false;
+        }
+        return !isObjectMethod(m);
+    }
+
+    private static boolean isObjectMethod(Method m) {
+        try {
+            Object.class.getMethod(m.getName(), m.getParameterTypes());
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
     }
 
     public static final char HIDDEN_SERVICE = '-';

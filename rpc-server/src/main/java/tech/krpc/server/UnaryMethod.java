@@ -240,7 +240,14 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             if (ex instanceof InvocationTargetException) {
                 wrapToClient = ex.getCause();
             }
-            if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
+            if (wrapToClient instanceof tech.krpc.util.JsonDecodeException) {
+                // AUD-omp-31: a malformed request body is the CLIENT's fault → INVALID_ARGUMENT, not
+                // UNKNOWN/500. Description is sanitized (no Jackson field/class names); the full cause
+                // is already in the log.error above for server-side diagnosis.
+                wrapToClient = Status.INVALID_ARGUMENT
+                        .withDescription(traceId + ",malformed JSON request body")
+                        .withCause(wrapToClient).asRuntimeException();
+            } else if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
                 //Server side application throws an exception (or does something other than returning a Status code to terminate an RPC)
                 //https://grpc.github.io/grpc/core/md_doc_statuscodes.html
                 var errMsg = wrapToClient.getMessage();

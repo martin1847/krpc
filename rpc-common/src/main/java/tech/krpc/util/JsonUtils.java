@@ -11,12 +11,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  *
  * @author martin.cong
  * @version JsonUtils: JsonUtils.java, v 0.1 2021年10月17日 00:06 young Exp $
  */
+@Slf4j
 public abstract class JsonUtils {
     //private static final Map<ParameterizedType, JavaType> TYPES_MAP = new ConcurrentHashMap<>();
 
@@ -30,7 +32,7 @@ public abstract class JsonUtils {
         try {
             var module = Class.forName(jsr310Exists).getDeclaredConstructor().newInstance();
             MAPPER.registerModule((Module) module);
-            System.out.println("!!!! jackson jsr310.JavaTimeModule register !!!");
+            log.info("jackson jsr310.JavaTimeModule registered");
         } catch (Exception e) {
             //ignore
         }
@@ -58,7 +60,9 @@ public abstract class JsonUtils {
         try {
             return (T)MAPPER.readValue(json,MAPPER.constructType(type));
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            // AUD-omp-31: typed + sanitized. Never leak Jackson internals (field/class names, offsets)
+            // to a client; the raw exception is kept as the cause for server-side logs only.
+            throw new JsonDecodeException("malformed JSON: cannot decode request body", e);
         }
     }
 
@@ -69,7 +73,8 @@ public abstract class JsonUtils {
         try {
             return (T) MAPPER.readValue(json,type);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            // AUD-omp-31: see the Type overload above.
+            throw new JsonDecodeException("malformed JSON: cannot decode request body", e);
         }
     }
 

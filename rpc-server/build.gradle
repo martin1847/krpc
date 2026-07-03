@@ -32,6 +32,12 @@ dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
-//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    // HARDEN-B1: jws is the auth trust root — plain JUnit5 unit tests, no Quarkus boot / no DB.
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "io.grpc:grpc-netty:${grpcVersion}"
+}
+
+test {
+    useJUnitPlatform()
 }

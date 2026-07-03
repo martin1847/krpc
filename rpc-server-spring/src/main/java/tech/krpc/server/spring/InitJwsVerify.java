@@ -4,13 +4,13 @@
  */
 package tech.krpc.server.spring;
 
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.inject.Inject;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import tech.krpc.server.ServerContext;
 import tech.krpc.server.jws.ExtVerify;
 import tech.krpc.server.jws.JwsVerify;
 
@@ -31,6 +31,8 @@ public class InitJwsVerify {
 
     public static final String EXIT_ON_JWKS_ERROR_CONFIG_KEY = "rpc.server.exitOnJwksError";
 
+    public static final String JWS_AUD_CONFIG_KEY = "rpc.server.jwsAudiences";
+
 
     @Setter
     Optional<String> jwks;
@@ -41,6 +43,9 @@ public class InitJwsVerify {
     boolean exitOnJwksError;
     @Setter
     boolean bindClient;
+    // O-sec-17 (HARDEN-B1): optional aud validation, comma-separated. Empty = OFF (default).
+    @Setter
+    List<String> jwsAudiences = List.of();
 
 
     @Inject
@@ -69,17 +74,11 @@ public class InitJwsVerify {
             log.info("[ Reg ExtVerify ] :  {}", extVerify);
         }
 
-        var jwks = new JwsVerify(url, cookieName, extVerify,bindClient);
-        try {
-            jwks.loadJwks();
-            ServerContext.regCredentialVerify(jwks);
-        } catch (RuntimeException e) {
-            if (exitOnJwksError) {
-                throw e;
-            } else {
-                log.warn("!!! Error load jwks {} , auth token check NOT work : {}", jwks.getUrl(), e.getMessage());
-            }
-        }
+        // O1 (HARDEN-B1): construct + FAIL-CLOSED bootstrap + register in core. The verifier is
+        // always registered (unless exitOnJwksError aborts startup), so a JWKS outage can never
+        // leave auth fail-open.
+        JwsVerify.bootstrapAndRegister(url, cookieName, extVerify, bindClient, exitOnJwksError,
+                jwsAudiences);
     }
 
 }

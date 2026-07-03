@@ -54,6 +54,13 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         ServerContext.credentialVerify = credentialVerify;
     }
 
+    // HARDEN-B1: read-only accessor for the registered verifier. Lets the security regression
+    // tests assert the fail-closed contract (verifier registered + rejecting) without reflecting
+    // on a package-private field from another module.
+    public static CredentialVerify credentialVerify() {
+        return credentialVerify;
+    }
+
     public static ServerContext current() {
         return SC_KEY.get();
     }

@@ -26,6 +26,14 @@ dependencies {
 
     runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
 
+    // HARDEN-B1: fail-open regression guard for InitJwsVerify wiring (plain JUnit5, no Spring boot).
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "io.grpc:grpc-stub:${grpcVersion}"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 compileTestJava {

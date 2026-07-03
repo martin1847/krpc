@@ -270,26 +270,59 @@ public AccountInfo me() {
 - `ctx.softUid()` — returns the `sub` or `null` when not logged in; never throws on
   missing/invalid token (`ServerContext.java:142-155`).
 
-### 8.6 Key rotation
+### 8.6 Key rotation and revocation
 
-An unknown `kid` triggers a JWKS refetch (`JwsVerify.java:71-78`), so adding a new
-key to the published JWKS rotates it in — **but** `loadJwks` is throttled to once
-per 5 minutes (`GAP_MILL`, `JwsVerify.java:35,84-86`), so a freshly added `kid` may
-not be picked up until that window elapses.
+An unknown `kid` triggers a JWKS refetch on a short **30 s** backoff
+(`MIN_FETCH_GAP_MILL`), so a freshly rotated-in key is picked up quickly. On a cache
+**hit**, JWKS is refreshed in the background at most once per **5 min**
+(`GAP_MILL`) — and each successful fetch **rebuilds** the keyset (replace, not
+merge), so a key **removed** from the published JWKS stops verifying within that
+window (revocation works). A **failed** refetch keeps the last-known-good keyset
+serving and does **not** burn the 5-min window (`JwsVerify.java`, O3/O4).
 
-### 8.7 Production hardening
+### 8.7 Production hardening — fail-closed by default
+
+krpc is **fail-closed**: if the JWKS URL is unreachable or invalid, authentication is
+**never silently disabled**.
+
+- **Default (`exitOnJwksError=false`):** the verifier is registered but **fail-closed**.
+  Until JWKS loads successfully, every credential-required request is rejected with
+  gRPC **`UNAVAILABLE`** (`"JWKS not ready"` — distinct from a bad token's
+  `UNAUTHENTICATED`/`PERMISSION_DENIED`, so ops can tell "auth backend down" from
+  "bad credential"). A background daemon retries the fetch with gentle backoff
+  (5 s → 60 s); when it succeeds, auth goes live automatically (logged at WARN).
+- **`exitOnJwksError=true`:** startup **aborts loudly** instead of coming up
+  fail-closed. Use when your deployment model would rather crash-loop than serve
+  while the auth trust root is unreachable.
 
 ```properties
+# optional: abort startup instead of coming up fail-closed
 rpc.server.exitOnJwksError=true
 ```
-By default a bad/unreachable JWKS URL only logs a warning and leaves auth
-**disabled** (`InitJwsVerify.java:81-87` quarkus / `:76-82` spring) — requests pass
-without a credential check. Set `exitOnJwksError=true` so startup fails loudly
-instead of silently shipping with auth off.
 
-- **DO:** set `exitOnJwksError=true` in prod.
-- **DON'T:** rely on the default in prod — a JWKS outage at boot silently turns
-  authentication off.
+> **Behaviour change (HARDEN-B1):** pre-1.0.4 the default **fail-open** — a bad/unreachable
+> JWKS at boot logged a warning and left auth **off** until restart. That path is gone;
+> there is no configuration that yields silent fail-open. A JWKS fetch is also bounded
+> (5 s connect / 10 s request timeout, 1 MiB body cap) against a slow/oversized IdP.
+
+### 8.8 Claim validation (exp / nbf / aud)
+
+- **`exp`** is required and enforced — a token past `exp` is rejected
+  `UNAUTHENTICATED`; a token **missing** `exp` is malformed → `UNAUTHENTICATED`.
+- **`nbf`** is enforced when present, with a 60 s clock-skew allowance — a token whose
+  `nbf` is more than 60 s in the future is rejected `UNAUTHENTICATED` (HARDEN-B1,
+  behaviour change; tokens without `nbf` are unaffected).
+- **`aud`** validation is **opt-in, default OFF** (behaviour unchanged for single-`aud`
+  deployments). Set a comma-separated allow-list to enable:
+
+```properties
+# optional: reject tokens whose aud does not intersect this list. empty = off.
+rpc.server.jwsAudiences=api-gateway,internal
+```
+
+- Malformed tokens (bad structure / base64 / JSON / missing `exp`) and
+  non-canonical signatures (not exactly 64 raw bytes, incl. bare ASN.1/DER) are
+  rejected `UNAUTHENTICATED` and logged at DEBUG only (no per-token stack-trace flood).
 
 ---
 

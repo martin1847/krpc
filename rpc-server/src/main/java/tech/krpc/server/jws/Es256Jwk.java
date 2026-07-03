@@ -97,9 +97,17 @@ public class Es256Jwk {
 
     static boolean isValid(byte[] data, byte[] signature, ECPublicKey key)
             throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        var sig =  Signature.getInstance(SING_ALGORITHM);
-        int expectedSize = SIGNATURE_BYTES_LENGTH;
-        byte[] derSignature = expectedSize != signature.length && signature[0] == 0x30 ? signature : jws2der(signature);
+        // O-sec-16 (HARDEN-B1): a JWS ES256 signature is EXACTLY R||S = 64 raw bytes. Reject
+        // anything else — including bare ASN.1/DER (previously accepted when signature[0]==0x30),
+        // which is malleable (many DER encodings verify) — and guard null/short arrays (was an
+        // AIOOBE on signature[0]). Always transcode via jws2der so only the canonical concat
+        // form is ever verified.
+        if (signature == null || signature.length != SIGNATURE_BYTES_LENGTH) {
+            throw new IllegalArgumentException(
+                    "invalid ES256 signature length: " + (signature == null ? "null" : signature.length));
+        }
+        var sig = Signature.getInstance(SING_ALGORITHM);
+        byte[] derSignature = jws2der(signature);
         sig.initVerify(key);
         sig.update(data);
         return sig.verify(derSignature);

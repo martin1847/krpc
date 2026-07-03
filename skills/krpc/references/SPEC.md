@@ -31,9 +31,12 @@ Two hard constraints, both enforced at the **only** method-discovery point
 - **Return type must be `RpcResult<…>`.**
 - **At most one parameter.**
 
-A method violating either is **silently dropped** — not registered, no error at
-startup; the call just fails to resolve at runtime. This is the single most
-common mistake.
+A method violating either is now **rejected fail-fast at discovery** (HARDEN-B3,
+C9/AUD-omp-09): an *abstract* `@RpcService` method with an illegal signature throws
+`IllegalStateException` from `RefUtils.toRpcMethods` (server startup / client stub init /
+codegen). Pre-HARDEN-B3 it was **silently dropped** (not registered, no error — the call just
+failed to resolve at runtime), the single most common mistake. `default`/`static` methods (and
+Object redeclarations) are exempt — they are the sanctioned escape hatch for interface helpers.
 
 - **DO:** merge multiple inputs into one DTO. Built-in generic wrappers exist:
   `PagedQuery<T>` (`rpc-api/.../PagedQuery.java`), e.g. `plistBk(PagedQuery<Book> q)`.
@@ -56,11 +59,17 @@ exclusive:
 | `DTO data` | non-null only when `code == 0` |
 
 ```java
-return RpcResult.ok(data);          // asserts data != null
-return RpcResult.error(666, "...");  // asserts code > 0 && msg != null
+return RpcResult.ok(data);          // throws NPE if data == null
+return RpcResult.error(666, "...");  // throws IllegalArgumentException if code <= 0, NPE if msg == null
 result.isOk();                       // code == 0
-result.ifOk(fn); result.orElseThrow();
+result.ifOk(fn);                     // maps OK data → a NEW RpcResult (never mutates the receiver)
+result.orElseThrow();
 ```
+
+> HARDEN-B3 (C3/AUD-omp-28): `ok`/`error` now enforce these invariants at runtime (they were
+> `assert`-only — no-ops under the default `-da` JVM). `ifOk` builds a **new** result instead of
+> re-typing + mutating `this` (an aliasing bug that swapped a shared caller's DTO). The no-arg
+> `error()` reinterpret-as-failure throws `IllegalStateException` if called on an OK result.
 
 Business error codes are **bucketed by hundreds; large domains by thousands**
 (`RpcResult.java:21-22`). The numeric space is a superset of `google.rpc.Code`

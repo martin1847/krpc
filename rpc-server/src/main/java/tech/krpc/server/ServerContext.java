@@ -129,7 +129,11 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         if(verifyed){
             return;
         }
-        verifyed = true;
+        // AUD-omp-13: set verifyed=true ONLY AFTER verify() returns cleanly. Pre-fix it was set
+        // BEFORE verify(), so a thrown verify() left verifyed=true + credential=null — a later
+        // softUid() then short-circuited (verifyed) and uid() NPE'd (500) on the null credential.
+        // On failure verifyed stays false: the StatusException propagates (fail-closed) and a retry
+        // re-verifies rather than silently trusting a half-done attempt.
         if (credentialVerify != null) {
             var token = CredentialVerify.bearerToken(headers);
             var isCookie = false;
@@ -139,6 +143,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
             }
             credential = credentialVerify.verify(token, clientId(), isCookie);
         }
+        verifyed = true;
     }
 
     public UserCredential getCredential() {
@@ -168,6 +173,14 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
      * @return
      */
     public String uid(){
+        // AUD-omp-13: clean rejection instead of an NPE. credential is null when the call is not
+        // credential-required (checkCredential never ran / verify skipped) yet the impl calls uid().
+        // That is a caller/config error — surface it explicitly, not as an opaque NullPointerException.
+        if (credential == null) {
+            throw new IllegalStateException(
+                    "uid() requires an authenticated request — no credential resolved "
+                    + "(is the service @UnsafeWeb(requireCredential=true) / @RequireCredential?). Use softUid() when auth is optional.");
+        }
         return credential.getSubject();
     }
 

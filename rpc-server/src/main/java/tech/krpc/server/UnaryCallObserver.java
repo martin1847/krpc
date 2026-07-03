@@ -49,9 +49,15 @@ public class UnaryCallObserver
 
     @Override
     public void onNext(OutputProto response) {
-
+        // O5 + AUD-omp-08 (#2): self-idempotent — never send after a terminal event.
         checkState(!aborted, "Stream was terminated by error, no further calls are allowed");
         checkState(!completed, "Stream is already completed, no further calls are allowed");
+        // AUD-omp-12 (#3): client already cancelled ⇒ the call is closed transport-side; sending
+        // would race that close. Short-circuit. call.isCancelled() is authoritative; `cancelled`
+        // mirrors onCancel (was write-only — now read here).
+        if (call.isCancelled() || cancelled) {
+            return;
+        }
         if (!sentHeaders) {
             call.sendHeaders(ServerContext.current().getResponseHeaders());
             sentHeaders = true;
@@ -61,18 +67,37 @@ public class UnaryCallObserver
 
     @Override
     public void onError(Throwable t) {
+      // O5 + AUD-omp-08 (#2): self-idempotent. The FIRST terminal signal wins; a second
+      // onError/onCompleted (e.g. UnaryMethod's catch firing after onCompleted's close() threw) is a
+      // no-op — never a second call.close() (which throws "call already closed" and masks the real
+      // error). Set the flag BEFORE close() so even a throwing close() leaves us guarded on re-entry.
+      if (aborted || completed) {
+        return;
+      }
+      aborted = true;
+      // AUD-omp-12 (#3): a cancelled call is already closed; a second close() would throw.
+      if (call.isCancelled() || cancelled) {
+        return;
+      }
       Metadata metadata = Status.trailersFromThrowable(t);
       if (metadata == null) {
         metadata = new Metadata();
       }
       call.close(Status.fromThrowable(t), metadata);
-      aborted = true;
     }
 
     @Override
     public void onCompleted() {
-      call.close(Status.OK, new Metadata());
+      // O5 + AUD-omp-08 (#2): self-idempotent — see onError.
+      if (aborted || completed) {
+        return;
+      }
       completed = true;
+      // AUD-omp-12 (#3): cancelled call is already closed; skip the close race.
+      if (call.isCancelled() || cancelled) {
+        return;
+      }
+      call.close(Status.OK, new Metadata());
     }
 
     @Override

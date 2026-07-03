@@ -34,7 +34,9 @@ public class Es256Signature {
             privateKey = (ECPrivateKey) KeyFactory.getInstance(Es256Jwk.ELLIPTIC_CURVE)
                     .generatePrivate(privSpec);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            log.error("error get privateKey: " + pri64, e);
+            // O-sec-48 (HARDEN-B1): NEVER log the base64 private key material. Log the failure
+            // class only; the key bytes must not reach logs.
+            log.error("error building EC private key from configured material", e);
             throw new RuntimeException(e);
         }
     }

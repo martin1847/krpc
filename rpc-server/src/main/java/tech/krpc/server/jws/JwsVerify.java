@@ -442,44 +442,52 @@ public class JwsVerify implements CredentialVerify {
             throw Status.PERMISSION_DENIED.withCause(e).asException();
         }
 
-        // Signature verified — parse payload and check temporal / audience / binding claims.
+        // Signature verified. Read + type-check every payload claim under ONE catch. RED LINE: any
+        // malformed path must map to a clean status, never escape as UNKNOWN. A malformed CLAIM here
+        // is a wrong JSON *type* — {"exp":"x"} / {"nbf":[...]} deserializes a String/List where a
+        // Number is required, and the (Number) casts in getExpiresAt/getNotBefore/getClientHashLong
+        // (and the (List) cast behind getAudience) throw a ClassCastException. Pre-fix that CCE
+        // escaped verify() as UNKNOWN; catching every type-sensitive claim here (not just exp)
+        // closes exp/nbf/chl/aud and any future numeric claim in one place. StatusException is
+        // CHECKED (not a RuntimeException), so the auth rejections thrown below sail through this
+        // catch unchanged — only the type/parse faults are remapped to UNAUTHENTICATED.
         try {
             jws.parsePayload();
+
+            var now = System.currentTimeMillis() / 1000L;
+
+            // C5 (HARDEN-B1): a token with no exp is malformed → UNAUTHENTICATED (was NPE→UNKNOWN).
+            var exp = jws.getExpiresAt();
+            if (exp == null) {
+                throw malformed("token missing exp", null);
+            }
+            if (now > exp.longValue()) {
+                throw Status.UNAUTHENTICATED.withDescription("Token expired at: " + exp).asException();
+            }
+
+            // O-sec-17 (HARDEN-B1): enforce nbf when present (with small clock-skew allowance).
+            var nbf = jws.getNotBefore();
+            if (nbf != null && now + CLOCK_SKEW_SEC < nbf.longValue()) {
+                throw Status.UNAUTHENTICATED.withDescription("Token not yet valid (nbf): " + nbf).asException();
+            }
+
+            // O-sec-17 (HARDEN-B1): optional aud validation (OFF by default; see requiredAudiences).
+            var required = requiredAudiences;
+            if (!required.isEmpty()) {
+                var aud = jws.getAudience();
+                if (aud == null || aud.stream().noneMatch(required::contains)) {
+                    throw Status.UNAUTHENTICATED.withDescription("Token audience not accepted").asException();
+                }
+            }
+
+            if (bindClient) {
+                var clientHash = jws.getClientHashLong();
+                if (null == clientHash || clientHash.longValue() != Murmur3.hash64(cid.getBytes(StandardCharsets.UTF_8))) {
+                    throw Status.UNAUTHENTICATED.withDescription("Token forge : " + cid).asException();
+                }
+            }
         } catch (RuntimeException e) {
-            throw malformed("malformed payload", e);
-        }
-
-        var now = System.currentTimeMillis() / 1000L;
-
-        // C5 (HARDEN-B1): a token with no exp is malformed → UNAUTHENTICATED (was NPE→UNKNOWN).
-        var exp = jws.getExpiresAt();
-        if (exp == null) {
-            throw malformed("token missing exp", null);
-        }
-        if (now > exp.longValue()) {
-            throw Status.UNAUTHENTICATED.withDescription("Token expired at: " + exp).asException();
-        }
-
-        // O-sec-17 (HARDEN-B1): enforce nbf when present (with small clock-skew allowance).
-        var nbf = jws.getNotBefore();
-        if (nbf != null && now + CLOCK_SKEW_SEC < nbf.longValue()) {
-            throw Status.UNAUTHENTICATED.withDescription("Token not yet valid (nbf): " + nbf).asException();
-        }
-
-        // O-sec-17 (HARDEN-B1): optional aud validation (OFF by default; see requiredAudiences).
-        var required = requiredAudiences;
-        if (!required.isEmpty()) {
-            var aud = jws.getAudience();
-            if (aud == null || aud.stream().noneMatch(required::contains)) {
-                throw Status.UNAUTHENTICATED.withDescription("Token audience not accepted").asException();
-            }
-        }
-
-        if (bindClient) {
-            var clientHash = jws.getClientHashLong();
-            if (null == clientHash || clientHash.longValue() != Murmur3.hash64(cid.getBytes(StandardCharsets.UTF_8))) {
-                throw Status.UNAUTHENTICATED.withDescription("Token forge : " + cid).asException();
-            }
+            throw malformed("malformed claim", e);
         }
 
         extVerify.afterSignCheck(jws, isCookie);

@@ -181,10 +181,13 @@ public class Es256Jwk {
      */
     public static byte[] jws2der(byte[] jwsSignature)  {
 
-        // O-sec-16 (HARDEN-B1 fix-round-1): jws2der is only ever reached with an already
-        // length-checked 64-byte concat, but keep it self-defending — an odd/short array would
-        // desync the R/S offsets. Reject as IllegalArgumentException so verify()'s catch maps it
-        // to UNAUTHENTICATED, never an AIOOBE that escapes to UNKNOWN.
+        // O-sec-16 (HARDEN-B1 fix-round-1): the only production caller is isValid(), which enforces
+        // an EXACTLY-64-byte signature before calling in — so an external token never reaches here
+        // with a short array. This primitive stays self-defending on its OWN terms: it rejects only
+        // null / empty / ODD-length input (an odd array would desync the R/S offsets); a short EVEN
+        // array is transcoded, not rejected — acceptable because it is unreachable from verify().
+        // Reject as IllegalArgumentException so verify()'s catch maps it to UNAUTHENTICATED, never
+        // an AIOOBE that escapes to UNKNOWN.
         if (jwsSignature == null || jwsSignature.length == 0 || (jwsSignature.length & 1) != 0) {
             throw new IllegalArgumentException(
                     "invalid ES256 concat length: " + (jwsSignature == null ? "null" : jwsSignature.length));

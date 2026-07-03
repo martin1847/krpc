@@ -411,6 +411,15 @@ class JwsVerifyHardenTest {
 
         assertVerifyCode(verify, token, Status.Code.UNAUTHENTICATED,
                 "token missing kid ⇒ UNAUTHENTICATED (regression: was NPE → UNKNOWN)");
+
+        // codex-r2 test gap: a BLANK (whitespace-only) kid must also reject. Header carries a valid
+        // signature, so only kid.isBlank() in the guard can turn it away — kill that clause and this
+        // token would reach jwksCache.get("   ") → PERMISSION_DENIED, i.e. the wrong code. This pins
+        // the guard to isBlank(), not just != null.
+        String headerBlankKid = b64("{\"kid\":\"   \",\"alg\":\"ES256\"}");
+        String blankKidToken = new Es256Signature(k1.priB64).sign(headerBlankKid, b64(validClaims("u")));
+        assertVerifyCode(verify, blankKidToken, Status.Code.UNAUTHENTICATED,
+                "token with blank kid ⇒ UNAUTHENTICATED (pins kid.isBlank() guard, not just != null)");
     }
 
     // ------------------------------------------------------------------------------------------
@@ -500,6 +509,48 @@ class JwsVerifyHardenTest {
         } finally {
             slow.stop(0);
         }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 20. codex-r2 (blocking): valid signature + wrong-TYPE temporal/binding claim ⇒ UNAUTHENTICATED.
+    //     {"exp":"x"} / {"nbf":[...]} / {"chl":"x"} deserialize a String/List where a Number is
+    //     required; the (Number) casts threw ClassCastException that escaped verify() as UNKNOWN.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void malformedClaimTypes_mapToUnauthenticated_notUnknown() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+        long exp = nowSec() + 3600;
+
+        // Each token is signed correctly (valid 64-byte sig, known kid) so it CLEARS the signature
+        // check and reaches the claim reads — isolating the claim-type fault. RED LINE: every one
+        // must be a clean UNAUTHENTICATED, never a wrapped CCE → UNKNOWN.
+
+        // exp as a STRING → (Number) getExpiresAt() throws before the null check.
+        assertVerifyCode(verify, jwt(k1, "{\"sub\":\"u\",\"exp\":\"not-a-number\"}"),
+                Status.Code.UNAUTHENTICATED,
+                "string exp ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+        // exp as an ARRAY → same cast, same escape.
+        assertVerifyCode(verify, jwt(k1, "{\"sub\":\"u\",\"exp\":[1,2,3]}"),
+                Status.Code.UNAUTHENTICATED,
+                "array exp ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+        // nbf as a STRING (exp valid so we reach nbf) → (Number) getNotBefore() CCE.
+        assertVerifyCode(verify, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"nbf\":\"soon\"}"),
+                Status.Code.UNAUTHENTICATED,
+                "string nbf ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+        // nbf as an ARRAY → same.
+        assertVerifyCode(verify, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"nbf\":[1]}"),
+                Status.Code.UNAUTHENTICATED,
+                "array nbf ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
+
+        // chl is read ONLY when bindClient=true → (Number) getClientHashLong() CCE. readyVerifier is
+        // bindClient=false, so build a BOUND verifier over the SAME running JWKS.
+        JwsVerify bound =
+                new JwsVerify(verify.getUrl(), JwsVerify.DEFAULT_COOKIE_NAME, ExtVerify.EMPTY, true);
+        bound.loadJwks();
+        assertVerifyCode(bound, jwt(k1, "{\"sub\":\"u\",\"exp\":" + exp + ",\"chl\":\"nope\"}"),
+                Status.Code.UNAUTHENTICATED,
+                "string chl (bindClient) ⇒ UNAUTHENTICATED (regression: was CCE → UNKNOWN)");
     }
 
     // ==========================================================================================

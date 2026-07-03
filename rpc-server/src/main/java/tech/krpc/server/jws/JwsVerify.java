@@ -406,15 +406,33 @@ public class JwsVerify implements CredentialVerify {
         // with a full stack trace (attacker-driven DoS).
         JwsCredential jws;
         String kid;
+        String alg;
         byte[] data;
         byte[] signature;
         try {
             jws = new JwsCredential(token);
             kid = jws.getKeyId();
+            // O-sec (HARDEN-B1 fix-round-4): read the header `alg` INSIDE this catch. header is
+            // parsed as Map<String,String>, so a non-string alg ({"alg":256} / {"alg":[...]}) makes
+            // getAlgorithm()'s String checkcast throw ClassCastException — caught here as malformed
+            // rather than escaping as UNKNOWN. A missing alg yields null, handled by the guard below.
+            alg = jws.getAlgorithm();
             data = jws.jwtWithoutSign().getBytes(StandardCharsets.UTF_8);
             signature = Base64.getUrlDecoder().decode(jws.sign64());
         } catch (RuntimeException e) {
             throw malformed("malformed token", e);
+        }
+
+        // O-sec (HARDEN-B1 fix-round-4): alg-conformance guard — CONFORMANCE / DEFENSE-IN-DEPTH,
+        // NOT a fail-open fix. The security property (no alg-confusion / alg=none / RS256-with-EC-key)
+        // is ALREADY structurally guaranteed: the server always verifies with hardcoded
+        // SHA256withECDSA (Es256Jwk.SING_ALGORITHM) over EC-only keys and ignores the client alg, so
+        // only a cryptographically valid ES256 signature can pass. This guard adds RFC 7515 §4.1.1
+        // header conformance and cleaner reject semantics: a header whose alg is missing or not
+        // exactly "ES256" (wrong value; wrong type already caught above) is turned away up front as
+        // UNAUTHENTICATED, instead of relying on the signature "happening" not to match.
+        if (!Es256Jwk.JWS_ALG.equals(alg)) {
+            throw malformed("unsupported or missing alg (require " + Es256Jwk.JWS_ALG + ")", null);
         }
 
         // B2 (HARDEN-B1 fix-round-1): a well-formed header JSON with no `kid` yields kid == null.

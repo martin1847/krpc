@@ -606,6 +606,48 @@ class JwsVerifyHardenTest {
                 "null iat read by custom ExtVerify ⇒ UNAUTHENTICATED (regression: was NPE → UNKNOWN)");
     }
 
+    // ------------------------------------------------------------------------------------------
+    // 22. HARDEN-B1 fix-round-4 (alg conformance / defense-in-depth): the header `alg` MUST be
+    //     exactly "ES256". NOTE the framing — this is NOT a fail-open fix. The server always
+    //     verifies with hardcoded SHA256withECDSA over EC-only keys and ignores the client alg, so
+    //     alg-confusion (alg=none, RS256-with-EC-key) is already structurally impossible; a token
+    //     can only pass with a real ES256 signature. This guard adds RFC 7515 §4.1.1 conformance:
+    //     alg none / RS256 / missing / non-string ⇒ UNAUTHENTICATED, up front — even when the
+    //     signature bytes are a perfectly valid ES256 signature (rejected for alg, not for sig).
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void algConformance_nonEs256HeaderRejected_evenWithValidSignature() throws Exception {
+        Kp k1 = genKey("K1");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+        String claims = validClaims("u");
+
+        // Positive control: the correct alg=ES256 still verifies — the guard must not reject
+        // legitimate tokens (and proves these tokens are otherwise fully valid, so any rejection
+        // below is due to alg alone).
+        assertVerifyOk(verify, jwtHeader(k1, "{\"kid\":\"K1\",\"alg\":\"ES256\"}", claims),
+                "alg=ES256 with a valid signature still verifies (guard doesn't break canonical tokens)");
+
+        // Each token below carries a genuinely valid ES256 signature over its (bad-alg) header, so
+        // only the alg guard can turn it away — proving alg is checked independently of the crypto.
+        assertVerifyCode(verify, jwtHeader(k1, "{\"kid\":\"K1\",\"alg\":\"none\"}", claims),
+                Status.Code.UNAUTHENTICATED,
+                "alg=none ⇒ UNAUTHENTICATED (even though the ES256 signature is valid)");
+        assertVerifyCode(verify, jwtHeader(k1, "{\"kid\":\"K1\",\"alg\":\"RS256\"}", claims),
+                Status.Code.UNAUTHENTICATED,
+                "alg=RS256 ⇒ UNAUTHENTICATED (alg-confusion attempt turned away by conformance guard)");
+        assertVerifyCode(verify, jwtHeader(k1, "{\"kid\":\"K1\"}", claims),
+                Status.Code.UNAUTHENTICATED,
+                "missing alg ⇒ UNAUTHENTICATED (RFC 7515 §4.1.1 requires alg)");
+        // Non-string alg: header parses as Map<String,String>, so getAlgorithm()'s String checkcast
+        // throws CCE — caught as malformed (not escaping as UNKNOWN), still UNAUTHENTICATED.
+        assertVerifyCode(verify, jwtHeader(k1, "{\"kid\":\"K1\",\"alg\":256}", claims),
+                Status.Code.UNAUTHENTICATED,
+                "numeric alg ⇒ UNAUTHENTICATED (non-string alg: CCE caught as malformed, not UNKNOWN)");
+        assertVerifyCode(verify, jwtHeader(k1, "{\"kid\":\"K1\",\"alg\":[\"ES256\"]}", claims),
+                Status.Code.UNAUTHENTICATED,
+                "array alg ⇒ UNAUTHENTICATED (non-string alg: CCE caught as malformed, not UNKNOWN)");
+    }
+
     // ==========================================================================================
     // Harness (inlined from GrpcContextAuthIT — do NOT import it).
     // ==========================================================================================
@@ -644,6 +686,15 @@ class JwsVerifyHardenTest {
 
     private static String jwt(Kp kp, String claimsJson) {
         return jwt(kp.kid, kp.priB64, claimsJson);
+    }
+
+    /**
+     * Sign a JWT over an ARBITRARY header JSON (so tests can inject a bad/missing/non-string alg).
+     * The signature is a genuine ES256 signature over this exact header+payload, so any rejection is
+     * attributable to the alg-conformance guard, not to a signature mismatch.
+     */
+    private static String jwtHeader(Kp kp, String headerJson, String claimsJson) {
+        return new Es256Signature(kp.priB64).sign(b64(headerJson), b64(claimsJson));
     }
 
     /** Sign over a RAW (already-encoded, possibly invalid-base64) payload segment. */

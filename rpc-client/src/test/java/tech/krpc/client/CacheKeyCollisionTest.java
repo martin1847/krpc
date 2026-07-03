@@ -49,18 +49,25 @@ class CacheKeyCollisionTest {
 
     @Test
     void byteArrayAndUtf8DoNotCollideOnSameMethod() {
-        // Same full method name for both stubs; only the input shape differs. A byte[] payload and
-        // a utf8 payload that happen to hash/spell similarly must never land on one key.
-        MethodStub bytesStub = CacheStubs.bytesStub();
-        MethodStub utf8Stub = CacheStubs.utf8Stub();
+        // Toothless-proofing (fix round 1): use ONE stub so the full method name is identical, and
+        // pick the utf8 payload == md5(bytePayload) so the b:/u: value-parts are byte-for-byte equal
+        // (md5 is 32 hex chars, below KEY_MAX_SIZE_UNDIGEST, so the utf8 branch stores it verbatim).
+        // The ONLY thing separating the two keys is then the dataCase tag — a mutation that drops the
+        // tag collapses them onto one key and assertNotEquals goes red. Previously the two stubs had
+        // different method names, so the keys differed for that reason alone and the tag was untested.
+        MethodStub stub = CacheStubs.bytesStub();
+        byte[] payload = "collision-probe".getBytes(StandardCharsets.UTF_8);
+        String sameValuePart = SimpleMD5.md5(payload); // == what the b: branch emits for `payload`
 
-        String byteKey = cache.cacheKey(bytesStub, bytesInput("hello".getBytes(StandardCharsets.UTF_8)));
-        String utf8Key = cache.cacheKey(utf8Stub, utf8Input("hello"));
+        String byteKey = cache.cacheKey(stub, bytesInput(payload));
+        String utf8Key = cache.cacheKey(stub, utf8Input(sameValuePart));
 
         assertNotEquals(byteKey, utf8Key,
-                "byte[] and utf8 inputs must be tagged into different key namespaces");
-        assertTrue(byteKey.contains(":b:"), () -> "byte[] key should carry the b: tag: " + byteKey);
-        assertTrue(utf8Key.contains(":u:"), () -> "utf8 key should carry the u: tag: " + utf8Key);
+                "same method + identical value-part: only the dataCase tag may separate the keys");
+        assertEquals(stub.methodDescriptor.getFullMethodName() + ":b:" + sameValuePart, byteKey,
+                "byte[] key must be method:b:<md5>");
+        assertEquals(stub.methodDescriptor.getFullMethodName() + ":u:" + sameValuePart, utf8Key,
+                "utf8 key must be method:u:<value>");
     }
 
     @Test

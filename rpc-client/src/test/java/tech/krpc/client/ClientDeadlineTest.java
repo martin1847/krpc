@@ -95,4 +95,30 @@ class ClientDeadlineTest {
         assertTrue(remainingMs > 0,
                 () -> "custom 1s default should leave positive remaining time, was " + remainingMs);
     }
+
+    @Test
+    void unlimitedOptOutSkipsDefault() {
+        // Per-call opt-out: a legitimately long call marks itself unlimited and must NOT get the
+        // default stamped, even with a positive global default. Mutation that ignores the marker
+        // stamps a 30s deadline and this goes red.
+        ClientDeadline.setDefaultDeadlineMillis(ClientDeadline.DEFAULT_DEADLINE_MILLIS);
+
+        CallOptions applied = ClientDeadline.apply(ClientDeadline.unlimited());
+
+        assertNull(applied.getDeadline(),
+                "an explicit per-call unlimited opt-out must leave the call deadline-less");
+    }
+
+    @Test
+    void explicitDeadlineOutranksUnlimitedMarker() {
+        // Ordering guard: an explicit deadline is checked before the unlimited marker, so a call
+        // carrying both keeps its explicit deadline (the caller's most specific intent wins).
+        ClientDeadline.setDefaultDeadlineMillis(ClientDeadline.DEFAULT_DEADLINE_MILLIS);
+        CallOptions opt = ClientDeadline.unlimited(CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS));
+
+        CallOptions applied = ClientDeadline.apply(opt);
+
+        assertNotNull(applied.getDeadline(),
+                "an explicit deadline must survive even when the unlimited marker is also set");
+    }
 }

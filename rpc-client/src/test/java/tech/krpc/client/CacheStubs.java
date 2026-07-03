@@ -16,10 +16,6 @@ final class CacheStubs {
         return stub("bytesMethod", byte[].class);
     }
 
-    /** Stub whose returnType == String.class → CacheManager takes the utf8 path. */
-    static MethodStub utf8Stub() {
-        return stub("utf8Method", String.class);
-    }
 
     private static MethodStub stub(String methodName, Class<?> paramType) {
         try {

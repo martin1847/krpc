@@ -16,9 +16,12 @@ import io.grpc.CallOptions;
  * {@code JwsVerify.bootstrapAndRegister} dedup).
  *
  * <p><b>Default behaviour change:</b> the compiled-in default is {@value #DEFAULT_DEADLINE_MILLIS}
- * ms. {@code 0} or negative = unlimited = pre-HARDEN-B2 behaviour. An explicit deadline
- * ({@code OPTION_LOCAL} / {@code withCallOptions} / a filter-set {@link CallOptions#getDeadline()})
- * always wins.
+ * ms. {@code 0} or negative = unlimited = pre-HARDEN-B2 behaviour. Precedence, highest first:
+ * an explicit deadline ({@code OPTION_LOCAL} / {@code withCallOptions} / a filter-set
+ * {@link CallOptions#getDeadline()}) always wins; then a per-call unlimited opt-out
+ * ({@link #unlimited()}); then the global default. A legitimate long call opts out per-call with
+ * {@code ClientContext.withCallOptions(ClientDeadline.unlimited(), rpc::longCall)} — no need to
+ * disable the default process-wide.
  */
 public final class ClientDeadline {
 
@@ -29,6 +32,14 @@ public final class ClientDeadline {
     public static final long DEFAULT_DEADLINE_MILLIS = 30_000L;
 
     private static volatile long defaultDeadlineMillis = DEFAULT_DEADLINE_MILLIS;
+
+    /**
+     * Per-call opt-out marker. When set, {@link #apply(CallOptions)} leaves the call deadline-less
+     * (unlimited) instead of stamping the default — for legitimately long calls, without disabling
+     * the default process-wide. An explicit deadline still outranks it.
+     */
+    static final CallOptions.Key<Boolean> UNLIMITED_KEY =
+            CallOptions.Key.createWithDefault("krpc-client-deadline-unlimited", Boolean.FALSE);
 
     private ClientDeadline() {
     }
@@ -43,8 +54,23 @@ public final class ClientDeadline {
     }
 
     /**
+     * {@link CallOptions#DEFAULT} marked to opt this call out of the default deadline (unlimited).
+     * Pass it through {@code ClientContext.withCallOptions(...)} for a legitimately long call.
+     */
+    public static CallOptions unlimited() {
+        return unlimited(CallOptions.DEFAULT);
+    }
+
+    /** Mark {@code options} to opt out of the default deadline (unlimited) for this call. */
+    public static CallOptions unlimited(CallOptions options) {
+        var base = options == null ? CallOptions.DEFAULT : options;
+        return base.withOption(UNLIMITED_KEY, Boolean.TRUE);
+    }
+
+    /**
      * Return {@code options} with the default deadline applied, or unchanged when disabled
-     * ({@code <= 0}) or when the caller already set an explicit deadline.
+     * ({@code <= 0}), when the caller already set an explicit deadline, or when the caller opted
+     * this call out via {@link #unlimited()}.
      */
     public static CallOptions apply(CallOptions options) {
         long millis = defaultDeadlineMillis;
@@ -53,6 +79,9 @@ public final class ClientDeadline {
         }
         if (options != null && options.getDeadline() != null) {
             return options; // explicit deadline wins
+        }
+        if (options != null && Boolean.TRUE.equals(options.getOption(UNLIMITED_KEY))) {
+            return options; // per-call opt-out: caller declared this a legitimately unlimited call
         }
         var base = options == null ? CallOptions.DEFAULT : options;
         return base.withDeadlineAfter(millis, TimeUnit.MILLISECONDS);

@@ -63,20 +63,20 @@ public interface CacheManager {
     default String cacheKey(MethodStub stub,
                     InputProto input){
 
-        // C2 (HARDEN-B2): byte[] params travel in `bs` with utf8 EMPTY, so keying on getUtf8()
-        // alone collapsed every byte[] input onto one key -> @Cached returned another arg's data.
-        // Key on the actual payload and tag the dataCase so the three shapes never collide.
-        String paramKey;
-        var json = input.getUtf8();
-        if (json != null && !json.isEmpty()) {
-            paramKey = "u:" + (json.length() > KEY_MAX_SIZE_UNDIGEST
-                    ? json.substring(0, 32) + "---" + SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8))
-                    : json);
-        } else if (input.getDataCase() == InputProto.DataCase.BS) {
-            paramKey = "b:" + SimpleMD5.md5(input.getBs());
-        } else {
-            paramKey = "n:";
-        }
+        // C2 (HARDEN-B2): key on the explicit dataCase tristate, never a "utf8 non-empty" heuristic.
+        // setUtf8("") has dataCase == UTF8 but an empty payload; the old heuristic folded it onto the
+        // NOT_SET ("n:") key, so an empty-string arg collided with a no-arg call. Branch on dataCase
+        // so UTF8 / BS / DATA_NOT_SET never share a key and byte[] payloads never collapse together.
+        String paramKey = switch (input.getDataCase()) {
+            case UTF8 -> {
+                var json = input.getUtf8();
+                yield "u:" + (json.length() > KEY_MAX_SIZE_UNDIGEST
+                        ? json.substring(0, 32) + "---" + SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8))
+                        : json);
+            }
+            case BS -> "b:" + SimpleMD5.md5(input.getBs());
+            case DATA_NOT_SET -> "n:";
+        };
         return stub.methodDescriptor.getFullMethodName()+":"+paramKey;
     }
 

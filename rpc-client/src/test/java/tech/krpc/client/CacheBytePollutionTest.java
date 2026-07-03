@@ -75,4 +75,47 @@ class CacheBytePollutionTest {
         assertArrayEquals(new byte[]{9, 8, 7, 6}, readB,
                 "each read must yield a fresh clone unaffected by mutation of a prior read");
     }
+
+    // --- Raw SPI (fix round 1) -------------------------------------------------------------------
+    // The tests above exercise the CacheManager helper defaults, which cloned even before fix round 1.
+    // The blocking O10 fix sank the clone INTO SimpleLRUCache's raw byte[] API (set(String,byte[],int)
+    // / get(String)), reachable directly by a user-held SimpleLRUCache. These call that API with no
+    // helper in the path, so a mutation removing the impl-layer clone (while keeping the helper clone)
+    // still goes red.
+
+    @Test
+    void rawApiMutatingReturnedArrayDoesNotPoisonCache() {
+        SimpleLRUCache cache = new SimpleLRUCache(16);
+        cache.set(KEY, new byte[]{10, 20, 30, 40, 50}, 60);
+
+        byte[] first = cache.get(KEY);
+        assertNotNull(first, "entry must be present with positive expireSeconds");
+        java.util.Arrays.fill(first, (byte) 0x7F);
+
+        assertArrayEquals(new byte[]{10, 20, 30, 40, 50}, cache.get(KEY),
+                "raw get() must clone: mutating a returned array cannot poison the entry");
+    }
+
+    @Test
+    void rawApiMutatingSourceArrayAfterSetDoesNotChangeCachedValue() {
+        SimpleLRUCache cache = new SimpleLRUCache(16);
+        byte[] source = {1, 2, 3, 4, 5};
+        cache.set(KEY, source, 60);
+        java.util.Arrays.fill(source, (byte) 0x00);
+
+        assertArrayEquals(new byte[]{1, 2, 3, 4, 5}, cache.get(KEY),
+                "raw set() must clone: mutating the source buffer after set cannot change the entry");
+    }
+
+    @Test
+    void rawApiSeparateReadsReturnIndependentArrays() {
+        SimpleLRUCache cache = new SimpleLRUCache(16);
+        cache.set(KEY, new byte[]{9, 8, 7, 6}, 60);
+
+        byte[] readA = cache.get(KEY);
+        java.util.Arrays.fill(readA, (byte) 0x01);
+
+        assertArrayEquals(new byte[]{9, 8, 7, 6}, cache.get(KEY),
+                "each raw get() must yield a fresh clone, unaffected by mutation of a prior read");
+    }
 }

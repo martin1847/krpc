@@ -105,8 +105,11 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
 
             var url = new URL(cfg.getUrl());
 
+            // C8 (HARDEN-B2): URL.getPort() is -1 when the config URL omits the port; that reached
+            // ManagedChannelBuilder.forAddress(host, -1). Fall back to the protocol default port.
+            var port = url.getPort() < 0 ? url.getDefaultPort() : url.getPort();
             var channelBuilder =
-                    ManagedChannelBuilder.forAddress(url.getHost(), url.getPort());
+                    ManagedChannelBuilder.forAddress(url.getHost(), port);
             if ("https".equals(url.getProtocol())) {
                 channelBuilder.useTransportSecurity();
             } else {
@@ -116,6 +119,15 @@ public class RpcClientScannerConfigurer implements BeanDefinitionRegistryPostPro
             var fac = new RpcClientFactory(appName, channelBuilder.build());
             fac.setCacheManager(cacheManager);
             log.info("build RpcClientFactory {}/{}", appName, fac);
+
+            // C8 (HARDEN-B2): register the factory as a destroyMethod="close" bean. Before this it
+            // was a local var captured only by the client bean-supplier lambda and never registered,
+            // so its close() was never called on context shutdown -> every refresh leaked the
+            // ManagedChannel + its gRPC executor threads.
+            var facBd = new RootBeanDefinition(RpcClientFactory.class, () -> fac);
+            facBd.setDestroyMethodName("close");
+            var facBeanName = "rpcClientFactory-" + appName;
+            registry.registerBeanDefinition(facBeanName, facBd);
 
             for (var clz : clzSet) {
                 var bd = new RootBeanDefinition(clz, () -> fac.get(clz));

@@ -37,8 +37,13 @@ public class SimpleLRUCache implements CacheManager {
         };
     }
 
+    // C1 (HARDEN-B2): accessOrder=true makes get() a STRUCTURAL mutation (moves the entry to
+    // the tail). Under virtual-thread concurrency, an unsynchronized get() corrupted the linked
+    // list (dirty reads, and once a 100% CPU self-spin in a broken next-pointer cycle). get()
+    // and set() must share one monitor; the check-timestamp-then-remove compound below is one
+    // critical section, not two.
     @Override
-    public byte[] get(String cacheKey) {
+    public synchronized byte[] get(String cacheKey) {
         var wrap = map.get(cacheKey);
         if (wrap != null) {
             if (wrap.timestamp >= System.currentTimeMillis()) {
@@ -50,7 +55,7 @@ public class SimpleLRUCache implements CacheManager {
     }
 
     @Override
-    public void set(String cacheKey, byte[] bytes, int expireSeconds) {
+    public synchronized void set(String cacheKey, byte[] bytes, int expireSeconds) {
         var wrap = new ValueWrap(bytes,System.currentTimeMillis() + expireSeconds* 1000L);
         map.put(cacheKey,wrap);
     }

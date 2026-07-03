@@ -32,7 +32,10 @@ public interface CacheManager {
         if(stub.returnType != byte[].class){
             value = message.getUtf8().getBytes(StandardCharsets.UTF_8);
         }else {
-            value = message.getBs();//.toByteArray();
+            // O10 (HARDEN-B2): getBs() hands back OutputProto's internal array by reference.
+            // Clone so a caller mutating the returned byte[] can't poison the cached entry.
+            var bs = message.getBs();
+            value = bs == null ? null : bs.clone();
         }
         set(cacheKey,value,stub.getExpireSeconds());
     }
@@ -49,7 +52,9 @@ public interface CacheManager {
         if(stub.returnType != byte[].class){
             bd.setUtf8(new String(bs,StandardCharsets.UTF_8));
         }else{
-            bd.setBs(bs);
+            // O10 (HARDEN-B2): clone the cached array before handing it out, so THIS caller's
+            // later mutation can't corrupt the shared cache value seen by other threads/calls.
+            bd.setBs(bs.clone());
         }
         return bd.build();
     }
@@ -58,10 +63,19 @@ public interface CacheManager {
     default String cacheKey(MethodStub stub,
                     InputProto input){
 
+        // C2 (HARDEN-B2): byte[] params travel in `bs` with utf8 EMPTY, so keying on getUtf8()
+        // alone collapsed every byte[] input onto one key -> @Cached returned another arg's data.
+        // Key on the actual payload and tag the dataCase so the three shapes never collide.
+        String paramKey;
         var json = input.getUtf8();
-        String paramKey  = json;
-        if(json.length()>KEY_MAX_SIZE_UNDIGEST){
-            paramKey = json.substring(0,32)+"---"+ SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8));
+        if (json != null && !json.isEmpty()) {
+            paramKey = "u:" + (json.length() > KEY_MAX_SIZE_UNDIGEST
+                    ? json.substring(0, 32) + "---" + SimpleMD5.md5(json.getBytes(StandardCharsets.UTF_8))
+                    : json);
+        } else if (input.getDataCase() == InputProto.DataCase.BS) {
+            paramKey = "b:" + SimpleMD5.md5(input.getBs());
+        } else {
+            paramKey = "n:";
         }
         return stub.methodDescriptor.getFullMethodName()+":"+paramKey;
     }

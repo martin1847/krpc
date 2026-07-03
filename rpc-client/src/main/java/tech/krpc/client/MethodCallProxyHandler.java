@@ -120,7 +120,10 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
         }
 
         public ClientCall<InputProto,OutputProto> makeCall(CallOptions options){
-            var call = channel.newCall(stub.methodDescriptor, options);
+            // O2 (HARDEN-B2): apply the configurable default deadline as the last step before the
+            // call is created, so an explicit OPTION_LOCAL / withCallOptions / filter-set deadline
+            // (already on `options`) wins and only a truly deadline-less call gets the default.
+            var call = channel.newCall(stub.methodDescriptor, ClientDeadline.apply(options));
             // ADR-0003: propagate the inbound W3C traceparent to the outbound call.
             var traceparent = MDC.get(TraceMeta.MDC_TRACEPARENT);
             if (null != traceparent) {

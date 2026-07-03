@@ -468,6 +468,32 @@ Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
   (native includes the boot log). OFF path (`/mcp` absent, 404) is covered by
   `McpDisabledQuarkusTest`, not by the transcripts.
 
+### 12.3 Client limits / hardening config
+
+```properties
+# Default outbound call deadline (ms) when the caller sets none. Default 30000; 0 = unlimited.
+rpc.client.defaultDeadlineMillis=30000
+```
+**⚠️ Behaviour change (HARDEN-B2, O2):** before this, a call with no explicit deadline used
+`CallOptions.DEFAULT` — no deadline — so a hung/half-open upstream blocked the calling virtual
+thread forever. Now a deadline-less outbound call gets this default, applied in one authority
+(`ClientDeadline.apply`, `rpc-client`) shared by the proxy path (sync + async, `MethodCallProxyHandler`),
+`GeneralizeClient`, and rpcurl. Spring binds the config in `RpcClientAutoConfigure.afterPropertiesSet`
+(single point — a future Quarkus client binds the same authority, so the two can't drift, mirroring
+the Batch-1 `JwsVerify.bootstrapAndRegister` dedup). **A legitimate call slower than the default is
+cut with `DEADLINE_EXCEEDED`** — raise the value or set an explicit per-call deadline for long calls.
+An explicit deadline always wins: `ClientContext.withCallOptions(CallOptions.DEFAULT.withDeadlineAfter(...), ...)`
+or a filter that sets `CallOptions.getDeadline()`. `0` or negative = unlimited = pre-1.0.4 behaviour.
+
+Other client correctness fixes in this batch (no config, pure bug fixes): the default `@Cached`
+cache (`SimpleLRUCache`) is now thread-safe (`get`/`set` synchronised — the `accessOrder` map
+re-links on `get`, so concurrent reads corrupted it under virtual threads); the cache key now tags
+the input `dataCase` so distinct `byte[]` params stop colliding onto one key (C2); cached `byte[]`
+values are cloned on both edges so a caller mutating a returned array can't poison the shared entry
+(O10); and the Spring client `RpcClientFactory` is registered as a `destroyMethod="close"` bean
+(was leaked every refresh — channel + gRPC executor threads) with a portless config URL falling
+back to the protocol default port (C8), and a graceful `shutdown()`+bounded-await close (C6-client).
+
 ---
 
 ## 13. Native image (GraalVM)

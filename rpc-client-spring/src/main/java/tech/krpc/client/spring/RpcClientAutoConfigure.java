@@ -3,12 +3,12 @@
  * Copyright (c) 2021-2023 All Rights Reserved.
  */
 package tech.krpc.client.spring;
-
 import java.util.Map;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,6 +17,7 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import tech.krpc.client.ClientDeadline;
 
 /**
  *
@@ -49,13 +50,20 @@ public class RpcClientAutoConfigure implements InitializingBean {
         private Map<String, RpcCfg> clients;
     }
 
+    @Autowired
+    Environment environment;
+
     @Override
     public void afterPropertiesSet() throws Exception {
         log.debug("*******************rpc.enable RpcClientAutoConfigure*******************************");
-        //log.info("*******************RpcClientAutoConfigure*******************************");
-        //log.info("*******************RpcClientAutoConfigure*******************************");
-        //log.info("*******************RpcClientAutoConfigure*******************************");
-        //log.info("*******************RpcClientAutoConfigure******************************* {}",clients);
+        // O2 (HARDEN-B2): single Spring binding point for the client default deadline. The apply
+        // logic lives in ClientDeadline (shared with rpcurl/generalize); here we only bind config
+        // so the two frameworks can't drift (mirrors Batch-1 JwsVerify.bootstrapAndRegister dedup).
+        var millis = environment.getProperty(ClientDeadline.CONFIG_KEY, Long.class,
+                ClientDeadline.DEFAULT_DEADLINE_MILLIS);
+        ClientDeadline.setDefaultDeadlineMillis(millis);
+        log.info("[ RPC Client ] default deadline = {} ms ({})", millis,
+                millis <= 0 ? "unlimited" : "hung upstream will be cut");
     }
 
 

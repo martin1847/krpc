@@ -7,6 +7,10 @@ dependencies {
     api project(':rpc-api')
     api project(':rpc-common')
     implementation "io.grpc:grpc-stub:${grpcVersion}"
+    // D2 (2026-07-03): NettyServerBuilder.maxConcurrentCallsPerConnection is Netty-only
+    // (not on the abstract io.grpc.ServerBuilder). compileOnly for the instanceof cast;
+    // consumers already pull grpc-netty at runtime (rpc-server-quarkus/-spring runtimeOnly).
+    compileOnly "io.grpc:grpc-netty:${grpcVersion}"
     implementation "io.netty:netty-common:$nettyGrpcVersion"
 //    implementation "io.grpc:grpc-xds:${grpcVersion}"
 

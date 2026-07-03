@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.grpc.Metadata;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.quarkus.arc.Unremovable;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -33,8 +34,13 @@ import lombok.extern.slf4j.Slf4j;
  * <p>Errors are reported in the JSON body via a {@code code} field (gRPC-style status,
  * mirroring {@code OutputProto}/{@code RpcResult}), not via the HTTP status line — the
  * underlying netty transport only emits 200 (handled), 404 (unknown path) or 500
- * (uncaught exception). Not-found/forbidden therefore surface as {@code code:404}.
+ * (uncaught exception). Not-found/forbidden therefore surface as {@code code:5}
+ * — gRPC {@code NOT_FOUND} ({@link #CODE_NOT_FOUND}), never HTTP {@code 404}.
  */
+// AGENT-001 P1 prerequisite: this handler is discovered reflectively by
+// HttpHandlerExpose (getBeans(Object,Any)), so Arc's default remove-unused-beans=all
+// would strip it as unused, making /agent/invoke absent in a default consumer.
+@Unremovable
 @ApplicationScoped
 @Slf4j
 public class AgentInvokeHandler implements PostHandler<AgentInvokeRequest> {

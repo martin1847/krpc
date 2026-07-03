@@ -55,15 +55,25 @@ public class HttpHandlerExpose extends AbstractHttpHandler {
         int g = 0,p = 0;
         for (var bean : allSet){
             if(GetHandler.class.isAssignableFrom(bean.getBeanClass())){
-                g++;
                 var handler = (GetHandler) CDI.current().select(bean.getBeanClass()).get();
+                // ADR-0004 (AGENT-001 P1): a flag-gated handler (e.g. MCP, default OFF)
+                // opts out here, so its path is never registered — zero new surface.
+                if(!handler.enabled()){
+                    log.debug(" skip disabled HTTP GET {} ", handler.path());
+                    continue;
+                }
+                g++;
                 getHanlderMap.put(handler.path(), handler);
                 log.debug(" found HTTP GET {} ", handler.path());
             }
 
             if(PostHandler.class.isAssignableFrom(bean.getBeanClass())){
-                p++;
                 var handler = (PostHandler<?>) CDI.current().select(bean.getBeanClass()).get();
+                if(!handler.enabled()){
+                    log.debug(" skip disabled HTTP POST {} ", handler.path());
+                    continue;
+                }
+                p++;
                 postMap.put(handler.path(), handler);
                 log.debug(" found HTTP POST {} ", handler.path());
             }

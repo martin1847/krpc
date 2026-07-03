@@ -24,6 +24,7 @@ import tech.krpc.util.RefUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.netty.NettyServerBuilder;
 import io.grpc.ServerServiceDefinition;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,12 +37,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RpcServerBuilder {
 	private final int port;
+	// D2 (2026-07-03): concurrent-call cap per HTTP/2 connection; 0 = unlimited.
+	private final int maxConcurrentCallsPerConnection;
 	private final Server server;
 
 	// ADR-0004 (AGENT-001 P0): web-only (@UnsafeWeb) dispatch surface, exposed for the
 	// HTTP discover/invoke endpoints. Hidden services are never added here.
 	private final Map<String, WebInvoker> webMethods = new HashMap<>();
 	private ApiMeta                       webApiMeta;
+	// ADR-0004 (AGENT-001 P1): MCP tool subset — only @UnsafeWeb(agentTool=true) methods.
+	private final Map<String, WebInvoker> mcpMethods = new HashMap<>();
+	private ApiMeta                       mcpApiMeta;
 //	private final static Marshaller<Object> RESPONSE_MARSHALLER = new ResponseMarshaller();
 //	private final static Marshaller<InputMessage> REQUEST_MARSHALLER =
 //			ProtoLiteUtils.marshaller(InputMessage.getDefaultInstance());
@@ -55,6 +61,9 @@ public class RpcServerBuilder {
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
 		public static final List<BindableService> PROTO_SERVICE_LIST = new ArrayList<>();
 		Executor executor;
+		// D2 (2026-07-03): default 2000; 0 = unlimited (pre-1.0.4 behaviour).
+		private int maxConcurrentCallsPerConnection =
+				RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION;
 
 		//public final String applicationName;
 
@@ -85,6 +94,17 @@ public class RpcServerBuilder {
 			return this;
 		}
 
+		/// D2: cap concurrent calls per HTTP/2 connection. 0 = unlimited (the only
+		/// unlimited value); a negative value is a configuration error and fails fast.
+		public Builder maxConcurrentCallsPerConnection(int max) {
+			if (max < 0) {
+				throw new IllegalArgumentException(
+						"rpc.server.maxConcurrentCallsPerConnection must be >= 0 (0 = unlimited), got " + max);
+			}
+			this.maxConcurrentCallsPerConnection = max;
+			return this;
+		}
+
 		public Builder regGlobalFilter(ServerFilter... filters) {
 			for (var filter : filters) {
 				ServerContext.regGlobalFilter(filter);
@@ -105,6 +125,7 @@ public class RpcServerBuilder {
 	
 	private RpcServerBuilder(Builder builder) throws Exception {
 		this.port = builder.port;
+		this.maxConcurrentCallsPerConnection = builder.maxConcurrentCallsPerConnection;
 		this.server = init(builder.services,builder.executor);
 	}
 	
@@ -114,6 +135,21 @@ public class RpcServerBuilder {
 		//System.out.println("========XDS======XDS======XDS=====");
 
 		serverBuilder.executor(executor);
+
+		// D2 (2026-07-03): app-layer defence-in-depth vs CVE-2026-47244 (HTTP/2
+		// stream-flood DoS). maxConcurrentCallsPerConnection lives only on
+		// NettyServerBuilder, not the abstract ServerBuilder; forPort() returns the
+		// Netty provider at runtime (grpc-netty runtimeOnly). instanceof keeps this
+		// compile-safe (grpc-netty compileOnly) and avoids reflection for native.
+		if (maxConcurrentCallsPerConnection > 0) {
+			if (serverBuilder instanceof NettyServerBuilder) {
+				((NettyServerBuilder) serverBuilder)
+						.maxConcurrentCallsPerConnection(maxConcurrentCallsPerConnection);
+			} else {
+				log.warn("maxConcurrentCallsPerConnection={} ignored: server provider {} is not Netty",
+						maxConcurrentCallsPerConnection, serverBuilder.getClass().getName());
+			}
+		}
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);
@@ -125,6 +161,7 @@ public class RpcServerBuilder {
 		var publicMetaService = new MServiceImpl();
 		var metaMethods = new ArrayList<RpcMetaMethod>();
 		var webMetaMethods = new ArrayList<RpcMetaMethod>();
+		var mcpMetaMethods = new ArrayList<RpcMetaMethod>();
 		services.put(metaService,Collections.emptyList());
 		services.put(publicMetaService,Collections.emptyList());
 
@@ -153,6 +190,8 @@ public class RpcServerBuilder {
 				// ADR-0004: web exposure == @UnsafeWeb. Hidden services keep the '-' prefix
 				// in their service name and are never registered into the web surface.
 				boolean web = clz.isAnnotationPresent(UnsafeWeb.class);
+				// ADR-0004 (AGENT-001 P1): agentTool is a strict subset of web — MCP tools only.
+				boolean agentTool = web && ((UnsafeWeb) clz.getAnnotation(UnsafeWeb.class)).agentTool();
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
@@ -161,8 +200,13 @@ public class RpcServerBuilder {
 						metaMethods.add(toMeta(stub,attr));
 					}
 					if(needMeta && web){
-						webMethods.put(webKey(stub.methodDescriptor.getFullMethodName()), methodInvokation);
+						var webKey = webKey(stub.methodDescriptor.getFullMethodName());
+						webMethods.put(webKey, methodInvokation);
 						webMetaMethods.add(toMeta(stub,attr));
+						if(agentTool){
+							mcpMethods.put(webKey, methodInvokation);
+							mcpMetaMethods.add(toMeta(stub,attr));
+						}
 					}
 				}
 				var srv = serviceDefBuilder.build();
@@ -182,6 +226,7 @@ public class RpcServerBuilder {
 		}
 		metaService.init(buildApiMeta(metaMethods));
 		webApiMeta = buildApiMeta(webMetaMethods);
+		mcpApiMeta = buildApiMeta(mcpMetaMethods);
 		return serverBuilder.build();
 	}
 
@@ -199,6 +244,16 @@ public class RpcServerBuilder {
 	/// ADR-0004: ApiMeta containing only @UnsafeWeb services and their DTO closure.
 	public ApiMeta webApiMeta(){
 		return webApiMeta;
+	}
+
+	/// ADR-0004 (AGENT-001 P1): "Service/method" -> dispatcher for @UnsafeWeb(agentTool=true) only.
+	public Map<String, WebInvoker> mcpMethods(){
+		return mcpMethods;
+	}
+
+	/// ADR-0004 (AGENT-001 P1): ApiMeta containing only agentTool services (MCP tools/list source).
+	public ApiMeta mcpApiMeta(){
+		return mcpApiMeta;
 	}
 
 	public static ApiMeta buildApiMeta(List<RpcMetaMethod> methods){

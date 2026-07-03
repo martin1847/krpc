@@ -79,11 +79,24 @@ curl -X POST http://HOST:8080/agent/invoke \
   silently skips it (SPEC §8.7, `exitOnJwksError=true` in prod).
 - **Auth and rate-limiting are the gateway's job**, not krpc core — put these two
   paths behind a gateway (ADR-0004).
-- **`@UnsafeWeb(agentTool=…)` is not built yet** — a P1 design in ADR-0004. P0 gates
-  agent exposure on `@UnsafeWeb` only; there is no narrower agent-tool subset today.
-- **Caveats:** JVM-mode only (native reflection-config for these handlers is not
-  added); and in a minimal Quarkus app the handler beans must be retained — see
-  `docs/agent-guide.md` for the runtime note and a real discover→invoke transcript.
+- **`@UnsafeWeb(agentTool=true)` gates the MCP tool surface** (`POST /mcp`, below) —
+  a deliberate subset of web exposure. `/agent/discover` + `/agent/invoke` are
+  unaffected (still the full `@UnsafeWeb` set).
+- Reachable in a **default consumer, JVM + native** (handlers carry `@Unremovable`;
+  native reflection-config included). See `docs/agent-guide.md` for a real
+  discover→invoke transcript.
+
+## MCP bridge — `POST /mcp` (P1, ADR-0004, default OFF)
+
+Same `8080` host also speaks MCP (spec `2025-06-18`, JSON-RPC 2.0 over Streamable
+HTTP). Enable with `rpc.server.mcp.enabled=true` (env `KRPC_MCP=true`); default OFF =
+zero new surface. Tools = the `@UnsafeWeb(agentTool=true)` subset only; tool name
+`Service_method`; `input`/`outputSchema` derived from the DTO tree + jakarta
+constraints + `@Doc` (`outputSchema` is the `RpcResult<T>`-unwrapped `T`).
+`tools/call` runs the **same credential+filter dispatch as `/agent/invoke`** (not
+bypassed). Methods: `initialize`, `notifications/initialized` (202), `tools/list`,
+`tools/call`, `ping`; JSON-response mode, no SSE. Full contract: **SPEC §12.2**;
+handshake transcript: `docs/agent-guide.md`.
 
 ## Native image (GraalVM / Quarkus)
 

@@ -7,7 +7,9 @@ package tech.krpc.http.server;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +33,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 import io.netty.handler.timeout.IdleStateEvent;
 import jakarta.validation.Validator;
@@ -55,7 +58,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     public static final String SERVER_NAME = "Netty";
 
     // ADR-0004 (AGENT-001 P1): a handler may set this response header to override the
-    // default HTTP 200 (e.g. MCP notifications -> 202). It is consumed by writeHandler
+    // default HTTP 200 (e.g. MCP notifications -> 202). It is consumed during response dispatch
     // and never written to the wire.
     public static final String STATUS_OVERRIDE_HEADER = "x-krpc-http-status";
 
@@ -69,6 +72,11 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     // back onto the channel's eventLoop (netty threading model: writes belong to the eventLoop,
     // never a foreign thread). Virtual threads are daemon, so no explicit shutdown is needed.
     static final ExecutorService HANDLER_VT = Executors.newVirtualThreadPerTaskExecutor();
+
+    // O6 (HARDEN-B4 fix round 1): per-connection response-ordering state. The handler is @Sharable,
+    // so per-channel state lives in a channel attribute, not an instance field. See ConnState.
+    private static final AttributeKey<ConnState> STATE =
+            AttributeKey.valueOf(AbstractHttpHandler.class, "connState");
 
     public abstract Validator getValidator();
 
@@ -87,7 +95,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             var query = new QueryStringDecoder(uri);
             var handler = getHanlderMap.get(query.rawPath());
             if (null != handler) {
-                writeHandler(ctx, handler, query, request.headers());
+                enqueue(ctx, handlerTask(ctx, handler, query, request.headers()));
                 return;
             }
         } else if ("POST".equals(method)) {
@@ -100,21 +108,21 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
                 try {
                     dto = parsePost(request, postHandler);
                 } catch (JsonDecodeException ex) {
-                    // AUD-omp-20/omp-21: parsePost's JsonUtils.parse ran BEFORE writeHandler's
+                    // AUD-omp-20/omp-21: parsePost's JsonUtils.parse ran BEFORE the dispatch's
                     // try, so a malformed body escaped to exceptionCaught -> ctx.close() -> a bare
                     // connection reset with no HTTP response. Now it is a 400 JSON here. Message is
                     // JsonDecodeException's neutral text; Jackson internals stay in the cause/log.
                     log.warn("bad request body on {}: {}", postHandler.path(), ex.getMessage());
-                    writeError(ctx, HttpResponseStatus.BAD_REQUEST, ex.getMessage());
+                    enqueue(ctx, errorTask(ctx, HttpResponseStatus.BAD_REQUEST, ex.getMessage()));
                     return;
                 } catch (HttpError ex) {
                     // Missing body / validation failure -> 400 (C7 + AUD-omp-21).
-                    writeError(ctx, ex.status, ex.getMessage());
+                    enqueue(ctx, errorTask(ctx, ex.status, ex.getMessage()));
                     return;
                 } catch (RuntimeException ex) {
                     // Any other parse-time failure: neutral 500, never a silent close.
                     log.error("parse error on {}", postHandler.path(), ex);
-                    writeError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, null);
+                    enqueue(ctx, errorTask(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, null));
                     return;
                 }
 
@@ -122,24 +130,27 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
                     ((QueryStringAware) dto).setQueryString(query);
                 }
 
-                writeHandler(ctx, postHandler, dto, request.headers());
+                enqueue(ctx, handlerTask(ctx, postHandler, dto, request.headers()));
                 return;
             }
         }
 
-        writeNotFound(ctx, uri);
+        // C7: 404 as a JSON envelope (matching content-type). Echoing the not-found URI discloses
+        // nothing sensitive. Queued so it stays in order behind any in-flight request on this conn.
+        enqueue(ctx, errorTask(ctx, HttpResponseStatus.NOT_FOUND, uri + " not found"));
 
     }
 
-    <ParamDTO> void writeHandler(ChannelHandlerContext ctx, Handler<ParamDTO> handler, ParamDTO dto, HttpHeaders requestHeaders) {
-        // O6 backpressure: stop reading further requests on THIS connection before handing off to a
-        // virtual thread, so a slow handler cannot pull an unbounded backlog off the socket — bounds
-        // in-flight blocking work to <=1 per connection. autoRead is re-enabled on the eventLoop
-        // once the response is queued (setAutoRead(true) re-arms the read). All autoRead / write
-        // calls stay on the eventLoop; only handle() runs on the VT. dto/extHeaders/requestHeaders
-        // are already materialized off the request ByteBuf, so the VT touches nothing refcounted.
-        ctx.channel().config().setAutoRead(false);
-        HANDLER_VT.execute(() -> {
+    private static <ParamDTO> RequestTask handlerTask(
+            ChannelHandlerContext ctx, Handler<ParamDTO> handler, ParamDTO dto, HttpHeaders requestHeaders) {
+        // O6 + AUD-omp-09: handle() may block (DB / downstream) so it MUST run off the eventLoop; it
+        // is dispatched to a virtual thread and the response write is scheduled back onto the channel
+        // eventLoop (writes belong to the eventLoop, never a foreign thread). dto / requestHeaders are
+        // already materialized off the request ByteBuf (parsePost / QueryStringDecoder / the
+        // String-backed DefaultHttpHeaders), so the VT touches nothing refcounted. onDone (which frees
+        // the FIFO slot) fires only AFTER the write is queued on the eventLoop, so the next pipelined
+        // request on this connection is dispatched strictly after this response is written.
+        return onDone -> HANDLER_VT.execute(() -> {
             HttpResponseStatus status;
             String contentType;
             byte[] bytes;
@@ -151,7 +162,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             } catch (final Throwable ex) {
                 // C7 + AUD-omp-21: never echo ex.getMessage() — internal reason stays in the log;
                 // client gets a neutral 500 JSON envelope. Catch Throwable so the response AND the
-                // autoRead re-enable below are guaranteed even on an Error.
+                // FIFO-slot release below are guaranteed even on an Error.
                 log.error("handler " + handler.path() + " error", ex);
                 status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                 contentType = TYPE_JSON;
@@ -166,10 +177,69 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
                 try {
                     writeResponse(ctx, fStatus, fContentType, fBytes, fExtHeaders);
                 } finally {
-                    // Re-arm reads for the next request on this connection (false->true fires read()).
-                    ctx.channel().config().setAutoRead(true);
+                    onDone.run();
                 }
             });
+        });
+    }
+
+    /**
+     * A pre-dispatch error response (parse 400 / validation 400 / 404 / parse-time 500). It flows
+     * through the same per-connection FIFO queue as handler responses so that, e.g., a bad-body
+     * request pipelined behind a slow in-flight request cannot have its 400 overtake the earlier
+     * response. Written synchronously on the eventLoop; onDone then frees the FIFO slot.
+     */
+    private static RequestTask errorTask(ChannelHandlerContext ctx, HttpResponseStatus status, String msg) {
+        return onDone -> {
+            try {
+                writeError(ctx, status, msg);
+            } finally {
+                onDone.run();
+            }
+        };
+    }
+
+    private static ConnState state(ChannelHandlerContext ctx) {
+        var attr = ctx.channel().attr(STATE);
+        ConnState st = attr.get();
+        if (null == st) {
+            st = new ConnState();
+            attr.set(st);
+        }
+        return st;
+    }
+
+    /** Appends a request to this connection's FIFO queue and tries to dispatch it. Eventloop-only. */
+    private static void enqueue(ChannelHandlerContext ctx, RequestTask task) {
+        ConnState st = state(ctx);
+        st.queue.addLast(task);
+        drain(ctx, st);
+    }
+
+    /**
+     * Dispatch the next queued request iff none is in flight — strict one-in / one-out so responses
+     * on this connection are returned in request order (HTTP/1.1). Runs only on the channel
+     * eventLoop, so ConnState needs no synchronization. autoRead is dropped while a request is being
+     * served (backpressure: bounds in-flight work to <=1 and stops the socket pulling further
+     * pipelined bytes) and re-armed once the queue drains.
+     */
+    private static void drain(ChannelHandlerContext ctx, ConnState st) {
+        if (st.active) {
+            return;
+        }
+        RequestTask next = st.queue.pollFirst();
+        if (null == next) {
+            ctx.channel().config().setAutoRead(true);
+            return;
+        }
+        st.active = true;
+        ctx.channel().config().setAutoRead(false);
+        next.run(() -> {
+            // Response for the current request has been written on the eventLoop. Free the slot and
+            // dispatch the next queued request. Scheduled (not inline) so a burst of synchronous
+            // error responses cannot recurse without bound.
+            st.active = false;
+            ctx.channel().eventLoop().execute(() -> drain(ctx, st));
         });
     }
 
@@ -265,12 +335,6 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         super.userEventTriggered(ctx, evt);
     }
 
-    private static void writeNotFound(ChannelHandlerContext ctx, String uri) {
-        // C7: 404 as a JSON envelope with a matching content-type (was a PLAIN header wrapping a
-        // JSON body). Echoing the not-found URI discloses nothing sensitive.
-        writeError(ctx, HttpResponseStatus.NOT_FOUND, uri + " not found");
-    }
-
     /**
      * Builds a uniform JSON error envelope {@code {"code":<status>,"message":<msg>}} (C7). A null
      * message falls back to the status reason phrase. AUD-omp-21: callers pass only client-safe
@@ -342,6 +406,30 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
         ctx.write(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.CONTINUE));
+    }
+
+    /**
+     * A single queued unit of work on one connection. {@code run} MUST call {@code onDone} exactly
+     * once — possibly asynchronously, after the response has been written on the eventLoop — so the
+     * next queued request is dispatched only then. See {@link #drain}.
+     */
+    @FunctionalInterface
+    private interface RequestTask {
+        void run(Runnable onDone);
+    }
+
+    /**
+     * O6 (HARDEN-B4 fix round 1): per-connection response-ordering state. HTTP/1.1 requires that
+     * responses on one connection be returned in request order. Because handle() runs off the
+     * eventLoop on a virtual thread, two requests pipelined in a SINGLE TCP segment (both already
+     * decoded by the aggregator before setAutoRead(false) can stop the read) would otherwise be
+     * dispatched concurrently and race: a fast request could overtake a slow one, so a response
+     * could even be framed against the wrong request (data crossing). This FIFO queue guarantees
+     * strict one-in / one-out. Touched only on the channel eventLoop — no synchronization needed.
+     */
+    private static final class ConnState {
+        final Deque<RequestTask> queue = new ArrayDeque<>();
+        boolean active;
     }
 
     /**

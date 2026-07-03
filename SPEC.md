@@ -527,13 +527,23 @@ the HTTP-face analogue of the gRPC `JsonDecodeException`→`INVALID_ARGUMENT` ma
 the agent/MCP surface never discloses an internal reason to the client.
 
 **Threading (O6 / AUD-omp-09).** Business logic must not run on the netty NIO worker eventLoop — a
-blocking handler there starves the bounded workerGroup (the whole front door). `writeHandler`
+blocking handler there starves the bounded workerGroup (the whole front door). `channelRead0`
 dispatches `handler.handle()` to a per-request **virtual thread**
 (`Executors.newVirtualThreadPerTaskExecutor()`); the response write is scheduled back on the
 channel's eventLoop (netty model: writes belong to the eventLoop, never a foreign thread).
-Backpressure: `setAutoRead(false)` before handoff bounds in-flight blocking work to ≤1 per
-connection; `setAutoRead(true)` after the write re-arms reads. **Caveat:** responses to requests
-pipelined within a single TCP segment can reorder — rare on the agent/MCP surface, not addressed.
+Backpressure: `setAutoRead(false)` while a request is in flight bounds in-flight blocking work to ≤1
+per connection; reads re-arm (`setAutoRead(true)`) once the connection's queue drains.
+
+**Per-connection response ordering (O6 fix-round-1).** HTTP/1.1 requires responses on one
+connection to be returned in request order. Because `handle()` runs off the eventLoop, two requests
+pipelined in a **single TCP segment** (both decoded by the aggregator before `setAutoRead(false)`
+can stop the read) would otherwise be dispatched to their virtual threads concurrently and race — a
+fast request could overtake a slow one, so a response could be framed against the **wrong** request
+(data crossing). Each connection therefore carries a **FIFO queue** (`ConnState`, held in a netty
+channel attribute, touched only on the eventLoop): every request — handler responses *and*
+error/404 responses alike — is enqueued; exactly one is served at a time; the next is dispatched
+only after the current response has been written on the eventLoop. Strict one-in / one-out
+guarantees in-order, correctly-framed responses per connection.
 
 **Idle / slow-loris (AUD-omp-52).** The pipeline carries an `IdleStateHandler` (reader-idle
 `HttpServer.READ_IDLE_SECONDS` = 60s); a connection sending no inbound bytes in that window is

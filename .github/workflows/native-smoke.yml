@@ -38,7 +38,7 @@ jobs:
 
       - name: Build quickstart native image (host toolchain, no container)
         run: |
-          ./gradlew :examples:quickstart:build \
+          ./gradlew --init-script .github/ci-init.gradle :examples:quickstart:build \
             -Dquarkus.native.enabled=true \
             -Dquarkus.native.container-build=false \
             -Dquarkus.package.jar.enabled=false \

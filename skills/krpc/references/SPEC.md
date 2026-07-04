@@ -503,6 +503,54 @@ values are cloned on both edges so a caller mutating a returned array can't pois
 (was leaked every refresh — channel + gRPC executor threads) with a portless config URL falling
 back to the protocol default port (C8), and a graceful `shutdown()`+bounded-await close (C6-client).
 
+### 12.4 HTTP face — error model, threading & idle limits (HARDEN-B4)
+
+The `http-server` netty host serving `/agent/*` and `/mcp` (`AbstractHttpHandler`, `HttpServer`).
+
+**Error model (C7 / AUD-omp-20 / AUD-omp-21).** Every error is a uniform JSON envelope
+`{"code":<httpStatus>,"message":<text>}` with `content-type: application/json` — body and
+content-type always match. Status-line mapping (was: everything → 500 with the raw exception
+message on the wire):
+
+| condition | status |
+|---|---|
+| malformed JSON body | `400` (neutral `"malformed JSON…"`; Jackson internals only in the log) |
+| empty body to a validating endpoint | `400` `"request body is required"` |
+| bean-validation failure | `400` (field path + constraint; **never** the rejected value — PII stays in the log) |
+| request body > 1 MiB | `413` (netty `HttpObjectAggregator`) |
+| unknown path | `404` |
+| handler internal error | `500` (status reason phrase only — **never** `ex.getMessage()`) |
+
+A malformed body no longer escapes to netty `exceptionCaught` → `ctx.close()` (a bare connection
+reset with no HTTP response); it is a 400 JSON and the connection stays open (AUD-omp-20). This is
+the HTTP-face analogue of the gRPC `JsonDecodeException`→`INVALID_ARGUMENT` mapping (HARDEN-B3);
+the agent/MCP surface never discloses an internal reason to the client.
+
+**Threading (O6 / AUD-omp-09).** Business logic must not run on the netty NIO worker eventLoop — a
+blocking handler there starves the bounded workerGroup (the whole front door). `channelRead0`
+dispatches `handler.handle()` to a per-request **virtual thread**
+(`Executors.newVirtualThreadPerTaskExecutor()`); the response write is scheduled back on the
+channel's eventLoop (netty model: writes belong to the eventLoop, never a foreign thread).
+Backpressure: `setAutoRead(false)` while a request is in flight bounds in-flight blocking work to ≤1
+per connection; reads re-arm (`setAutoRead(true)`) once the connection's queue drains.
+
+**Per-connection response ordering (O6 fix-round-1).** HTTP/1.1 requires responses on one
+connection to be returned in request order. Because `handle()` runs off the eventLoop, two requests
+pipelined in a **single TCP segment** (both decoded by the aggregator before `setAutoRead(false)`
+can stop the read) would otherwise be dispatched to their virtual threads concurrently and race — a
+fast request could overtake a slow one, so a response could be framed against the **wrong** request
+(data crossing). Each connection therefore carries a **FIFO queue** (`ConnState`, held in a netty
+channel attribute, touched only on the eventLoop): every request — handler responses *and*
+error/404 responses alike — is enqueued; exactly one is served at a time; the next is dispatched
+only after the current response has been written on the eventLoop. Strict one-in / one-out
+guarantees in-order, correctly-framed responses per connection.
+
+**Idle / slow-loris (AUD-omp-52).** The pipeline carries an `IdleStateHandler` (reader-idle
+`HttpServer.READ_IDLE_SECONDS` = 60s); a connection sending no inbound bytes in that window is
+closed, so an "open and abandon" client cannot pin a worker forever. Independently, `HttpServer.start()`
+shuts down both `NioEventLoopGroup`s if bind fails (was: they leaked their NIO threads, and a caller
+retry loop stacked orphaned pools).
+
 ---
 
 ## 13. Native image (GraalVM)

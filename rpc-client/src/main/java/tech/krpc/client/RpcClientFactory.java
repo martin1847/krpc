@@ -87,15 +87,6 @@ public class RpcClientFactory {
     }
 
 
-    public void setDefaultCacheManager(Object cacheManager) {
-        if(cacheManager instanceof CacheManager){
-            setCacheManager((CacheManager) cacheManager);
-        }else {
-            setCacheManager(new SimpleLRUCache());
-        }
-    }
-
-
     public void close(){
         if(null!=channel){
             // C6-client (HARDEN-B2): graceful shutdown drains in-flight RPCs; shutdownNow() alone

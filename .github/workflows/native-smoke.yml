@@ -1,0 +1,83 @@
+# Native-image smoke: build the DB-free quickstart as a GraalVM native image AND
+# boot it + curl the agent/MCP HTTP endpoints. Build catches dead-code / reflection
+# gaps at image-build time; the e2e catches runtime-only native failures (missing
+# reflection-config, init crashes) that a build-only check would miss. Native boots
+# in milliseconds and the curls are sub-second, so the e2e is nearly free on top of
+# the build (which is the only slow part).
+name: native-smoke
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    # Only on changes that can affect the native image; skip doc-only PRs to save CI minutes.
+    paths:
+      - '**/*.java'
+      - '**/*.gradle'
+      - '**/*.properties'
+      - '**/gradle.properties'
+      - '**/native-image/**'
+      - '.github/workflows/native-smoke.yml'
+permissions:
+  contents: read
+concurrency:
+  group: native-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Mandrel (GraalVM) JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: 'mandrel'
+          java-version: '21'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build quickstart native image (host toolchain, no container)
+        run: |
+          ./gradlew :examples:quickstart:build \
+            -Dquarkus.native.enabled=true \
+            -Dquarkus.native.container-build=false \
+            -Dquarkus.package.jar.enabled=false \
+            -x test
+
+      - name: Boot the native runner + smoke the agent/MCP HTTP endpoints
+        run: |
+          set -euo pipefail
+          RUNNER=$(ls examples/quickstart/build/*-runner)
+          echo "runner: $RUNNER"; file "$RUNNER"
+          KRPC_MCP=true "$RUNNER" -Drpc.server.app=quickstart >/tmp/quickstart.log 2>&1 &
+          PID=$!
+          # wait for "started" (native boots in ms; generous cap)
+          for i in $(seq 1 50); do
+            grep -q "started in" /tmp/quickstart.log && break
+            sleep 0.2
+          done
+          echo "--- boot log ---"; cat /tmp/quickstart.log
+          grep -q "native" /tmp/quickstart.log || { echo "::error::runner did not report native mode"; kill $PID; exit 1; }
+
+          fail=0
+          check() { # name expected url [curl-args...]
+            local name=$1 exp=$2 url=$3; shift 3
+            local code
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$@" "$url" || echo 000)
+            if [ "$code" = "$exp" ]; then echo "PASS $name -> $code";
+            else echo "::error::$name expected $exp got $code"; fail=1; fi
+          }
+          check "GET /agent/discover"          200 http://localhost:8080/agent/discover
+          check "GET /mcp (405)"               405 http://localhost:8080/mcp
+          check "malformed POST /agent/invoke (400)" 400 http://localhost:8080/agent/invoke \
+                -X POST -H 'Content-Type: application/json' --data 'not-json{'
+
+          echo "--- MCP initialize ---"
+          init=$(curl -s -X POST -H 'Content-Type: application/json' -H 'MCP-Protocol-Version: 2025-06-18' \
+            --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
+            http://localhost:8080/mcp)
+          echo "$init"
+          echo "$init" | grep -q '"result"' || { echo "::error::MCP initialize did not return a JSON-RPC result"; fail=1; }
+
+          kill $PID 2>/dev/null || true
+          exit $fail

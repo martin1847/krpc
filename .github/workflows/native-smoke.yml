@@ -44,7 +44,17 @@ jobs:
             -Dquarkus.package.jar.enabled=false \
             -x test
 
-      - name: Boot the native runner + smoke the agent/MCP HTTP endpoints
+      - name: Fetch the rpcurl CLI (Rust gRPC client, prebuilt linux binary)
+        run: |
+          # Reuse the published musl binary from krpc-crates releases — no Rust toolchain /
+          # cross-repo build needed. Public asset, downloadable without auth. Pin the CLI version.
+          curl -sSL -o rpcurl.zip \
+            https://github.com/martin1847/krpc-crates/releases/download/v1.0.0/rpcurl-1.0.0-x86_64-unknown-linux-musl.zip
+          unzip -o rpcurl.zip -d rpcurl-bin
+          chmod +x rpcurl-bin/rpcurl
+          ./rpcurl-bin/rpcurl --version
+
+      - name: Boot the native runner + smoke the agent/MCP HTTP endpoints + gRPC (rpcurl)
         run: |
           set -euo pipefail
           RUNNER=$(ls examples/quickstart/build/*-runner)
@@ -78,6 +88,18 @@ jobs:
             http://localhost:8080/mcp)
           echo "$init"
           echo "$init" | grep -q '"result"' || { echo "::error::MCP initialize did not return a JSON-RPC result"; fail=1; }
+
+          # gRPC path: the Rust rpcurl client -> the native krpc server on :50051.
+          # Validates BOTH the krpc client wire protocol (cross-language) AND the server's
+          # gRPC dispatch + RpcResult envelope end-to-end, over and above the HTTP-gateway checks.
+          echo "--- rpcurl gRPC: quickstart/Hello/hello ---"
+          hello=$(./rpcurl-bin/rpcurl http://localhost:50051/quickstart/Hello/hello -d '{"name":"native-ci"}' 2>&1 || true)
+          echo "$hello"
+          if echo "$hello" | grep -q '"code": 0' && echo "$hello" | grep -q 'Hello, native-ci'; then
+            echo "PASS rpcurl gRPC Hello -> code 0, greeting echoed"
+          else
+            echo "::error::rpcurl gRPC Hello did not return code 0 with the expected greeting"; fail=1
+          fi
 
           kill $PID 2>/dev/null || true
           exit $fail

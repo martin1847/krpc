@@ -44,12 +44,19 @@ jobs:
             -Dquarkus.package.jar.enabled=false \
             -x test
 
-      - name: Fetch the rpcurl CLI (Rust gRPC client, prebuilt linux binary)
+      - name: Fetch the rpcurl CLI (Rust gRPC client, latest prebuilt linux binary)
         run: |
+          set -euo pipefail
           # Reuse the published musl binary from krpc-crates releases — no Rust toolchain /
-          # cross-repo build needed. Public asset, downloadable without auth. Pin the CLI version.
-          curl -sSL -o rpcurl.zip \
-            https://github.com/martin1847/krpc-crates/releases/download/v1.0.0/rpcurl-1.0.0-x86_64-unknown-linux-musl.zip
+          # cross-repo build. Auto-tracks the LATEST release so a future rpcurl bump is picked up
+          # without touching this workflow. Public repo → no auth. Resolve the latest linux-musl
+          # asset URL from the releases API, then download it.
+          URL=$(curl -sSL https://api.github.com/repos/martin1847/krpc-crates/releases/latest \
+            | grep -oE '"browser_download_url": *"[^"]*x86_64-unknown-linux-musl\.zip"' \
+            | head -1 | sed -E 's/.*"(https[^"]+)".*/\1/')
+          if [ -z "$URL" ]; then echo "::error::no linux-musl rpcurl asset in the latest krpc-crates release"; exit 1; fi
+          echo "rpcurl asset: $URL"
+          curl -sSL -o rpcurl.zip "$URL"
           unzip -o rpcurl.zip -d rpcurl-bin
           chmod +x rpcurl-bin/rpcurl
           ./rpcurl-bin/rpcurl --version

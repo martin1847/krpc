@@ -58,8 +58,15 @@ jobs:
           echo "rpcurl asset: $URL"
           curl -sSL -o rpcurl.zip "$URL"
           unzip -o rpcurl.zip -d rpcurl-bin
-          chmod +x rpcurl-bin/rpcurl
-          ./rpcurl-bin/rpcurl --version
+          # The zip nests the binary under a versioned dir (rpcurl-<ver>-<triple>/rpcurl);
+          # locate it by name rather than assuming a path, so a version bump keeps working.
+          RPCURL_BIN=$(find rpcurl-bin -type f -name rpcurl | head -1)
+          [ -n "$RPCURL_BIN" ] || { echo "::error::rpcurl binary not found in the release zip"; exit 1; }
+          chmod +x "$RPCURL_BIN"
+          # Stabilize the path for the next step.
+          mkdir -p "$HOME/.local/bin" && cp "$RPCURL_BIN" "$HOME/.local/bin/rpcurl"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/rpcurl" --version
 
       - name: Boot the native runner + smoke the agent/MCP HTTP endpoints + gRPC (rpcurl)
         run: |
@@ -100,7 +107,7 @@ jobs:
           # Validates BOTH the krpc client wire protocol (cross-language) AND the server's
           # gRPC dispatch + RpcResult envelope end-to-end, over and above the HTTP-gateway checks.
           echo "--- rpcurl gRPC: quickstart/Hello/hello ---"
-          hello=$(./rpcurl-bin/rpcurl http://localhost:50051/quickstart/Hello/hello -d '{"name":"native-ci"}' 2>&1 || true)
+          hello=$(rpcurl http://localhost:50051/quickstart/Hello/hello -d '{"name":"native-ci"}' 2>&1 || true)
           echo "$hello"
           if echo "$hello" | grep -q '"code": 0' && echo "$hello" | grep -q 'Hello, native-ci'; then
             echo "PASS rpcurl gRPC Hello -> code 0, greeting echoed"

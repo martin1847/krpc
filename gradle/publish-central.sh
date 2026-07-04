@@ -128,7 +128,12 @@ build_bundle() {
   local bundle_dir="$ROOT_DIR/build/central-bundle"
   local bundle_zip="$ROOT_DIR/build/${project_name}-${version}-central-bundle.zip"
 
-  "$GRADLE_CMD" clean build publishAllPublicationsToCentralStagingRepository -x test >&2
+  # Exclude the quickstart example from the release build: it is NOT a published module, and its
+  # Quarkus app-model resolution transitively wants the exact krpc rpc-* version that ext-rpc pins
+  # (e.g. ext-rpc 1.0.3 -> rpc-client 1.0.3) which may not be in the local mirror when this build
+  # is ahead of that pin. quickstart is validated separately by the native-smoke CI, so skipping it
+  # here does not reduce coverage; the 9 published modules still build+sign+stage.
+  "$GRADLE_CMD" clean build publishAllPublicationsToCentralStagingRepository -x test -x :examples:quickstart:build >&2
 
   rm -rf "$bundle_dir" "$bundle_zip"
   mkdir -p "$bundle_dir"

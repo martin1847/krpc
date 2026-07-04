@@ -1,5 +1,7 @@
 
-# Unreleased (target 1.0.4 / 1.1.0)
+# 1.1.0, 2026-07-04
+
+* **Dependency: `rpc-server-quarkus` now pulls `tech.krpc.ext:ext-rpc` `1.0.1` → `1.0.3`** (native-image DTO super-class reflection fix — the Quarkus augmentation `Class.forName` CNFE, now a Jandex super-walk that also registers inherited/generic-base DTO fields). The `extRpcVersion` / `extMybatisVersion` gradle properties were split so the two extensions version independently (`ext-mybatis` stays `1.0.1` until its own bump).
 
 P0 fix package (AGENT-001, ADR-0004) — makes the already-shipped agent surface actually work in a default consumer; these are bug fixes, not flag-gated behaviour changes:
 

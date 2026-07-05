@@ -587,6 +587,43 @@ whitespace-trimmed:
   `deployment.environment.name` with the **lowercase** value
   (`dev`/`test`/`staging`/`prod`).
 
+### 12.6 Persistence & transaction discipline
+
+The **ecosystem default is weak transaction, throughput first** — the posture every
+data-access extension implements *safe-by-construction*. Under the virtual-thread
+runtime (one VT per RPC — [§10](#10-service-implementation)) the pooled connection is
+the scarce resource; holding one longer than the operation needs directly caps
+throughput, and the overwhelming majority of RPC methods are reads or single-statement
+writes that need no cross-statement atomicity.
+
+- **Default (no ceremony): per-operation auto-commit.** A connection is borrowed for
+  the operation and returned to the pool the moment it finishes — **never parked** on a
+  request, session, or thread. The shipped/minimal extension config already behaves this
+  way with no tuning flag; you write nothing.
+- **Heavy scenarios opt in explicitly.** A multi-write invariant — two or more writes
+  that must **live or die together** — is wrapped in an explicit transaction
+  (`@Transactional` / JTA). Inside it the connection is bound until the transaction ends;
+  that longer hold is the author's conscious trade.
+
+When to escalate — the one judgement call:
+
+| your method does | posture |
+| --- | --- |
+| a read, or one single-statement write | default auto-commit — do nothing |
+| **≥ 2 writes that must all commit or all roll back** | explicit `@Transactional` / JTA |
+
+- **DON'T:** ship a **silent multi-write** with no transaction — each statement commits
+  on its own, so a mid-sequence failure leaves the earlier writes durably applied
+  (partial state, no rollback).
+- **DON'T:** cache a borrowed connection / `SqlSession` in a field or `ThreadLocal` to
+  "reuse" it — that pins the scarce resource and defeats the return-immediately default
+  (it is the leak class this posture exists to prevent).
+
+The data-access extensions (`ext-mybatis` ≥ 1.0.2) are **safe-by-construction** under
+this principle: the default path cannot leak or pin a connection. Per-extension config
+detail lives in each extension's README; the rationale is ecosystem **ADR-0002
+(weak-transaction default)**.
+
 ---
 
 ## 13. Native image (GraalVM)

@@ -556,6 +556,37 @@ closed, so an "open and abandon" client cannot pin a worker forever. Independent
 shuts down both `NioEventLoopGroup`s if bind fails (was: they leaked their NIO threads, and a caller
 retry loop stacked orphaned pools).
 
+### 12.5 Deployment environment tag — `APP_ENV`
+
+`APP_ENV` names the **deployment environment** for display and telemetry only
+(`rpc-common/.../util/EnvUtils.java`). The parse is case-insensitive and
+whitespace-trimmed:
+
+| value | aliases | `AppEnv` |
+|---|---|---|
+| `dev` | `develop`, `development` | `DEV` |
+| `test` | — | `TEST` |
+| `staging` | `stage`, `pre` | `STAGING` |
+| `prod` | `production` | `PROD` |
+
+- **Unset → `DEV`** (smoothest for local dev; the only consumer today is the
+  startup banner). **Unknown value → warn once + `PROD`** (safe side, same
+  fail-closed philosophy as auth); it never throws. Before this, an
+  IAC-supplied `stage`/`pre` hit `AppEnv.valueOf` and crashed startup with
+  `IllegalArgumentException`.
+- **Display / telemetry only — never a behaviour switch.** `APP_ENV` must not
+  gate code paths. A behavioural toggle gets its **own** env flag (template:
+  `KRPC_MCP` / `rpc.server.mcp.enabled`, §12.2). If a behaviour branch is ever
+  keyed off the environment, the unset default flips from `DEV` to `PROD`.
+- **Two axes — do not conflate.** The deployment-environment **label**
+  (`APP_ENV`) is independent of the **Quarkus runtime profile**
+  (`dev`/`test`/`prod`). In particular **staging runs the `prod` profile**
+  (prod-shaped config) while carrying `APP_ENV=staging` as its label — the two
+  must not be wired to the same value.
+- **Telemetry convention:** emit as the OpenTelemetry resource attribute
+  `deployment.environment.name` with the **lowercase** value
+  (`dev`/`test`/`staging`/`prod`).
+
 ---
 
 ## 13. Native image (GraalVM)

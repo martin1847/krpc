@@ -172,16 +172,9 @@ public class RpcServiceExposer implements ApplicationListener<ApplicationReadyEv
         initJwsVerify.init();
 
         if (!defaultExecutor) {
-            // instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL ( SHARED_CHANNEL_EXECUTOR/ NAME = "grpc-default-executor")
             var name = app + "-rpc";
-            var cpus = Runtime.getRuntime().availableProcessors();
-            if (cpus < 6) {
-                // docker may be 1
-                log.info(" cpus is too small {} , change to default 6.", cpus);
-                cpus = 6;
-            }
-            executor = ThreadPool.newExecutor(name, cpus);
-            log.info("Init Executor {}({} cpus),  instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name, cpus);
+            executor = ThreadPool.newExecutor(name);
+            log.info("Init virtual-thread per-task executor {}, replacing grpc ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name);
         } else {
             log.info("Use CachedThreadPool ServerImplBuilder.DEFAULT_EXECUTOR_POOL grpc-default-executor.");
         }

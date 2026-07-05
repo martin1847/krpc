@@ -556,6 +556,74 @@ closed, so an "open and abandon" client cannot pin a worker forever. Independent
 shuts down both `NioEventLoopGroup`s if bind fails (was: they leaked their NIO threads, and a caller
 retry loop stacked orphaned pools).
 
+### 12.5 Deployment environment tag — `APP_ENV`
+
+`APP_ENV` names the **deployment environment** for display and telemetry only
+(`rpc-common/.../util/EnvUtils.java`). The parse is case-insensitive and
+whitespace-trimmed:
+
+| value | aliases | `AppEnv` |
+|---|---|---|
+| `dev` | `develop`, `development` | `DEV` |
+| `test` | — | `TEST` |
+| `staging` | `stage`, `pre` | `STAGING` |
+| `prod` | `production` | `PROD` |
+
+- **Unset → `DEV`** (smoothest for local dev; the only consumer today is the
+  startup banner). **Unknown value → warn once + `PROD`** (safe side, same
+  fail-closed philosophy as auth); it never throws. Before this, an
+  IAC-supplied `stage`/`pre` hit `AppEnv.valueOf` and crashed startup with
+  `IllegalArgumentException`.
+- **Display / telemetry only — never a behaviour switch.** `APP_ENV` must not
+  gate code paths. A behavioural toggle gets its **own** env flag (template:
+  `KRPC_MCP` / `rpc.server.mcp.enabled`, §12.2). If a behaviour branch is ever
+  keyed off the environment, the unset default flips from `DEV` to `PROD`.
+- **Two axes — do not conflate.** The deployment-environment **label**
+  (`APP_ENV`) is independent of the **Quarkus runtime profile**
+  (`dev`/`test`/`prod`). In particular **staging runs the `prod` profile**
+  (prod-shaped config) while carrying `APP_ENV=staging` as its label — the two
+  must not be wired to the same value.
+- **Telemetry convention:** emit as the OpenTelemetry resource attribute
+  `deployment.environment.name` with the **lowercase** value
+  (`dev`/`test`/`staging`/`prod`).
+
+### 12.6 Persistence & transaction discipline
+
+The **ecosystem default is weak transaction, throughput first** — the posture every
+data-access extension implements *safe-by-construction*. Under the virtual-thread
+runtime (one VT per RPC — [§10](#10-service-implementation)) the pooled connection is
+the scarce resource; holding one longer than the operation needs directly caps
+throughput, and the overwhelming majority of RPC methods are reads or single-statement
+writes that need no cross-statement atomicity.
+
+- **Default (no ceremony): per-operation auto-commit.** A connection is borrowed for
+  the operation and returned to the pool the moment it finishes — **never parked** on a
+  request, session, or thread. The shipped/minimal extension config already behaves this
+  way with no tuning flag; you write nothing.
+- **Heavy scenarios opt in explicitly.** A multi-write invariant — two or more writes
+  that must **live or die together** — is wrapped in an explicit transaction
+  (`@Transactional` / JTA). Inside it the connection is bound until the transaction ends;
+  that longer hold is the author's conscious trade.
+
+When to escalate — the one judgement call:
+
+| your method does | posture |
+| --- | --- |
+| a read, or one single-statement write | default auto-commit — do nothing |
+| **≥ 2 writes that must all commit or all roll back** | explicit `@Transactional` / JTA |
+
+- **DON'T:** ship a **silent multi-write** with no transaction — each statement commits
+  on its own, so a mid-sequence failure leaves the earlier writes durably applied
+  (partial state, no rollback).
+- **DON'T:** cache a borrowed connection / `SqlSession` in a field or `ThreadLocal` to
+  "reuse" it — that pins the scarce resource and defeats the return-immediately default
+  (it is the leak class this posture exists to prevent).
+
+The data-access extensions (`ext-mybatis` ≥ 1.0.2) are **safe-by-construction** under
+this principle: the default path cannot leak or pin a connection. Per-extension config
+detail lives in each extension's README; the rationale is ecosystem **ADR-0002
+(weak-transaction default)**.
+
 ---
 
 ## 13. Native image (GraalVM)

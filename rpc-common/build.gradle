@@ -33,5 +33,11 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
     testImplementation "com.google.protobuf:protobuf-java:3.25.3"
 
+    // EnvUtils APP_ENV normalisation regression — plain JUnit5, no container.
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
 
+test {
+    useJUnitPlatform()
 }

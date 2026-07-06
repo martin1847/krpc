@@ -102,11 +102,23 @@ by reading `rpc-server/.../exe/ThreadPool.java` at tag `v1.1.0`.)
 - **Same-machine driver contention.** Driver and server share the 10-core M2 Pro.
   At **512** closed-loop threads the box is saturated (p50 ≈ 27 ms, RPS collapses
   vs 128) — this level is past the throughput knee and is a *stress* point, not a
-  clean signal. The trustworthy VT-vs-pool signal is at **32 and 128**. The
-  contention is applied equally to all four, so the *relative* ordering holds.
-- **p999 is noisy** (single worst-tail samples on a loaded laptop; per-rep spread
-  up to ~3×). RPS and p50/p99 are tight (spread < 3.5%) and are the load-bearing
-  numbers; treat p999 as directional only.
+  clean signal. The trustworthy VT-vs-pool signal is at **32 and 128**, where the
+  driver is not thread-bound and the contention is applied roughly equally to all
+  four, so the *relative* ordering holds. At **512** the driver alone runs 512
+  blocking threads on the same box, so this setup **cannot distinguish** real
+  server-side executor saturation from driver-side thread interference — the 512
+  ordering (and its native crossover) is not a clean executor signal.
+- **p999 is noisy *and* understated.** Single worst-tail samples on a loaded laptop
+  (per-rep spread up to ~3×). Worse, the closed-loop blocking driver is subject to
+  **coordinated omission**: a worker blocked on a slow request issues no new requests
+  during the stall, so the latency that would have accrued to the work it did not send
+  is never sampled — the true tail is worse than what these numbers report. RPS and
+  p50/p99 are tight (spread < 3.5%) and are the load-bearing numbers; treat p999 as
+  directional only.
+- **Run-order / thermal.** Variants ran in a fixed order with the concurrency sweeps
+  back-to-back, so thermal drift and order effects are not randomized out. Sub-1%
+  deltas (e.g. native VT-vs-pool at 128, **+0.8%**) sit within this noise floor and
+  should be read as a tie, not a real ordering.
 - **JVM RPS at low concurrency reflects C2 peak** after warmup; native trades peak
   throughput for boot time (0.03 s vs 0.25 s) and image footprint — a different
   axis this micro-benchmark does not price in.
@@ -123,16 +135,22 @@ The data **supports keeping VT as the default** (`defaultExecutor=false`):
   with equal or better tail latency. For the typical RPC-microservice profile
   (small-message unary, low–moderate concurrency) VT is the clear win.
 - In native, VT still wins at low concurrency (**+10.5%** at 32) and ties at 128.
-- **Where the pool wins:** native **+ very high concurrency (512): pool +6.6%.**
-  At the saturation point, VT's per-task virtual-thread creation and carrier
-  scheduling overhead under a native runtime stops being repaid, and the bounded
-  cached platform pool edges ahead. This is a stress-regime, native-only crossover
-  — not the default operating point. A service that is knowingly native **and**
-  runs sustained near-saturation concurrency could reasonably flip
+- **Where the pool measured faster:** native + very high concurrency (512):
+  pool +6.6%. This is an **observed crossover; the mechanism is not distinguished
+  by this setup.** With 512 blocking driver threads sharing the box (see caveats),
+  we cannot separate a real server-side executor effect from driver-side thread
+  interference. Candidate hypotheses, none resolved here: (a) at saturation VT's
+  per-task virtual-thread creation and carrier-scheduling overhead under the native
+  runtime stops being repaid and the bounded cached platform pool edges ahead;
+  (b) same-machine driver contention perturbs the two native variants unequally at
+  512. It is a stress-regime, native-only crossover — not the default operating
+  point. If the crossover is real, a service that is knowingly native **and** runs
+  sustained near-saturation concurrency could reasonably flip
   `RPC_SERVER_DEFAULTEXECUTOR=true`; everything else should stay on VT.
 
 Net: ADR-0002's default is evidence-backed for the common case; the runtime flip
-exists and works (JVM and native) for the one regime where the pool wins.
+exists and works (JVM and native) for the one stress regime where the pool measured
+faster (mechanism undistinguished — see above).
 
 ### Raw data
 

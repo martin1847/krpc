@@ -1,0 +1,6 @@
+# Standalone benchmark build outputs — never committed.
+.gradle/
+**/build/
+build-logs/
+
+# Committed provenance lives under data/<date>/ (raw per-rep JSON), not build-logs/.

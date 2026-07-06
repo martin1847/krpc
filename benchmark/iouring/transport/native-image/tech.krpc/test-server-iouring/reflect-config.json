@@ -1,0 +1,8 @@
+[
+  {
+    "name": "tech.krpc.server.iouring.IoUringSupport",
+    "methods": [
+      { "name": "newServerBuilder", "parameterTypes": ["int"] }
+    ]
+  }
+]

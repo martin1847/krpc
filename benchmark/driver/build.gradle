@@ -1,0 +1,30 @@
+// BENCH-001 load driver — runtime-agnostic. Depends only on the published
+// rpc-client + grpc-netty + the shared contract jar; no Quarkus/Spring here, so
+// the SAME driver drives every server-<runtime> unchanged (maintainer steering).
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':contract')
+    implementation "tech.krpc:rpc-client:${krpcVersion}"
+    implementation "io.grpc:grpc-netty:${grpcVersion}"
+}
+
+application {
+    mainClass = 'tech.krpc.bench.driver.LoadDriver'
+}
+
+// Emit a fat-ish run script + a classpath file the harness can invoke directly,
+// so a run needs no gradle daemon in the measured window.
+tasks.register('dumpClasspath') {
+    group = 'benchmark'
+    description = 'Writes the driver runtime classpath to build/driver-classpath.txt.'
+    dependsOn 'classes'
+    doLast {
+        def out = layout.buildDirectory.file('driver-classpath.txt').get().asFile
+        out.parentFile.mkdirs()
+        out.text = (sourceSets.main.runtimeClasspath).asPath
+        println "driver classpath -> ${out} (${sourceSets.main.runtimeClasspath.files.size()} entries)"
+    }
+}

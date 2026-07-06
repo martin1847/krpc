@@ -1,0 +1,25 @@
+// BENCH-001 server under test — Quarkus runtime. This is the `server-<runtime>`
+// slot for Quarkus; a future Spring Boot benchmark adds a sibling server-spring/
+// reusing contract/ + driver/ + the RESULTS format (maintainer steering 2026-07-06).
+//
+// Tests the PUBLISHED krpc 1.1.0 on Maven Central (consumer view, BENCH-001 §1).
+// rpc-server-quarkus:1.1.0's POM transitively brings rpc-server + http-server
+// (compile) and ext-rpc 1.0.3 + grpc-netty 1.79.0 (runtime); ext-rpc carries the
+// native SERVER support (SPEC §13.2), so no per-service native glue is needed.
+plugins {
+    id 'io.quarkus' version "${quarkusVersion}"
+}
+
+group = "tech.krpc.bench"
+
+dependencies {
+    implementation platform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
+
+    implementation "tech.krpc:rpc-server-quarkus:${krpcVersion}"
+    implementation project(':contract')
+
+    implementation "io.quarkus:quarkus-arc"
+    implementation "io.quarkus:quarkus-netty"
+
+    runtimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+}

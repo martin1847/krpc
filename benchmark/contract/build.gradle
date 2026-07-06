@@ -1,0 +1,8 @@
+// Runtime-agnostic shared contract: the @RpcService interface + DTOs, depending
+// ONLY on the published rpc-api (annotations + RpcResult). No Quarkus, no Spring,
+// no server/client runtime here — so the SAME jar is shared by server-<runtime>/
+// (the impl) and driver/ (the client stub), and a future server-spring/ reuses it
+// verbatim. BENCH-001 contract module (maintainer steering: keep driver runtime-neutral).
+dependencies {
+    api "tech.krpc:rpc-api:${krpcVersion}"
+}

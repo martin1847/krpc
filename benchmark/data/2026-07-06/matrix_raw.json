@@ -1,0 +1,466 @@
+{
+  "jvm-vt": {
+    "32": [
+      {
+        "label": "jvm-vt-c32-r1",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 382261,
+        "errors": 0,
+        "rps": 38221.0,
+        "p50us": 817.3,
+        "p99us": 1238.4,
+        "p999us": 4852.9,
+        "maxus": 11341.5
+      },
+      {
+        "label": "jvm-vt-c32-r2",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 374735,
+        "errors": 0,
+        "rps": 37468.0,
+        "p50us": 836.2,
+        "p99us": 1247.1,
+        "p999us": 5222.9,
+        "maxus": 13859.2
+      },
+      {
+        "label": "jvm-vt-c32-r3",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 376292,
+        "errors": 0,
+        "rps": 37624.0,
+        "p50us": 828.6,
+        "p99us": 1243.8,
+        "p999us": 5318.6,
+        "maxus": 60025.4
+      }
+    ],
+    "128": [
+      {
+        "label": "jvm-vt-c128-r1",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 359075,
+        "errors": 0,
+        "rps": 35885.0,
+        "p50us": 3493.6,
+        "p99us": 4574.1,
+        "p999us": 13581.3,
+        "maxus": 29223.2
+      },
+      {
+        "label": "jvm-vt-c128-r2",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 353035,
+        "errors": 0,
+        "rps": 35281.0,
+        "p50us": 3560.3,
+        "p99us": 4716.7,
+        "p999us": 9266.2,
+        "maxus": 30002.3
+      },
+      {
+        "label": "jvm-vt-c128-r3",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 354842,
+        "errors": 0,
+        "rps": 35459.0,
+        "p50us": 3561.1,
+        "p99us": 4528.0,
+        "p999us": 7660.5,
+        "maxus": 8684.8
+      }
+    ],
+    "512": [
+      {
+        "label": "jvm-vt-c512-r1",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 187385,
+        "errors": 0,
+        "rps": 18671.0,
+        "p50us": 27212.8,
+        "p99us": 32839.4,
+        "p999us": 58711.4,
+        "maxus": 64339.1
+      },
+      {
+        "label": "jvm-vt-c512-r2",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 189527,
+        "errors": 0,
+        "rps": 18896.0,
+        "p50us": 26947.9,
+        "p99us": 31167.1,
+        "p999us": 50168.8,
+        "maxus": 53870.5
+      },
+      {
+        "label": "jvm-vt-c512-r3",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 189076,
+        "errors": 0,
+        "rps": 18846.0,
+        "p50us": 27035.9,
+        "p99us": 32201.6,
+        "p999us": 49671.8,
+        "maxus": 59019.8
+      }
+    ]
+  },
+  "jvm-pool": {
+    "32": [
+      {
+        "label": "jvm-pool-c32-r1",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 327608,
+        "errors": 0,
+        "rps": 32757.0,
+        "p50us": 995.5,
+        "p99us": 1218.3,
+        "p999us": 4901.7,
+        "maxus": 12776.5
+      },
+      {
+        "label": "jvm-pool-c32-r2",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 325950,
+        "errors": 0,
+        "rps": 32591.0,
+        "p50us": 1005.5,
+        "p99us": 1258.4,
+        "p999us": 5061.5,
+        "maxus": 11244.9
+      },
+      {
+        "label": "jvm-pool-c32-r3",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 334436,
+        "errors": 0,
+        "rps": 33439.0,
+        "p50us": 979.5,
+        "p99us": 1233.7,
+        "p999us": 4814.0,
+        "maxus": 12979.6
+      }
+    ],
+    "128": [
+      {
+        "label": "jvm-pool-c128-r1",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 320096,
+        "errors": 0,
+        "rps": 31990.0,
+        "p50us": 3919.5,
+        "p99us": 5107.4,
+        "p999us": 13803.6,
+        "maxus": 38368.3
+      },
+      {
+        "label": "jvm-pool-c128-r2",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 317576,
+        "errors": 0,
+        "rps": 31735.0,
+        "p50us": 3978.0,
+        "p99us": 5157.3,
+        "p999us": 8358.1,
+        "maxus": 11614.5
+      },
+      {
+        "label": "jvm-pool-c128-r3",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 319479,
+        "errors": 0,
+        "rps": 31927.0,
+        "p50us": 3931.9,
+        "p99us": 5757.8,
+        "p999us": 10619.4,
+        "maxus": 15696.9
+      }
+    ],
+    "512": [
+      {
+        "label": "jvm-pool-c512-r1",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 181935,
+        "errors": 0,
+        "rps": 18134.0,
+        "p50us": 28157.5,
+        "p99us": 30894.8,
+        "p999us": 34323.4,
+        "maxus": 38306.9
+      },
+      {
+        "label": "jvm-pool-c512-r2",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 179112,
+        "errors": 0,
+        "rps": 17852.0,
+        "p50us": 28595.8,
+        "p99us": 31667.5,
+        "p999us": 34079.0,
+        "maxus": 38569.7
+      },
+      {
+        "label": "jvm-pool-c512-r3",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 178882,
+        "errors": 0,
+        "rps": 17827.0,
+        "p50us": 28544.8,
+        "p99us": 32791.9,
+        "p999us": 58540.8,
+        "maxus": 63625.8
+      }
+    ]
+  },
+  "native-vt": {
+    "32": [
+      {
+        "label": "native-vt-c32-r1",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 312705,
+        "errors": 0,
+        "rps": 31266.0,
+        "p50us": 972.3,
+        "p99us": 2571.3,
+        "p999us": 5306.3,
+        "maxus": 11624.3
+      },
+      {
+        "label": "native-vt-c32-r2",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 308054,
+        "errors": 0,
+        "rps": 30801.0,
+        "p50us": 988.7,
+        "p99us": 2629.0,
+        "p999us": 5058.4,
+        "maxus": 15183.4
+      },
+      {
+        "label": "native-vt-c32-r3",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 307976,
+        "errors": 0,
+        "rps": 30793.0,
+        "p50us": 981.7,
+        "p99us": 2742.0,
+        "p999us": 7520.0,
+        "maxus": 31154.7
+      }
+    ],
+    "128": [
+      {
+        "label": "native-vt-c128-r1",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 315846,
+        "errors": 0,
+        "rps": 31563.0,
+        "p50us": 3956.9,
+        "p99us": 7092.9,
+        "p999us": 15005.1,
+        "maxus": 32526.0
+      },
+      {
+        "label": "native-vt-c128-r2",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 314177,
+        "errors": 0,
+        "rps": 31399.0,
+        "p50us": 3986.0,
+        "p99us": 6848.6,
+        "p999us": 10011.2,
+        "maxus": 33145.1
+      },
+      {
+        "label": "native-vt-c128-r3",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 313027,
+        "errors": 0,
+        "rps": 31281.0,
+        "p50us": 4005.8,
+        "p99us": 6827.6,
+        "p999us": 30430.8,
+        "maxus": 36116.0
+      }
+    ],
+    "512": [
+      {
+        "label": "native-vt-c512-r1",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 169527,
+        "errors": 0,
+        "rps": 16814.0,
+        "p50us": 30224.3,
+        "p99us": 35951.2,
+        "p999us": 55833.9,
+        "maxus": 74870.2
+      },
+      {
+        "label": "native-vt-c512-r2",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 173382,
+        "errors": 0,
+        "rps": 17274.0,
+        "p50us": 29475.3,
+        "p99us": 36210.1,
+        "p999us": 49967.4,
+        "maxus": 57600.2
+      },
+      {
+        "label": "native-vt-c512-r3",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 171267,
+        "errors": 0,
+        "rps": 17070.0,
+        "p50us": 29786.0,
+        "p99us": 37113.2,
+        "p999us": 66924.6,
+        "maxus": 84764.6
+      }
+    ]
+  },
+  "native-pool": {
+    "32": [
+      {
+        "label": "native-pool-c32-r1",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 279036,
+        "errors": 0,
+        "rps": 27900.0,
+        "p50us": 1080.3,
+        "p99us": 3022.7,
+        "p999us": 5687.4,
+        "maxus": 24172.8
+      },
+      {
+        "label": "native-pool-c32-r2",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 278771,
+        "errors": 0,
+        "rps": 27873.0,
+        "p50us": 1086.3,
+        "p99us": 3071.3,
+        "p999us": 5634.8,
+        "maxus": 14395.8
+      },
+      {
+        "label": "native-pool-c32-r3",
+        "threads": 32,
+        "durationSec": 10,
+        "count": 274682,
+        "errors": 0,
+        "rps": 27464.0,
+        "p50us": 1084.3,
+        "p99us": 3271.5,
+        "p999us": 8381.0,
+        "maxus": 22391.4
+      }
+    ],
+    "128": [
+      {
+        "label": "native-pool-c128-r1",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 308294,
+        "errors": 0,
+        "rps": 30809.0,
+        "p50us": 4034.1,
+        "p99us": 6742.3,
+        "p999us": 9855.6,
+        "maxus": 12534.1
+      },
+      {
+        "label": "native-pool-c128-r2",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 311555,
+        "errors": 0,
+        "rps": 31136.0,
+        "p50us": 3990.4,
+        "p99us": 6549.4,
+        "p999us": 8850.2,
+        "maxus": 11964.5
+      },
+      {
+        "label": "native-pool-c128-r3",
+        "threads": 128,
+        "durationSec": 10,
+        "count": 318598,
+        "errors": 0,
+        "rps": 31839.0,
+        "p50us": 3883.6,
+        "p99us": 7043.8,
+        "p999us": 9740.1,
+        "maxus": 11310.4
+      }
+    ],
+    "512": [
+      {
+        "label": "native-pool-c512-r1",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 183510,
+        "errors": 0,
+        "rps": 18286.0,
+        "p50us": 27857.0,
+        "p99us": 32231.9,
+        "p999us": 39479.4,
+        "maxus": 45899.8
+      },
+      {
+        "label": "native-pool-c512-r2",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 186083,
+        "errors": 0,
+        "rps": 18549.0,
+        "p50us": 27483.3,
+        "p99us": 30874.8,
+        "p999us": 34005.4,
+        "maxus": 35118.3
+      },
+      {
+        "label": "native-pool-c512-r3",
+        "threads": 512,
+        "durationSec": 10,
+        "count": 180411,
+        "errors": 0,
+        "rps": 17984.0,
+        "p50us": 28297.0,
+        "p99us": 33618.7,
+        "p999us": 61867.1,
+        "maxus": 74838.5
+      }
+    ]
+  }
+}

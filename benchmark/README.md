@@ -17,6 +17,11 @@ unary (`bench/Hello/hello`) — against the **published krpc 1.1.0 on Maven Cent
 | **VT** (`RPC_SERVER_DEFAULTEXECUTOR=false`, default) | ✓ | ✓ |
 | **platform pool** (`=true`, grpc `DEFAULT_EXECUTOR_POOL`) | ✓ | ✓ |
 
+Here **"platform pool" is grpc-java's fallback `DEFAULT_EXECUTOR_POOL`, not a
+krpc-owned pool** — krpc's own executor is virtual-thread per ADR-0002. Concurrency
+labels `c32/c128/c512` in the raw data are closed-loop driver callers. New-reader
+guide: **[`RESULTS.md` → "How to read this"](RESULTS.md#how-to-read-this)**.
+
 Results, methodology, caveats, and the ADR-0002 reading: **[`RESULTS.md`](RESULTS.md)**.
 
 ## Layout

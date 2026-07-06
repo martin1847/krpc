@@ -4,6 +4,30 @@ Append-only log. Each run appends a dated section (machine spec + JDK + raw data
 never rewrite a prior section. Raw per-rep JSON for each run lives under
 `build-logs/matrix_raw.json` (+ `matrix_agg.json`) at the time of the run.
 
+## How to read this
+
+Three things that trip up first-time readers of this log:
+
+- **`c32` / `c128` / `c512` = closed-loop driver concurrency** — N concurrent
+  callers, each doing request → wait for response → next (no pipelining). `c32` is
+  light load, `c128` moderate, `c512` is **past the knee** (machine saturated — a
+  stress zone, not a normal operating point; see Caveats). `c<N>` is the raw-JSON
+  label form `<runtime>-<executor>-c<N>-r<rep>` (e.g. `jvm-vt-c32-r1`); the tables
+  below head the same numbers as "concurrency 32/128/512".
+- **"pool" is not a krpc thread pool.** krpc's own executor was rewritten to
+  virtual threads (ADR-0002); `defaultExecutor=true` means krpc installs *no*
+  executor and grpc-java falls back to its library-internal `DEFAULT_EXECUTOR_POOL`
+  ("grpc-default-executor") — a **cached, unbounded platform-thread pool** (threads
+  created on demand, 60 s idle reap). So there is no fixed pool size; under
+  closed-loop load it grows toward ~concurrency threads. (Design inference — actual
+  thread counts were **not** sampled during the runs.)
+- **The executor toggle flips at runtime, even in native.** `rpc.server.defaultExecutor`
+  is a `@ConfigProperty` injected into a runtime Arc bean (`RpcServiceExpose`),
+  consumed at runtime init — *both* branches are compiled into the image, so one
+  native binary flips by env (no two-image build). Contrast the client-URL case
+  (EXTRPC-URL-001), where the value was consumed in a *build* step and got baked
+  into the image. Evidence: the **Runtime-flip evidence** section below.
+
 ---
 
 ## Run 2026-07-06 — Apple M2 Pro (host-local, all four)
@@ -58,6 +82,8 @@ Concurrency = closed-loop driver threads. `spread%` = (max−min)/median across 
 | native · VT | 17,070 | 2.7 | 29,786 | 36,210 | 55,834 |
 
 ### VT vs pool — throughput delta (median RPS, +ve = VT faster)
+
+*Each cell = VT's median RPS relative to pool's, at the same runtime and concurrency — e.g. **+14.9% = JVM·VT RPS is 14.9% higher than JVM·pool** (at c32).*
 
 | | 32 | 128 | 512 |
 |---|--:|--:|--:|

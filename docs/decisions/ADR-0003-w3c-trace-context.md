@@ -2,6 +2,12 @@
 
 Status: accepted
 
+Amended by: ADR-0006 (2026-07-16). ADR-0006 supersedes the "the framework creates no spans"
+clause below (span creation now joins the framework via the OTel API). The W3C propagation
+decision in this ADR — single `traceparent`/`tracestate`, drop B3, forward `x-request-id` — still
+stands, and the MDC forwarding path continues to coexist with span creation (one `traceparent` on
+the wire; see ADR-0006 "Coexistence with ADR-0003 MDC forwarding").
+
 Date: 2026-06-20
 
 ## Context
@@ -33,7 +39,8 @@ KRPC propagates trace context using W3C Trace Context:
 Behavior remains pure propagation: the server parses the inbound `traceparent`,
 exposes `traceId` / `spanId` to the log layout via MDC, and the client forwards the
 unchanged `traceparent` (plus `tracestate` / `x-request-id`) on outbound calls. The
-framework still creates no spans.
+framework still creates no spans. <!-- Superseded by ADR-0006: the framework now creates
+SERVER/CLIENT spans via the OTel API; this MDC forwarding coexists (one traceparent on the wire). -->
 
 ## Consequences
 

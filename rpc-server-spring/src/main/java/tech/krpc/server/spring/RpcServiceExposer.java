@@ -31,6 +31,8 @@ import tech.krpc.server.ServerContext;
 import tech.krpc.server.ServerFilter;
 import tech.krpc.server.exe.ThreadPool;
 import tech.krpc.util.EnvUtils;
+import tech.krpc.context.KrpcOtel;
+import io.opentelemetry.api.OpenTelemetry;
 
 /**
  *
@@ -170,6 +172,13 @@ public class RpcServiceExposer implements ApplicationListener<ApplicationReadyEv
         initValidator();
 
         initJwsVerify.init();
+
+        // OTEL-001 (ADR-0006): explicitly install the Spring context's OpenTelemetry into krpc (no
+        // global probing). ifAvailable => absent (no OTel starter) leaves krpc no-op.
+        ctx.getBeanProvider(OpenTelemetry.class).ifAvailable(otel -> {
+            KrpcOtel.install(otel);
+            log.info("OTel: installed Spring OpenTelemetry into krpc (tracing active).");
+        });
 
         if (!defaultExecutor) {
             var name = app + "-rpc";

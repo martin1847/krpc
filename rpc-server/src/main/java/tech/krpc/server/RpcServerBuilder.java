@@ -21,6 +21,7 @@ import tech.krpc.common.MethodStub;
 import tech.krpc.common.RpcConstants;
 import tech.krpc.common.RpcMetaService;
 import tech.krpc.common.meta.ApiMeta;
+import tech.krpc.context.KrpcOtel;
 import tech.krpc.filter.FilterInvokeHelper;
 import tech.krpc.util.RefUtils;
 import io.grpc.BindableService;
@@ -137,6 +138,13 @@ public class RpcServerBuilder {
 		//System.out.println("========XDS======XDS======XDS=====");
 
 		serverBuilder.executor(executor);
+
+		// OTEL-001 (ADR-0006): install the SERVER interceptor (W3C context extraction + SERVER
+		// span, scope-propagated to the handler's virtual thread). Default ON; a no-op until an OTel
+		// SDK is installed via KrpcOtel.install (zero spans, zero wire change). Off => not registered.
+		if (KrpcOtel.enabled()) {
+			serverBuilder.intercept(new OtelServerInterceptor());
+		}
 
 		// D2 (2026-07-03): app-layer defence-in-depth vs CVE-2026-47244 (HTTP/2
 		// stream-flood DoS). maxConcurrentCallsPerConnection lives only on

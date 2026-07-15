@@ -41,6 +41,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.krpc.util.JsonUtils;
 import tech.krpc.util.JsonDecodeException;
+import tech.krpc.context.KrpcOtel;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.context.propagation.TextMapGetter;
 
 /**
  *
@@ -72,6 +79,22 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     // back onto the channel's eventLoop (netty threading model: writes belong to the eventLoop,
     // never a foreign thread). Virtual threads are daemon, so no explicit shutdown is needed.
     static final ExecutorService HANDLER_VT = Executors.newVirtualThreadPerTaskExecutor();
+
+    // OTEL-001 (ADR-0006): resolved once (KrpcOtel.enabled() is a constant) so the disabled path
+    // JIT-folds to the original behaviour — zero cost, zero wire change.
+    private static final boolean OTEL_ENABLED = KrpcOtel.enabled();
+
+    // W3C context extraction from inbound Netty HTTP headers (webhook/callback entry).
+    private static final TextMapGetter<HttpHeaders> HTTP_HEADERS_GETTER = new TextMapGetter<>() {
+        @Override
+        public Iterable<String> keys(HttpHeaders carrier) {
+            return carrier == null ? java.util.List.of() : carrier.names();
+        }
+        @Override
+        public String get(HttpHeaders carrier, String key) {
+            return carrier == null ? null : carrier.get(key);
+        }
+    };
 
     // O6 (HARDEN-B4 fix round 1): per-connection response-ordering state. The handler is @Sharable,
     // so per-channel state lives in a channel attribute, not an instance field. See ConnState.
@@ -155,10 +178,23 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             String contentType;
             byte[] bytes;
             List<AsciiHeader> extHeaders = new ArrayList<AsciiHeader>();
+            // OTEL-001 (ADR-0006): SERVER span for the handled request, W3C context extracted from
+            // the request headers. null when disabled / no-op without an OTel SDK — behaviour and
+            // wire stay identical. makeCurrent() puts the span in scope so any outbound client call
+            // the handler makes on this virtual thread parents to it.
+            // B1 (ADR-0006): skip span creation when disabled OR when no OTel SDK is present
+            // (no-op TracerProvider) — no extract, no span, no scope. Per-call check (isNoop) so a
+            // late-registered SDK still traces; allocation-free on the no-SDK fast path.
+            Span span = (OTEL_ENABLED && !KrpcOtel.isNoop())
+                    ? startHttpServerSpan(handler, requestHeaders) : null;
+            Scope scope = span != null ? span.makeCurrent() : null;
             try {
                 bytes = handler.handle(dto, extHeaders, requestHeaders);
                 status = extractStatusOverride(extHeaders);
                 contentType = handler.contextType();
+                if (span != null) {
+                    span.setAttribute(KrpcOtel.HTTP_RESPONSE_STATUS_CODE, (long) status.code());
+                }
             } catch (final Throwable ex) {
                 // C7 + AUD-omp-21: never echo ex.getMessage() — internal reason stays in the log;
                 // client gets a neutral 500 JSON envelope. Catch Throwable so the response AND the
@@ -168,6 +204,18 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
                 contentType = TYPE_JSON;
                 bytes = errorBody(status, null);
                 extHeaders = null;
+                if (span != null) {
+                    span.setAttribute(KrpcOtel.HTTP_RESPONSE_STATUS_CODE, (long) status.code());
+                    span.setStatus(StatusCode.ERROR);
+                    span.recordException(ex);
+                }
+            } finally {
+                if (scope != null) {
+                    scope.close();
+                }
+                if (span != null) {
+                    span.end();
+                }
             }
             final HttpResponseStatus fStatus = status;
             final String fContentType = contentType;
@@ -181,6 +229,17 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
                 }
             });
         });
+    }
+
+    // OTEL-001 (ADR-0006): extract inbound W3C context from the HTTP headers and start a SERVER
+    // span named after the handler path. No-op tracer/propagator without an OTel SDK.
+    private static Span startHttpServerSpan(Handler<?> handler, HttpHeaders requestHeaders) {
+        Context parent = KrpcOtel.propagator()
+                .extract(Context.current(), requestHeaders, HTTP_HEADERS_GETTER);
+        return KrpcOtel.tracer().spanBuilder(handler.path())
+                .setSpanKind(SpanKind.SERVER)
+                .setParent(parent)
+                .startSpan();
     }
 
     /**

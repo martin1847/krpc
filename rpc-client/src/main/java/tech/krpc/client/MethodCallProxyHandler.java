@@ -10,6 +10,7 @@ import java.util.Map;
 import tech.krpc.annotation.Cached;
 import tech.krpc.common.FilterChain;
 import tech.krpc.common.MethodStub;
+import tech.krpc.context.KrpcOtel;
 import tech.krpc.context.TraceMeta;
 import tech.krpc.filter.FilterInvokeHelper;
 import tech.krpc.internal.InputProto;
@@ -34,7 +35,11 @@ import org.slf4j.MDC;
 @Slf4j
 public class MethodCallProxyHandler<T> implements InvocationHandler {
 
-    private final ManagedChannel channel;
+    // OTEL-001 (ADR-0006): the RPC channel, wrapped with the OTel CLIENT interceptor when enabled.
+    // Widened to io.grpc.Channel (ClientInterceptors.intercept returns a Channel, not a
+    // ManagedChannel); only newCall() is used here, and channel lifecycle stays with the caller's
+    // ManagedChannel (RpcClientFactory.close()).
+    private final io.grpc.Channel channel;
     final Class<T>       clz;
 
     final Map<Method, ChannelMethodInvoker> stubMap = new HashMap<>();
@@ -53,7 +58,12 @@ public class MethodCallProxyHandler<T> implements InvocationHandler {
                                   CacheManager cacheManager,
                                   SerialEnum serialEnum) {
         this.serverName = serverName;
-        this.channel = channel;
+        // OTEL-001 (ADR-0006): install the CLIENT interceptor (CLIENT span + W3C traceparent
+        // injection). Default ON; no-op without an OTel SDK. When off, the raw channel is used —
+        // ADR-0003 MDC forwarding is untouched.
+        this.channel = KrpcOtel.enabled()
+                ? io.grpc.ClientInterceptors.intercept(channel, new OtelClientInterceptor())
+                : channel;
         this.clz = clz;
 
         this.filterChain = new FilterInvokeHelper<>

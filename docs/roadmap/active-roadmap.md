@@ -87,8 +87,8 @@ Acceptance Criteria:
 
 ## AGENT-001: Agent-Friendly Introspection And MCP Surface
 
-Status: active  (P0 delivered on `dev`, security-reviewed; P1 MCP bridge implemented on
-`feat/mcp-bridge`, pending final review + merge)
+Status: active  (P0 + P1 both delivered on `dev` and security-reviewed; P1 MCP bridge merged to
+`dev` as PR #14, `9be92e6`. Remaining scope = uncommitted P2 ideas only.)
 
 Capability: Expose KRPC's runtime self-description to AI agents (discover → call)
 
@@ -116,7 +116,7 @@ Phases (sequenced P0 → P1):
     (JVM + native), no consumer action. Container-level `@QuarkusTest` added.
   - **Native: DONE.** `AgentInvokeRequest` reflection-config added; native build +
     boot verified (Mandrel 25/JDK25) with the agent endpoints reachable.
-- **P1 (IMPLEMENTED on `feat/mcp-bridge`, pending review + merge)** — MCP Streamable
+- **P1 (DELIVERED on `dev`, merged as PR #14 `9be92e6`)** — MCP Streamable
   HTTP bridge (`POST /mcp`, spec 2025-06-18, JSON-RPC 2.0), **not** a standalone
   module: a thin bridge on the P0 http-server host (ADR-0004 revised). `tools/list`
   generated from live `ApiMeta`; `tools/call` via the same `invokeWeb` path
@@ -139,3 +139,31 @@ Acceptance Criteria:
 - MCP module off by default adds no runtime surface.
 - No service registry/discovery/LB added (stays within ADR-0001).
 - Authentication remains gateway-side this phase.
+
+## OTEL-001: OpenTelemetry Span Creation On KRPC's Faces
+
+Status: active
+
+Capability: KRPC creates SERVER/CLIENT spans and extracts/injects W3C trace context on its own
+Netty faces (gRPC + HTTP), so a consumer with a provisioned OTLP pipeline gets connected traces
+across KRPC hops without application code. Span creation via the OpenTelemetry **API only** — no
+SDK/exporter in core (the SDK arrives from the consumer's Quarkus stack; ADR-0001 / NS-3).
+
+Components:
+
+- `rpc-common` (`KrpcOtel` — flag, tracer, gRPC metadata getter/setter, rpc/http attribute keys),
+  new `opentelemetry-api` dependency
+- `rpc-server` (`OtelServerInterceptor`, registered in `RpcServerBuilder`)
+- `rpc-client` (`OtelClientInterceptor`, installed in `MethodCallProxyHandler`)
+- `http-server` (`AbstractHttpHandler` SERVER-span extraction)
+- kill switch `rpc.otel.enabled` / env `KRPC_OTEL`, default ON (no-op without an SDK)
+
+ADR: ADR-0006 (amends ADR-0003's "no spans" clause)
+
+Acceptance Criteria:
+
+- Inbound `traceparent` → SERVER span → CLIENT span → outbound `traceparent`, one header, correct
+  parent chain across a real in-process hop (test-proven).
+- No behavior change without an OTel SDK (byte-identical wire; parity test).
+- No OTel SDK/exporter in any core module's runtime classpath (NS-3).
+- Native build + boot with the OTel surface, no reflection errors (NS-7).

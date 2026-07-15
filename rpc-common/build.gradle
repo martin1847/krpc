@@ -21,6 +21,12 @@ dependencies {
 //    api 'jakarta.json.bind:jakarta.json.bind-api:2.0.0'
     api "org.slf4j:slf4j-api:$slf4jVersion"
 
+    // OTEL-001 (ADR-0006): OpenTelemetry API only (no SDK/exporter — ADR-0001 / NS-3). Exposed
+    // as `api` so the gRPC server/client interceptors (rpc-server / rpc-client) and the HTTP
+    // handler (http-server) inherit it. With no OTel SDK on the consumer classpath,
+    // GlobalOpenTelemetry is a no-op: zero spans, zero header changes, zero cost beyond a no-op call.
+    api "io.opentelemetry:opentelemetry-api:${otelVersion}"
+
 //    implementation 'org.yaml:snakeyaml:1.28'
 //    implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"

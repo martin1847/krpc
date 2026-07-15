@@ -1,0 +1,28 @@
+// ARCH-001 / NORTH_STAR Enforcement: build-failing architecture gate.
+// Test-only, UNPUBLISHED module. It intentionally does NOT apply
+// gradle/upload.gradle, so it produces no Maven publication and the
+// central-bundle glob (top-level */build/central-staging) never matches it
+// — same non-publish precedent as examples/quickstart (settings.gradle;
+// commit 0c0ca37). Do not add upload.gradle here.
+
+dependencies {
+    // Core modules under test — their compiled classes are the analysis subject.
+    // testImplementation keeps them off any (non-existent) published artifact.
+    testImplementation project(':rpc-api')
+    testImplementation project(':rpc-common')
+    testImplementation project(':rpc-client')
+    testImplementation project(':rpc-server')
+    testImplementation project(':rpc-server-quarkus')
+    testImplementation project(':http-server')
+
+    testImplementation "com.tngtech.archunit:archunit-junit5:1.4.1"
+    // Plain JUnit 5 for the OnlyCoreModules scope-substitution guard test (ARCH-001 NB1).
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+    useJUnitPlatform()
+    // arch-test always discovers @ArchTest rules; keep the Gradle 9 guard honest.
+    failOnNoDiscoveredTests = true
+}

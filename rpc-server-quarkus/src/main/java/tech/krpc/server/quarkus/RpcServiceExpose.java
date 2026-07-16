@@ -20,6 +20,8 @@ import tech.krpc.server.ServerContext;
 import tech.krpc.server.ServerFilter;
 import tech.krpc.server.exe.ThreadPool;
 import tech.krpc.util.EnvUtils;
+import tech.krpc.context.KrpcOtel;
+import io.opentelemetry.api.OpenTelemetry;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
@@ -72,6 +74,13 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @Inject
     tech.krpc.server.agent.McpToolRegistry mcpToolRegistry;
 
+    // OTEL-001 (ADR-0006): the container's OpenTelemetry, if the consumer's stack provides one
+    // (e.g. quarkus-opentelemetry). Optional Instance — absent (isResolvable()==false) when no OTel
+    // extension is present, in which case KrpcOtel stays no-op. @Startup runs after the container is
+    // fully initialized, so the bean (when present) is resolvable here.
+    @Inject
+    Instance<OpenTelemetry> openTelemetry;
+
     @ConfigProperty(name = "rpc.server.app")//,defaultValue = NULL
     Optional<String> app;
 
@@ -90,6 +99,15 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
 
     @PostConstruct
     public void expose() throws Exception {
+
+        // OTEL-001 (ADR-0006): explicitly install the container's OpenTelemetry into krpc (no global
+        // probing). Resolvable only when the consumer ships an OTel extension; otherwise stay no-op.
+        if (openTelemetry.isResolvable()) {
+            KrpcOtel.install(openTelemetry.get());
+            log.info("OTel: installed container OpenTelemetry into krpc (tracing active).");
+        } else {
+            log.debug("OTel: no OpenTelemetry bean present; krpc tracing stays no-op.");
+        }
 
         initFilter();
 

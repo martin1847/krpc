@@ -53,6 +53,11 @@ public class RpcClientAutoConfigure implements InitializingBean {
     @Autowired
     Environment environment;
 
+    // OTEL-001 (ADR-0006): the Spring context's OpenTelemetry, if present (micrometer-tracing /
+    // OTel starter). ObjectProvider so a client-only app without an OTel starter stays no-op.
+    @Autowired(required = false)
+    org.springframework.beans.factory.ObjectProvider<io.opentelemetry.api.OpenTelemetry> otelProvider;
+
     @Override
     public void afterPropertiesSet() throws Exception {
         log.debug("*******************rpc.enable RpcClientAutoConfigure*******************************");
@@ -64,6 +69,13 @@ public class RpcClientAutoConfigure implements InitializingBean {
         ClientDeadline.setDefaultDeadlineMillis(millis);
         log.info("[ RPC Client ] default deadline = {} ms ({})", millis,
                 millis <= 0 ? "unlimited" : "hung upstream will be cut");
+        // OTEL-001: explicitly install the Spring OpenTelemetry into krpc (no global probing).
+        if (otelProvider != null) {
+            otelProvider.ifAvailable(otel -> {
+                tech.krpc.context.KrpcOtel.install(otel);
+                log.info("OTel: installed Spring OpenTelemetry into krpc client (tracing active).");
+            });
+        }
     }
 
 

@@ -28,6 +28,17 @@ dependencies {
     testImplementation("io.quarkus:quarkus-junit5") {
         exclude module: 'quarkus-bootstrap-maven-resolver'
     }
+
+    // OTEL-001 B1d (ADR-0006): container proof that the consumer's OpenTelemetry CDI bean is
+    // resolvable at RpcServiceExpose @Startup and gets installed into krpc, so a real gRPC call
+    // exports a SERVER span. TEST SCOPE ONLY — the published example's production deps are unchanged
+    // (no OTel SDK/exporter ships with the example).
+    testImplementation("io.quarkus:quarkus-opentelemetry") {
+        exclude module: 'quarkus-bootstrap-maven-resolver'
+    }
+    testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    testImplementation project(':rpc-client')
+    testImplementation "io.grpc:grpc-stub:${grpcVersion}"
 }
 
 // Convenience alias so `gradle :examples:quickstart:run` starts the server in

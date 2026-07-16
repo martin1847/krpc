@@ -93,15 +93,17 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         super(service, method, resDto, arg, lastChain);
         this.headers = headers;
         injectMdc(headers, HttpConst.CLIENT_ID_HEADER,CLIENT_ID);
-        // ADR-0003: parse inbound W3C traceparent, expose traceId/spanId to the log layout.
+        // ADR-0003 / OTEL-002 R2-2: validate the inbound W3C traceparent BEFORE writing any
+        // trace-related MDC. An invalid header sets none of MDC_TRACEPARENT / traceId / spanId /
+        // tracestate / x-request-id, so the no-SDK client path forwards zero traceparent downstream
+        // rather than an incoherent one — matching the HTTP face. A valid future-version header
+        // (with opaque trailing fields) is bound and forwarded verbatim.
         var traceparent = headers.get(TraceMeta.TRACEPARENT_KEY);
-        if(null != traceparent){
+        var ids = TraceMeta.parse(traceparent);
+        if(null != ids){
             MDC.put(TraceMeta.MDC_TRACEPARENT, traceparent);
-            var ids = TraceMeta.parse(traceparent);
-            if(null != ids){
-                MDC.put(TraceMeta.MDC_TRACE_ID, ids[0]);
-                MDC.put(TraceMeta.MDC_SPAN_ID, ids[1]);
-            }
+            MDC.put(TraceMeta.MDC_TRACE_ID, ids[0]);
+            MDC.put(TraceMeta.MDC_SPAN_ID, ids[1]);
             injectMdc(headers, TraceMeta.TRACESTATE,TraceMeta.TRACESTATE_KEY);
             injectMdc(headers, TraceMeta.X_REQUEST_ID,TraceMeta.REQUEST_ID);
         }

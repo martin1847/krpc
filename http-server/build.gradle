@@ -23,6 +23,14 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
     // OTEL-001: OTel SDK test exporter (test scope only — no SDK in core runtime, NS-3).
     testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    // OTEL-002 Fix 1: drive a real krpc client + server from an HTTP handler to prove the HTTP
+    // SERVER-span context reaches the outbound gRPC CLIENT call (test scope only — no runtime edge).
+    testImplementation project(':rpc-client')
+    testImplementation project(':rpc-server')
+    testImplementation "io.grpc:grpc-netty:${grpcVersion}"
+    // Real SLF4J provider so ADR-0003 MDC trace propagation + the Fix 3 redaction log-capture are
+    // exercisable (MDC/logging are no-ops under the NOP provider) — mirrors rpc-server's noSdkTest.
+    testImplementation "ch.qos.logback:logback-classic:1.5.18"
 
 }
 

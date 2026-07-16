@@ -755,7 +755,359 @@ only for what its build-time scan can reach. Know what is and is not covered.
 
 ---
 
-## 14. Quick checklist for a new service
+## 14. Contract evolution
+
+The contract is the `*-api` module (the `@RpcService` interfaces + DTOs; NS-1 — the
+interface *is* the contract). Evolving it safely is a publish-time discipline, not a
+runtime feature.
+
+### 14.1 Version policy — the major stays `1`
+
+`version` lives in `gradle.properties:5` (`version=1.1.0`, group `tech.krpc`). The
+published line is `1.MINOR.PATCH`:
+
+| bump | means | wire / API impact |
+| --- | --- | --- |
+| **major** (`1`) | **frozen — never increments** | the wire envelope is stable (NS-2: wire-compat originates in krpc) |
+| **minor** | a **breaking** contract change | old clients may fail — coordinate the deploy (§14.3) |
+| **patch** | a **compatible** change (additive / fix) | old clients keep working |
+
+A minor bump is the signal "consumers must move"; a patch is "safe to take whenever".
+This mirrors the support lifecycle in `docs/support-policy.md` (a superseded minor line
+drops to security-only). Today the policy is **author discipline** — krpc does not yet
+machine-enforce it at publish time (§14.2).
+
+### 14.2 The `*-api` publish gate — japicmp (recommended discipline)
+
+> **Status: external operational recommendation — NOT wired in this repo.** A grep for
+> `japicmp` in this tree returns nothing; krpc's own release does not run this gate today.
+> The rule below is the recommended publish discipline; a reference implementation runs in
+> a downstream consumer CI that is **not part of this repository** and is not anchorable
+> here. Treat it as a manual REQUIRED step until krpc wires it (findings-doc follow-up).
+
+Before publishing a `*-api` artifact, run a **binary/source compatibility check**
+(`japicmp`) of the candidate jar against the last released jar. Intended gate semantics:
+
+- **A detected incompatible change** (removed/renamed method, changed DTO field type,
+  narrowed return) should **FAIL the publish** unless the version carries a **minor** bump
+  (§14.1) — a breaking change on a **patch** bump is exactly what the check catches.
+- **Additive-only changes** (new method, new optional DTO field) pass on a patch bump.
+- Run it in the publish pipeline, not as a locally-optional nicety — "the interface is the
+  contract" (NS-1) is only real once a machine verifies the diff.
+
+### 14.3 Deploy-window rule — breaking changes deploy together
+
+> External operational recommendation (from a field report; not a krpc-code fact).
+
+A **breaking** contract change (a minor bump, §14.1) MUST deploy **front and back in the
+same window**. Additive/compatible changes (patch) MAY stagger.
+
+- **Rationale (real staging outage).** A breaking `*-api` change once shipped to one side
+  a day ahead of the other; for that one-day skew the two sides spoke different contracts
+  and calls failed — a self-inflicted outage from deploy skew, not a code bug.
+- The wire envelope is frozen (major `1`, NS-2), so this is about the **method/DTO
+  contract**, which has no compatibility bridge for a removed/renamed method or a changed
+  DTO shape — both sides must cut over atomically.
+
+- **DO:** ship a breaking `*-api` minor to producer and consumer in one deploy window.
+- **DON'T:** stagger a breaking change across days ("we'll do the client tomorrow") — the
+  skew window is a live outage.
+
+---
+
+## 15. Consumer guide (calling a KRPC service)
+
+For agents/humans **calling** a running service. Authoring rules are §1–§11; this is the
+call-side contract.
+
+> **Standing instruction — method names are contract, not guessable.** The rpcurl/gRPC
+> path has no runtime schema handshake yet (an external follow-up id **RPCURL-001** names
+> this gap; it is **not** tracked in this repo's roadmap/ADRs). The HTTP `/agent/discover`
+> surface *does* introspect — §12.2 / `docs/agent-guide.md`. Until rpcurl introspection
+> lands, **grep the `*-api` interface before calling** — a method name or DTO field you
+> guess wrong resolves to `UNIMPLEMENTED`/`code:5`, not a helpful hint (§15.4).
+
+### 15.1 Auth — two independent token lanes
+
+A JWT rides one of **two lanes**; know which you're using. Both feed the same verifier
+(§8.4): `Authorization: Bearer` is tried first, then the cookie `access-token`
+(`JwsVerify.java:49` `DEFAULT_COOKIE_NAME`; selection `ServerContext.java:137-144`).
+
+| lane | wire | rpcurl | when |
+| --- | --- | --- | --- |
+| **Business token** | `Cookie: access-token=<jwt>` | `-c "access-token=$TOK"` | a browser/frontend-style caller whose login set the `access-token` cookie |
+| **Framework token** | `authorization: Bearer <jwt>` | `-t "$TOK"` | service-to-service / tooling holding the raw JWT |
+
+```bash
+# business-token lane — equals syntax; sets Cookie: access-token=<jwt>
+rpcurl <url> -a <app> -c "access-token=$TOK" -d '{...}'   # rpcurl/.../RpcUrl.java:53-54,63-64
+
+# framework lane — prepends "Bearer "; sets authorization
+rpcurl <url> -a <app> -t "$TOK" -d '{...}'                # rpcurl/.../RpcUrl.java:56-57,67-68
+```
+
+- `-c/--cookie` puts its value verbatim on the `cookie` header (`rpcurl/.../RpcUrl.java:64`), so the
+  business token uses the **`access-token=<jwt>` equals form** (a cookie name=value pair),
+  never a bare token.
+- `-t/--token` prepends **`Bearer `** onto `authorization` (`rpcurl/.../RpcUrl.java:68`).
+- **There is no `KRPC_TOKEN` env var** — the framework lane is the `-t`/`--token` flag
+  only (no such env exists in the codebase).
+- **The agent HTTP surface (`/agent/invoke`, `/mcp`) forwards only `Authorization`, not
+  `Cookie`** — so the cookie lane is unavailable there; send a bearer token
+  (`docs/agent-guide.md` "Exposure model").
+
+### 15.2 URL construction
+
+The call path is `{app}/{Service}/{method}` (§5). For a browser/frontend hitting the HTTP
+gateway the full URL is `{gateway}/{app}/{Service}/{method}`, each piece derived by
+`RefUtils.rpcServiceName` (`RefUtils.java:173-198`):
+
+| service declaration | published name | gateway path | reachable |
+| --- | --- | --- | --- |
+| `@UnsafeWeb IDemoService` | `Demo` (leading `I` stripped) | `{gateway}/{app}/Demo/{method}` | frontend + s2s |
+| `@UnsafeWeb DemoService` | `Demo` (`Service` suffix stripped) | `{gateway}/{app}/Demo/{method}` | frontend + s2s |
+| `@UnsafeWeb FooRpc` | `Foo` (`Rpc` suffix stripped) | `{gateway}/{app}/Foo/{method}` | frontend + s2s |
+| `DemoService` (no `@UnsafeWeb`) | `-{app}/Demo` — the `-` prefixes the whole `{app}/Service` value | *not web-served*; gRPC/rpcurl path `-{app}/Demo/{method}` (`rpcurl --no-web`) | **service-to-service only** |
+
+Derivation rules (`RefUtils.java:179-196`): a leading `I` before an uppercase is stripped;
+a trailing `Service` or `Rpc` suffix is stripped; **no dots** in a name. `RefUtils` first
+forms `{app}/{Service}`, then — for a non-`@UnsafeWeb` service — prepends `HIDDEN_SERVICE`
+(`-`) to that **whole value**, yielding service name `-{app}/{Service}` and gRPC full
+method `-{app}/{Service}/{method}` (`RefUtils.java:192-196`). `@UnsafeWeb` services stay
+**prefixless**; the `-` keeps a hidden service off the web gateway (service-to-service
+only). The CLI mirrors this: `rpcurl --no-web` prepends `-` to the app segment
+(`rpcurl/.../RpcUrl.java:97-99`).
+
+On the plain-HTTP agent surface the same name is used **app-relative** —
+`{"service":"Demo","method":"..."}` — and lookup is the literal `"Service/method"` key
+(`WebMethodRegistry.java:36-40`); a hidden or unknown service resolves to `null` →
+`code:5` NOT_FOUND (`docs/agent-guide.md`).
+
+### 15.3 Field-format conventions (quick table)
+
+These are **DTO-authoring conventions** — how to *type* a field so it round-trips cleanly
+across polyglot clients — **not** behaviours a date/number serializer enforces. The
+serializer (`JsonUtils.java`) only guarantees `NON_NULL` output (`:28`) and lenient input
+(`FAIL_ON_UNKNOWN_PROPERTIES=false`, `:29`).
+
+| logical type | represent as | example |
+| --- | --- | --- |
+| date | `String`, `YYYY-MM-DD` | `"2026-07-17"` |
+| datetime | `String`, ISO-8601 with zone | `"2026-07-17T09:30:00+08:00"` |
+| money | `Long`, integer **cents** | `1999` = 19.99 |
+| large id (snowflake, etc.) | `String` | `"7300000000000000001"` |
+
+Why these are conventions, not serializer magic:
+
+- **`java.time` types are NOT ISO-configured.** `JsonUtils` registers `JavaTimeModule`
+  *only if it is on the classpath* (`JsonUtils.java:31-38`) and does **not** disable
+  `WRITE_DATES_AS_TIMESTAMPS`, so a raw `LocalDate`/`OffsetDateTime` field would serialize
+  as a Jackson **numeric array/timestamp**, not `YYYY-MM-DD`/ISO-8601. Represent dates as
+  `String` in the chosen format — the shipped test DTOs keep `java.time` fields off the
+  wire (`test-api/.../dto/TimeResult.java:23-25` are commented out). That is *why* the
+  convention says "String".
+- **money as integer cents** avoids binary floating-point rounding — never `Float`/`Double`
+  for money (contrast the boxed-`Float` geo fields in `Book.java:10-17`, which tolerate
+  imprecision). Not enforced; a discipline.
+- **large ids as `String`** avoids the JSON/JS `2^53` precision cliff for 64-bit ids; DTO
+  id fields are typed `String` where the id is opaque (`test-api/.../dto/Img.java:26`
+  `String id`). A boxed `Long` id is valid on the JVM but risks silent precision loss in a
+  JS/TS/Dart client.
+
+Combine with §4 (boxed scalars, `NON_NULL`).
+
+### 15.4 Error-code behavior — how to branch
+
+A caller branches on the failure *shape*. The three that matter (gRPC/rpcurl path):
+
+| failure | code | carries | caller action |
+| --- | --- | --- | --- |
+| **Jakarta validation failure** | `INVALID_ARGUMENT` | **field-level detail** — `Dto : field=value(constraint)` | self-correct the named field |
+| **Malformed JSON body** | `INVALID_ARGUMENT` | **no field detail** — only `<traceId>,malformed JSON request body` | fix the request JSON; no field is named |
+| **Unauthenticated / forbidden** | `UNAUTHENTICATED` / `PERMISSION_DENIED` | terse reason, **no field hint** | fix the token; nothing field-level to correct |
+| **Unimplemented / not found** | `UNIMPLEMENTED` (rpcurl) / `code:5 NOT_FOUND` (agent HTTP) | **bare** "method not found" | the method/service name is wrong or hidden |
+
+- **`INVALID_ARGUMENT` covers two different shapes** — branch carefully. A **jakarta
+  validation** failure throws `INVALID_ARGUMENT` with the offending `field=value(message)`
+  list (`ValidatorInvoke.java:35-41`) — field-level, self-correctable. A **malformed JSON
+  body** *also* maps to `INVALID_ARGUMENT`, but its client description is only
+  `<traceId>,malformed JSON request body` (`UnaryMethod.java:243-249`) — no field is named,
+  so a caller cannot self-correct a specific field for that member of the same code class.
+  (On the HTTP face the rejected *value* is stripped even for validation errors — field
+  path + constraint only, PII stays in the log — §12.4.)
+- **UNAUTHENTICATED / PERMISSION_DENIED give no actionable field hint** — descriptions are
+  auth-diagnostic, not self-correcting: `"requireCredential but empty token"`
+  (`JwsVerify.java:401`), `"Token expired at: …"` (`:485`), `"kid not found or expired"`
+  (`PERMISSION_DENIED`, `:448`), `"invalid signature !"` (`:454`). A caller cannot infer
+  *how* to build a valid call from the error — a **known gap** (named externally as
+  **RPCURL-001**; not tracked in this repo's roadmap/ADRs).
+- **Unimplemented is bare** — an unknown gRPC method is closed `UNIMPLEMENTED` with grpc's
+  stock "Method not found" (no krpc hint); the HTTP `/agent/invoke` path returns
+  `{"code":5,"message":"Service/method not found"}` (`WebMethodRegistry.java:36-40`,
+  `docs/agent-guide.md`). A hidden service is indistinguishable from a missing one (by
+  design — no internal disclosure).
+
+### 15.5 Consuming a release-candidate (`-rc`) artifact
+
+An `-rc` build (e.g. `1.1.1-rc1`) is a pre-release the producer publishes for
+verification. Three consumption routes, by scope:
+
+| route | when | how |
+| --- | --- | --- |
+| **mavenLocal** | same machine (dev loop) | producer `publishToMavenLocal`; consumer resolves via `mavenLocal()` (`build.gradle:16`) |
+| **vendored file-repo** | a shared `verify-bump` branch | commit the artifact into a repo-relative Maven file-repo and point a `maven { url … }` at it (the `MAVEN_REPO` scaffold, `build.gradle:17-19`, `gradle.properties:3`) |
+| **Nexus** | long-term / cross-team | publish the `-rc` to a Nexus snapshot/staging repo the team already resolves |
+
+`-rc` **never shadows a Central GA version**: Maven ranks `-rc` as a pre-release
+**qualifier that sorts *below* the final** (`1.1.1-rc1` < `1.1.1`), so once the GA lands
+on Central, highest-wins resolution prefers it — the `-rc` cannot accidentally win.
+(Central publish itself is `gradle/publish-central.sh`, §12.)
+
+> These routes and the ordering rule are **consumer-side operational guidance** (standard
+> Maven version semantics); only the `mavenLocal()` / `MAVEN_REPO` scaffold
+> (`build.gradle:16-19`) is anchored in this repo. The Nexus route is a deployment choice
+> with no in-repo anchor.
+
+### 15.6 Living example — the consumer smoke script
+
+The LH umbrella maintains a runnable end-to-end smoke script,
+`scripts/staging-smoke.sh` (owned by the LH seat, **not vendored here**). Shape: it points
+at a staging service, runs a `discover → invoke` (or `rpcurl -a <app> -d '{…}'`) against a
+known `@UnsafeWeb` method, and asserts the `RpcResult` envelope (`code:0`, expected
+`data`). Use it as the reference for a real call sequence; treat it as an **external
+pointer** — read it in the LH umbrella, do not copy it into krpc.
+
+---
+
+## 16. Operations facts
+
+Deployment/runtime facts that bite in production.
+
+### 16.1 Config: build-time vs runtime boundary
+
+A native image bakes **build-time-consumed** config into the binary; **runtime-consumed**
+config (`@ConfigProperty`/env, read at bean init) is flippable on the *same* binary.
+
+- **General rule.** A value consumed in a *build* step (reachable during the native
+  build's static init / an Arc build item) is frozen into the image — a runtime env
+  override does nothing. A value read at runtime flips branches on one native binary, no
+  per-value rebuild.
+- **Client routing URLs (`rpc.client.*.url`) — runtime behavior is NOT verifiable in this
+  repo.** The build-time-bake concern was recorded historically as **EXTRPC-URL-001**: a
+  client-URL value consumed in a *build* step and baked into the native image
+  (`benchmark/RESULTS.md:24-29` describes that historical bake — it is **not** a fix). The
+  runtime-URL fix lives in the **`ext-rpc` repo** (out of this tree); there is no
+  production `rpc.client.*.url` declaration, Quarkus RUN_TIME config root, or native
+  override test in *this* repository, so "routing keys are runtime-overridable" is
+  **unverified here** — an ext-rpc-scoped claim pending a concrete runtime consumer + a
+  same-binary native override test (findings-doc follow-up).
+- **How to verify (env override on a native image) — proven only for a different key.**
+  The same-binary env-flip has been demonstrated for `rpc.server.defaultExecutor`:
+  `RPC_SERVER_DEFAULTEXECUTOR` flips the VT-vs-pool branch on one native binary, observed
+  in the startup log (`benchmark/RESULTS.md:93-104`). Apply the same method to any runtime
+  key — set the env, boot the *same* binary, confirm the branch/value changed.
+
+### 16.2 Port authority
+
+Three server faces, three ports — do not conflate them.
+
+| face | config key | default | speaks |
+| --- | --- | --- | --- |
+| gRPC gateway | `rpc.server.port` | **50051** (`RpcConstants.java:31` `DEFAULT_PORT`) | HTTP/2 gRPC (use `rpcurl`) |
+| krpc HTTP (agent/MCP) | `http.port` | **8080** (`HttpHandlerExpose.java:36`, `HttpServer.java:32`) | plain HTTP/1.1 JSON (`/agent/*`, `/mcp`) |
+| Quarkus REST | `quarkus.http.port` | **8080** (Quarkus default) | the consumer's own Vert.x/REST endpoints |
+
+- **The krpc HTTP face is its own netty server** (`new HttpServer(this, port)`,
+  `HttpHandlerExpose.java:86`) — **separate** from Quarkus's Vert.x HTTP. Both default to
+  **8080**, so in a Quarkus consumer that also serves REST they **collide** on that port.
+- **Probe-hits-wrong-port anecdote.** A health probe (or `curl /agent/discover`) aimed at
+  `:8080` hit the *other* 8080 server — Quarkus REST answering (endpoint 404 / wrong body)
+  or a bind conflict — instead of the krpc agent face. The symptom looks like a broken
+  endpoint but is a port-identity mixup. Resolve by **reassigning one face** (commonly move
+  `http.port` off 8080, e.g. to `8088`) so the three faces are unambiguous. gRPC (50051)
+  never collides; the clash is only between the two 8080 defaults.
+
+### 16.3 Observability contract
+
+Since **OTEL-001** (ADR-0006, which amends ADR-0003), the framework **creates spans** on
+its own faces via the OpenTelemetry **API** (no SDK in core; a no-SDK consumer sees zero
+spans, zero wire change — NS-3/NS-4).
+
+- **What creates spans:**
+  - gRPC **SERVER** span — `OtelServerInterceptor`, registered globally
+    (`RpcServerBuilder.java:145-146`), named `{full/method}`
+    (`OtelServerInterceptor.java:48-54`).
+  - gRPC **CLIENT** span — `OtelClientInterceptor`, installed on the channel
+    (`MethodCallProxyHandler.java:61-64`); injects `traceparent` on egress.
+  - HTTP **SERVER** span — `AbstractHttpHandler` extracts W3C context and spans
+    `handle(...)` (`AbstractHttpHandler.java:181-236`).
+- **MDC ↔ span binding.** ADR-0003's MDC path coexists unchanged: the server parses the
+  inbound `traceparent` into MDC (`traceId`/`spanId` for the log pattern — §11) and the
+  OTel span shares that same W3C trace context, made current on the handler's virtual
+  thread (`OtelServerInterceptor.java:75`). Invariant: **exactly one `traceparent` on the
+  wire** in every mode (ADR-0006 "Coexistence").
+- **W3C only.** B3 (`x-b3-*`) is neither read nor emitted (ADR-0003) — a wire change vs
+  1.0.0; a B3-only peer shares no trace context.
+- **Symptom: logs show empty `traceId= spanId=`.** The layout prints those only when
+  `TraceMeta.parse` succeeds (`ServerContext.java:96-105`; `TraceMeta.parse` returns
+  `null` for a header that is **absent OR malformed** — `TraceMeta.java:39-47`). So empty
+  IDs mean **no *validly parsed* W3C `traceparent` was available** — not necessarily that
+  none arrived. When a header *is* present it is still stored raw in MDC (`MDC_TRACEPARENT`,
+  `ServerContext.java:99`): **inspect the raw header first** to tell "no header" from
+  "malformed / non-W3C header" (e.g. a B3-only or bad-format upstream) before concluding
+  the caller sent nothing.
+
+#### Zero-trace fault tree
+
+"OTLP is provisioned but no traces appear" — walk three layers **in order**:
+
+1. **App produces spans.** Is an OTel SDK actually installed into krpc? Core is API-only
+   and **no-op until `KrpcOtel.install(...)` runs** (`isNoop()` true → pass-through,
+   `OtelServerInterceptor.java:40-42`). Confirm the consumer's OTel stack (e.g.
+   `quarkus-opentelemetry`) is present so the bean is injected at `@Startup` (ADR-0006
+   wiring). No SDK ⇒ no spans, correctly.
+2. **Egress is allowed.** Does the observability namespace's **NetworkPolicy** permit the
+   pod's egress to the OTLP collector? A default-deny egress silently drops exporter
+   traffic — spans are created but never leave.
+3. **Receiver accepts.** Does the OTLP receiver accept the request — **auth / organization
+   header** (e.g. a required tenant header) correct? A rejected export looks identical to
+   "no traces" on the dashboard.
+
+Layer 1 is app/code (anchored above); layers 2–3 are platform (NS-3 — krpc owns neither,
+but this is where on-call starts).
+
+### 16.4 Unknown-method calls produce no span
+
+An **unknown gRPC method does not create a krpc SERVER span** — **[inference, not
+test-pinned].** krpc registers `OtelServerInterceptor` as a global gRPC interceptor
+(`RpcServerBuilder.java:145-146`) and the interceptor derives its span from a **resolved**
+method descriptor (`OtelServerInterceptor.java:44-54`). The decisive step — grpc-java
+invokes a globally-registered interceptor only *after* a successful method lookup, closing
+an unregistered method with `UNIMPLEMENTED` at the transport layer first — is grpc-java
+dispatch behavior; **no krpc test pins it and no grpc-java source/version is anchored
+here**, so treat "no span for unknown methods" as an implementation inference until a test
+or a pinned grpc-java reference confirms it. The HTTP `/agent/invoke` path differs: that
+endpoint is itself a registered handler, so an unknown *service in the body* is a
+normally-handled (and spanned) request that simply misses the `WebMethodRegistry` lookup
+(`WebMethodRegistry.java:36-40`) and returns `code:5`.
+
+### 16.5 Release & rollback discipline (runbook)
+
+- **Image-baked changes are gated by a manual bump.** Anything shipped inside the image
+  (code, or build-time-baked config — §16.1) reaches an environment only through a
+  deliberate **version bump + rebuild**: set `version` + `changelog.md` first (§12); there
+  is no hot-reload of image contents. Runtime config (§16.1) is the escape hatch for what
+  you must flip without a rebuild.
+- **Rollback respects the schema floor.** Rolling an image *back* is safe only down to the
+  **lowest image version compatible with the currently-applied DB schema**. Forward DB
+  migrations (Flyway) are typically not auto-reverted, so a schema at version *N* pins the
+  rollback floor to the first image that understands *N*; rolling below it hits
+  columns/tables the old code can't read. Establish the floor **before** rolling back.
+  (Consumer/`ext-mybatis`-side discipline — persistence posture is ADR-0002 / NS-5, §12.6.)
+
+---
+
+## 17. Quick checklist for a new service
 
 - [ ] Interface annotated `@RpcService`; name has no dots.
 - [ ] Every method `RpcResult<Dto> m(OneDto)` or `m()` — never 2+ params, never raw return.

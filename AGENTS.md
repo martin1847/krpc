@@ -117,6 +117,7 @@ Common commands:
 gradle build
 gradle test
 gradle :http-server:test --tests "tech.krpc.http.server.GrpcWebCodecTest"
+gradle :arch-test:test   # ARCH-001 architecture gate (ArchUnit, freeze-ratchet baseline; see ADR-0005)
 gradle clean
 gradle allDeps
 ```

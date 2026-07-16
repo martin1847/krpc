@@ -1,0 +1,10 @@
+#
+#Thu Jul 16 01:15:15 CST 2026
+R1\:\ tech.krpc\ slices\ are\ free\ of\ package\ cycles=a618d734-6067-49ab-9314-d90a55e13d80
+R2\:\ every\ tech.krpc\ production\ class\ resides\ in\ a\ classified\ layer\ package\ (completeness\ guard)=81e2fdc2-c08f-4ad6-bcee-dba3c0f068a1
+R2\:\ rpc-api\ must\ not\ depend\ on\ common/client/server/http=e9fea499-ac47-40b2-b05b-56cbeacc3674
+R2\:\ rpc-client\ must\ not\ depend\ on\ rpc-server=d2b00c57-0a70-46fc-aba6-696603eba9e2
+R2\:\ rpc-common\ must\ not\ depend\ on\ client/server/http=85577b55-bb34-4b05-bef0-a019e6b7e011
+R2\:\ rpc-server\ must\ not\ depend\ on\ rpc-client=ae8b965a-f463-47b4-80c4-43c80ec79b80
+R3\:\ core\ must\ not\ depend\ on\ discovery/registry/LB/telemetry-backend\ packages\ (NS-3)=12d6f0ac-ef93-4d7b-ba03-6caa52d1ff9e
+R4\:\ core\ must\ not\ depend\ on\ sun../com.sun../jdk.internal..\ (NS-7)=eb2f156d-307b-4553-abb9-aacc6f81db97

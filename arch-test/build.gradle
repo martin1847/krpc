@@ -16,12 +16,65 @@ dependencies {
     testImplementation project(':http-server')
 
     testImplementation "com.tngtech.archunit:archunit-junit5:1.4.1"
-    // Plain JUnit 5 for the OnlyCoreModules scope-substitution guard test (ARCH-001 NB1).
+    // Plain JUnit 5 for the OnlyCoreModules scope-substitution guard test (ARCH-001 NB1)
+    // and the ARCH-002 scan-face / NS-1 completeness gates.
     testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
+// ARCH-002: emit Gradle's AUTHORITATIVE evaluated project model so the scan-face
+// (ScanFaceCompletenessTest) and NS-1 (NoProtoInProductionSourceTest) gates observe the
+// REAL included projects — every include form (single/double quote, parenthesized,
+// multiline), intermediate projects (e.g. :examples), custom projectDir, and each java
+// project's main source dirs — instead of a hand-rolled settings.gradle text parser that
+// silently ignores unsupported syntax. Two files under build/arch-inventory/:
+//   projects.tsv     : <projectPath>\t<projectDir>\t<mainSrcDir:mainSrcDir:...>  (one per subproject)
+//   scanned-deps.txt : this module's testImplementation project(...) paths (the scan face)
+def archInventoryDir = layout.buildDirectory.dir('arch-inventory')
+
+// Captured at THIS module's configuration time (declared deps are available immediately).
+def scannedDepPaths = configurations.testImplementation.dependencies
+    .findAll { it instanceof ProjectDependency }
+    .collect { it.path }
+    .join('\n')
+
+// Captured after ALL projects are evaluated, so sourceSets (java plugin) are populated.
+def projectRows = []
+gradle.projectsEvaluated {
+    rootProject.allprojects.findAll { it != rootProject }.sort { it.path }.each { p ->
+        def srcDirs = p.plugins.hasPlugin('java')
+            ? p.sourceSets.main.allSource.srcDirs.collect { it.absolutePath }
+            : [p.file('src').absolutePath]
+        projectRows << [p.path, p.projectDir.absolutePath, srcDirs.join(File.pathSeparator)].join('\t')
+    }
+}
+
+def writeArchInventory = tasks.register('writeArchInventory') {
+    def projectsFile = archInventoryDir.map { it.file('projects.tsv') }
+    def depsFile = archInventoryDir.map { it.file('scanned-deps.txt') }
+    outputs.files(projectsFile, depsFile)
+    // ALWAYS regenerate: the evaluated project model (project set, projectDirs, source
+    // roots, arch-test's project deps) is recomputed every configuration; a normal build
+    // must never reuse a stale inventory. The task is trivial (writes two small files, a
+    // few ms), so always-out-of-date is the simplest fully-staleness-proof choice — cheaper
+    // than trying to enumerate every model input dimension and risk missing one.
+    outputs.upToDateWhen { false }
+    doLast {
+        def pf = projectsFile.get().asFile
+        pf.parentFile.mkdirs()
+        pf.text = projectRows.join('\n') + '\n'
+        depsFile.get().asFile.text = scannedDepPaths + '\n'
+    }
+}
+
 test {
+    // Declaring the (always-regenerated) inventory files as INPUTS means test re-runs
+    // whenever their CONTENT changes — i.e. whenever the project model changes — even on a
+    // plain `:arch-test:test` with no --rerun-tasks. (Also wires the task dependency.) So a
+    // new/renamed/removed module can never pass against a stale scan-face snapshot.
+    inputs.files(writeArchInventory)
+    // The gates read Gradle's authoritative project model from here.
+    systemProperty 'arch.inventory.dir', archInventoryDir.get().asFile.absolutePath
     useJUnitPlatform()
     // arch-test always discovers @ArchTest rules; keep the Gradle 9 guard honest.
     failOnNoDiscoveredTests = true

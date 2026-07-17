@@ -15,6 +15,16 @@ description: "Authoring and calling KRPC (tech.krpc) services. Use when writing 
 >   skill stays self-contained when copied into a consumer project. In the krpc repo
 >   itself, the root `SPEC.md` is the canonical copy.
 > - Agents discovering/calling a running service: read `docs/agent-guide.md`.
+> - Calling a running service (auth lanes, URL shape, field formats, error codes,
+>   `-rc` artifacts): `SPEC.md` §15. Evolving the `*-api` contract (japicmp gate,
+>   version policy, deploy windows): `SPEC.md` §14. Production/ops facts (ports,
+>   config build-vs-runtime, observability + zero-trace fault tree, release/rollback):
+>   `SPEC.md` §16.
+> - **Standing instruction — method names are contract, not guessable.** Until rpcurl
+>   introspection lands (an external follow-up id **RPCURL-001**; not tracked in this repo's
+>   roadmap/ADRs), **grep the `*-api` interface before calling** — a guessed method/field
+>   resolves to `UNIMPLEMENTED`/`code:5`, not a hint
+>   (`SPEC.md` §15.4). The HTTP `/agent/discover` surface does introspect (`SPEC.md` §12.2).
 > - Native-image consumers: `SPEC.md` §13 + the `krpc-native-build` skill.
 
 ## Five rules that bite first (condensed from SPEC §1–§6)

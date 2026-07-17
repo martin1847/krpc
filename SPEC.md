@@ -36,12 +36,12 @@ Two hard constraints, both enforced at the **only** method-discovery point
 - **Return type must be `RpcResult<…>`.**
 - **At most one parameter.**
 
-A method violating either is now **rejected fail-fast at discovery** (HARDEN-B3,
-C9/AUD-omp-09): an *abstract* `@RpcService` method with an illegal signature throws
-`IllegalStateException` from `RefUtils.toRpcMethods` (server startup / client stub init /
-codegen). Pre-HARDEN-B3 it was **silently dropped** (not registered, no error — the call just
-failed to resolve at runtime), the single most common mistake. `default`/`static` methods (and
-Object redeclarations) are exempt — they are the sanctioned escape hatch for interface helpers.
+A method violating either is **rejected fail-fast at discovery** (HARDEN-B3, C9/AUD-omp-09): an
+*abstract* `@RpcService` method with an illegal signature throws `IllegalStateException` from
+`RefUtils.toRpcMethods` (server startup / client stub init / codegen). Pre-HARDEN-B3 it was
+**silently dropped** (unregistered, failed to resolve at runtime — the single most common mistake).
+`default`/`static` methods (and Object redeclarations) are exempt — the sanctioned escape hatch for
+interface helpers.
 
 - **DO:** merge multiple inputs into one DTO. Built-in generic wrappers exist:
   `PagedQuery<T>` (`rpc-api/.../PagedQuery.java`), e.g. `plistBk(PagedQuery<Book> q)`.
@@ -213,12 +213,11 @@ public class PagedQuery<Q> {                 // PagedQuery.java:28-36
 
 ## 8. Authentication / context
 
-Built-in auth **verifies** an incoming JWT against a remote **JWKS** endpoint (the
-`uid()` path, once per authenticated request — `Es256Jwk.isValid`). krpc does **not
-issue** tokens while serving RPCs: minting the ES256 JWT and publishing the matching
-EC public JWKS at `rpc.server.jwks` is your **login service's** job (krpc ships
-`Es256Jws`/`Es256Signature` for the signing side if you want it). The recipe below is
-the standard "require login" (verify) side — follow it verbatim.
+Built-in auth **verifies** an incoming JWT against a remote **JWKS** endpoint (the `uid()` path,
+once per authenticated request — `Es256Jwk.isValid`). krpc does **not issue** tokens while serving
+RPCs: minting the ES256 JWT + publishing the matching EC JWKS at `rpc.server.jwks` is your **login
+service's** job (krpc ships `Es256Jws`/`Es256Signature` for the signing side). Follow the "require
+login" (verify) recipe below verbatim.
 
 ### 8.1 Require login on a service
 
@@ -227,15 +226,9 @@ default false (`UnaryMethod.java:59-65`). When required, `ctx.checkCredential()`
 runs before the method and throws (hard) on failure (`UnaryMethod.java:197-199,227-229`).
 
 ```java
-@UnsafeWeb(requireCredential = true)     // JWT required for every method
+@UnsafeWeb(requireCredential = true)  // JWT required for every method
 public interface AccountService { ... }
-
-// or per-method:
-@UnsafeWeb
-public interface AccountService {
-    @UnsafeWeb.RequireCredential          // JWT required for this method only
-    AccountInfo me();
-}
+// per-method instead:  @UnsafeWeb interface … { @UnsafeWeb.RequireCredential AccountInfo me(); }
 ```
 
 ### 8.2 Configure JWKS
@@ -286,33 +279,27 @@ public AccountInfo me() {
 
 ### 8.6 Key rotation and revocation
 
-An unknown `kid` triggers a JWKS refetch on a short **30 s** backoff
-(`MIN_FETCH_GAP_MILL`), so a freshly rotated-in key is picked up quickly. On a cache
-**hit**, JWKS is refreshed in the background at most once per **5 min**
-(`GAP_MILL`) — and each successful fetch **rebuilds** the keyset (replace, not
-merge), so a key **removed** from the published JWKS stops verifying within that
-serving and does **not** burn the 5-min window (`JwsVerify.java`, O3/O4). A successful
-fetch that returns **zero usable keys** (`{"keys":[]}`, null keys, or only non-EC
-entries) on an already-ready verifier is treated as **full revocation** — the live
-keyset is replaced with an empty map so every `kid` misses and is rejected
-`PERMISSION_DENIED` (fail-closed), rather than the empty result being dropped and the
-stale keyset kept alive (HARDEN-B1 fix-round-1, O3). Before the first successful load,
-an empty/null-keys document instead keeps the verifier not-ready → `UNAVAILABLE`.
+An unknown `kid` triggers a JWKS refetch on a **30 s** backoff (`MIN_FETCH_GAP_MILL`), so a
+rotated-in key is picked up quickly; on a cache **hit** JWKS refreshes in the background at most
+once per **5 min** (`GAP_MILL`). Each successful fetch **rebuilds** the keyset (replace, not
+merge), so a **removed** key stops verifying within that serving without burning the 5-min window
+(`JwsVerify.java`, O3/O4). A successful fetch returning **zero usable keys** (`{"keys":[]}`, null,
+or only non-EC) on an already-ready verifier = **full revocation**: the live keyset is replaced
+empty so every `kid` is rejected `PERMISSION_DENIED` (fail-closed), not dropped keeping the stale
+keyset (HARDEN-B1 fix-round-1, O3). Before the first successful load, an empty/null-keys document
+keeps the verifier not-ready → `UNAVAILABLE`.
 
 ### 8.7 Production hardening — fail-closed by default
 
-krpc is **fail-closed**: if the JWKS URL is unreachable or invalid, authentication is
-**never silently disabled**.
+krpc is **fail-closed**: an unreachable/invalid JWKS URL never silently disables auth.
 
-- **Default (`exitOnJwksError=false`):** the verifier is registered but **fail-closed**.
-  Until JWKS loads successfully, every credential-required request is rejected with
-  gRPC **`UNAVAILABLE`** (`"JWKS not ready"` — distinct from a bad token's
-  `UNAUTHENTICATED`/`PERMISSION_DENIED`, so ops can tell "auth backend down" from
-  "bad credential"). A background daemon retries the fetch with gentle backoff
-  (5 s → 60 s); when it succeeds, auth goes live automatically (logged at WARN).
-- **`exitOnJwksError=true`:** startup **aborts loudly** instead of coming up
-  fail-closed. Use when your deployment model would rather crash-loop than serve
-  while the auth trust root is unreachable.
+- **Default (`exitOnJwksError=false`):** verifier registered but **fail-closed** — until JWKS
+  loads, every credential-required request is rejected gRPC **`UNAVAILABLE`** (`"JWKS not ready"`,
+  distinct from a bad token's `UNAUTHENTICATED`/`PERMISSION_DENIED` so ops can tell "auth backend
+  down" from "bad credential"). A background daemon retries with backoff (5 s → 60 s); on success
+  auth goes live automatically (WARN).
+- **`exitOnJwksError=true`:** startup **aborts loudly** instead — for deployments that prefer
+  crash-loop over serving while the auth trust root is unreachable.
 
 ```properties
 # optional: abort startup instead of coming up fail-closed
@@ -375,16 +362,14 @@ handlers may block on IO freely; don't add your own bounded RPC thread pool.
 
 ## 11. Wire / JSON / tracing (mostly automatic)
 
-- Wire envelope `OutputProto` uses single-letter fields `c`(code)/`m`(msg)/`bs`(bytes);
-  null `msg`/`data` are not written (`ServerResult.java:30-38`).
-- Trace propagation is automatic and uses **W3C Trace Context** (ADR-0003):
-  the server reads the inbound `traceparent` header into MDC (parsing
-  `traceId`/`spanId` for the log pattern) and carries `tracestate` + `x-request-id`;
-  the client forwards `traceparent` opaquely on outbound calls
-  (`TraceMeta.java`, `ServerContext.java`, `MethodCallProxyHandler.java`,
-  `PropagateTraceCall.java`). The framework propagates context, it does not start
-  spans. B3 (`x-b3-*`) is no longer emitted or read — a wire change vs 1.0.0;
-  sibling clients must adopt W3C for cross-service trace continuity.
+- Wire envelope `OutputProto` uses single-letter fields `c`(code)/`m`(msg)/`bs`(bytes); null
+  `msg`/`data` are not written (`ServerResult.java:30-38`).
+- Trace propagation is automatic, **W3C Trace Context** (ADR-0003): the server reads inbound
+  `traceparent` into MDC (`traceId`/`spanId` for the log pattern), carries `tracestate` +
+  `x-request-id`; the client forwards `traceparent` opaquely (`TraceMeta.java`,
+  `ServerContext.java`, `MethodCallProxyHandler.java`, `PropagateTraceCall.java`). It propagates
+  context, does not start spans. B3 (`x-b3-*`) is no longer emitted/read — a wire change vs 1.0.0;
+  sibling clients must adopt W3C for cross-service continuity.
 
 ---
 
@@ -436,51 +421,21 @@ providers (none ship by default) ignore the cap with a warning rather than faili
 
 ### 12.2 MCP bridge (agent tools over `POST /mcp`)
 
-ADR-0004 P1: a hand-written [Model Context Protocol](https://modelcontextprotocol.io)
-bridge (spec `2025-06-18`, JSON-RPC 2.0 over Streamable HTTP), on the same netty
-HTTP host as `/agent/*` (`http.port`, default `8080`). No third-party MCP SDK; no
-new module or Central artifact.
+ADR-0004 P1: a hand-written [Model Context Protocol](https://modelcontextprotocol.io) bridge
+(spec `2025-06-18`, JSON-RPC 2.0 over Streamable HTTP) on the same netty HTTP host as
+`/agent/*` (`http.port`, default `8080`). No third-party SDK, no new module/artifact.
+**Default OFF** (the `/mcp` path is not even registered); tools = the
+`@UnsafeWeb(agentTool=true)` subset only (`@UnsafeWeb` alone does **not** create a tool).
+`tools/call` runs the identical dispatch as `/agent/invoke` — credential check **not**
+bypassed. Full behavior (JSON-Schema derivation, methods, dispatch/error mapping, GET→405,
+verification transcripts) → `skills/krpc/references/mcp-bridge.md`.
 
 ```properties
 # Default OFF = byte-level zero new surface (the /mcp path is not even registered).
 rpc.server.mcp.enabled=true
 ```
-Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
-`RPC_SERVER_MCP_ENABLED`. Read by `rpc-server-quarkus` (`McpHandler`).
-
-- **Tools = the `@UnsafeWeb(agentTool=true)` subset only.** `agentTool` (TYPE-level,
-  default `false`) is a **deliberate subset of web exposure** — `@UnsafeWeb` alone
-  does **not** create a tool. `/agent/discover` is unaffected (its web-filtered view
-  is unchanged); the two surfaces are distinct. ON with no `agentTool` method = an
-  empty `tools` list (valid).
-- **Tool name** = `Service_method` (underscore-joined; matches the client-enforced
-  `^[a-zA-Z0-9_-]+$`). `inputSchema`/`outputSchema` are JSON Schema derived from the
-  DTO type tree + jakarta constraints (`@NotBlank`→`required`+`minLength`, `@Size`,
-  `@Min`/`@Max`, `@Pattern`, `@Email`) + `@Doc`; `outputSchema` is the
-  `RpcResult<T>`-unwrapped `T`.
-- **`tools/call` runs the identical dispatch as `/agent/invoke`** (`WebInvoker.invokeWeb`):
-  the credential check is **not bypassed**, and only agentTool methods resolve
-  (unknown/non-agentTool/hidden → JSON-RPC `-32602`). Success → `content` text +
-  `structuredContent` (unwrapped `data`); a non-zero `RpcResult.code` or a thrown
-  credential/system error → `isError:true`.
-- **Methods**: `initialize`, `notifications/initialized` (→ HTTP 202), `tools/list`,
-  `tools/call`, `ping`. Transport is JSON-response mode only (one JSON object per
-  POST); SSE is spec-optional and not used (krpc tools are unary). Per spec 2025-06-18:
-  `GET /mcp` → `405 Method Not Allowed` (`Allow: POST`, no SSE stream offered here);
-  an `MCP-Protocol-Version` header the server does not support → `400`
-  (`initialize` is exempt — it negotiates via the body). Auth/rate-limit remain the
-  gateway's responsibility, same as the P0 agent surface.
-- **Verified** with real MCP clients over Streamable HTTP — `initialize` captured via a
-  `@modelcontextprotocol/sdk` client script (the Inspector CLI does not print the raw
-  result), `tools/list` + `tools/call` via the official `@modelcontextprotocol/inspector`
-  CLI — on JVM **and** GraalVM native (Mandrel 25/JDK25); `initialize` +
-  `tools/list` byte-identical across both, `tools/call` differs only in the runtime
-  timestamp.
-  Full verbatim transcripts (command lines + complete output):
-  [`docs/mcp-transcripts/jvm.txt`](https://github.com/martin1847/krpc/blob/f7c8e70/docs/mcp-transcripts/jvm.txt)
-  and [`docs/mcp-transcripts/native.txt`](https://github.com/martin1847/krpc/blob/f7c8e70/docs/mcp-transcripts/native.txt)
-  (native includes the boot log). OFF path (`/mcp` absent, 404) is covered by
-  `McpDisabledQuarkusTest`, not by the transcripts.
+Env: `KRPC_MCP=true` or the SmallRye mapping `RPC_SERVER_MCP_ENABLED` (`rpc-server-quarkus`,
+`McpHandler`).
 
 ### 12.3 Client limits / hardening config
 
@@ -488,34 +443,32 @@ Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
 # Default outbound call deadline (ms) when the caller sets none. Default 30000; 0 = unlimited.
 rpc.client.defaultDeadlineMillis=30000
 ```
-**⚠️ Behaviour change (HARDEN-B2, O2):** before this, a call with no explicit deadline used
-`CallOptions.DEFAULT` — no deadline — so a hung/half-open upstream blocked the calling virtual
-thread forever. Now a deadline-less outbound call gets this default, applied in one authority
-(`ClientDeadline.apply`, `rpc-client`) shared by the proxy path (sync + async, `MethodCallProxyHandler`),
-`GeneralizeClient`, and rpcurl. Spring binds the config in `RpcClientAutoConfigure.afterPropertiesSet`
-(single point — a future Quarkus client binds the same authority, so the two can't drift, mirroring
-the Batch-1 `JwsVerify.bootstrapAndRegister` dedup). **A legitimate call slower than the default is
-cut with `DEADLINE_EXCEEDED`** — raise the value or set an explicit per-call deadline for long calls.
-An explicit deadline always wins: `ClientContext.withCallOptions(CallOptions.DEFAULT.withDeadlineAfter(...), ...)`
-or a filter that sets `CallOptions.getDeadline()`. `0` or negative = unlimited = pre-1.0.4 behaviour.
+**⚠️ Behaviour change (HARDEN-B2, O2):** a deadline-less outbound call previously used
+`CallOptions.DEFAULT` (no deadline) so a hung upstream blocked the calling virtual thread forever;
+now it gets this default via one authority (`ClientDeadline.apply`, `rpc-client`) shared by the
+proxy path (sync + async, `MethodCallProxyHandler`), `GeneralizeClient`, and rpcurl (Spring binds
+it in `RpcClientAutoConfigure.afterPropertiesSet` — the **single** point; a future Quarkus client
+binds the same authority so the two can't drift, mirroring the Batch-1
+`JwsVerify.bootstrapAndRegister` dedup). **A legitimate slow call is cut with
+`DEADLINE_EXCEEDED`** — raise the value or set an explicit per-call deadline (which always wins:
+`ClientContext.withCallOptions(CallOptions.DEFAULT.withDeadlineAfter(...), ...)` or a filter
+setting `CallOptions.getDeadline()`). `0`/negative = unlimited = pre-1.0.4.
 
-Other client correctness fixes in this batch (no config, pure bug fixes): the default `@Cached`
-cache (`SimpleLRUCache`) is now thread-safe (`get`/`set` synchronised — the `accessOrder` map
-re-links on `get`, so concurrent reads corrupted it under virtual threads); the cache key now tags
-the input `dataCase` so distinct `byte[]` params stop colliding onto one key (C2); cached `byte[]`
-values are cloned on both edges so a caller mutating a returned array can't poison the shared entry
-(O10); and the Spring client `RpcClientFactory` is registered as a `destroyMethod="close"` bean
-(was leaked every refresh — channel + gRPC executor threads) with a portless config URL falling
-back to the protocol default port (C8), and a graceful `shutdown()`+bounded-await close (C6-client).
+Other client fixes this batch (no config): the default `@Cached` `SimpleLRUCache` is now
+thread-safe (`get`/`set` synchronised — `accessOrder` re-links on `get`, corrupting concurrent
+reads under VTs); the cache key tags input `dataCase` so distinct `byte[]` params stop colliding
+(C2); cached `byte[]` is cloned on both edges so a caller mutation can't poison the entry (O10);
+and the Spring `RpcClientFactory` is a `destroyMethod="close"` bean (was leaked every refresh —
+channel + gRPC executor threads), with a portless config URL falling back to the protocol default
+port (C8) and a graceful bounded-await `shutdown()` (C6-client).
 
 ### 12.4 HTTP face — error model, threading & idle limits (HARDEN-B4)
 
 The `http-server` netty host serving `/agent/*` and `/mcp` (`AbstractHttpHandler`, `HttpServer`).
 
 **Error model (C7 / AUD-omp-20 / AUD-omp-21).** Every error is a uniform JSON envelope
-`{"code":<httpStatus>,"message":<text>}` with `content-type: application/json` — body and
-content-type always match. Status-line mapping (was: everything → 500 with the raw exception
-message on the wire):
+`{"code":<httpStatus>,"message":<text>}` with matching `content-type: application/json` (was:
+everything → 500 with the raw exception message on the wire):
 
 | condition | status |
 |---|---|
@@ -526,35 +479,26 @@ message on the wire):
 | unknown path | `404` |
 | handler internal error | `500` (status reason phrase only — **never** `ex.getMessage()`) |
 
-A malformed body no longer escapes to netty `exceptionCaught` → `ctx.close()` (a bare connection
-reset with no HTTP response); it is a 400 JSON and the connection stays open (AUD-omp-20). This is
-the HTTP-face analogue of the gRPC `JsonDecodeException`→`INVALID_ARGUMENT` mapping (HARDEN-B3);
-the agent/MCP surface never discloses an internal reason to the client.
+A malformed body is a 400 JSON with the connection kept open (no bare `ctx.close()` reset;
+AUD-omp-20) — the HTTP analogue of the gRPC `JsonDecodeException`→`INVALID_ARGUMENT` mapping
+(HARDEN-B3); the agent/MCP surface never discloses an internal reason.
 
-**Threading (O6 / AUD-omp-09).** Business logic must not run on the netty NIO worker eventLoop — a
-blocking handler there starves the bounded workerGroup (the whole front door). `channelRead0`
-dispatches `handler.handle()` to a per-request **virtual thread**
-(`Executors.newVirtualThreadPerTaskExecutor()`); the response write is scheduled back on the
-channel's eventLoop (netty model: writes belong to the eventLoop, never a foreign thread).
-Backpressure: `setAutoRead(false)` while a request is in flight bounds in-flight blocking work to ≤1
-per connection; reads re-arm (`setAutoRead(true)`) once the connection's queue drains.
+**Threading (O6 / AUD-omp-09).** `channelRead0` dispatches `handler.handle()` to a per-request
+**virtual thread** (`Executors.newVirtualThreadPerTaskExecutor()`) so blocking never runs on the
+netty NIO eventLoop (which would starve the bounded workerGroup); the response write is scheduled
+back on the channel's eventLoop. Backpressure: `setAutoRead(false)` in flight bounds blocking work
+to ≤1 per connection, re-armed (`setAutoRead(true)`) when the queue drains.
 
-**Per-connection response ordering (O6 fix-round-1).** HTTP/1.1 requires responses on one
-connection to be returned in request order. Because `handle()` runs off the eventLoop, two requests
-pipelined in a **single TCP segment** (both decoded by the aggregator before `setAutoRead(false)`
-can stop the read) would otherwise be dispatched to their virtual threads concurrently and race — a
-fast request could overtake a slow one, so a response could be framed against the **wrong** request
-(data crossing). Each connection therefore carries a **FIFO queue** (`ConnState`, held in a netty
-channel attribute, touched only on the eventLoop): every request — handler responses *and*
-error/404 responses alike — is enqueued; exactly one is served at a time; the next is dispatched
-only after the current response has been written on the eventLoop. Strict one-in / one-out
-guarantees in-order, correctly-framed responses per connection.
+**Per-connection response ordering (O6 fix-round-1).** HTTP/1.1 needs in-order responses; since
+`handle()` runs off the eventLoop, two requests pipelined in one TCP segment could otherwise race
+and frame a response against the wrong request. Each connection carries a **FIFO queue**
+(`ConnState`, a netty channel attribute touched only on the eventLoop): every request (handler and
+error/404 alike) is enqueued, one served at a time, next dispatched only after the current response
+is written — strict one-in/one-out.
 
-**Idle / slow-loris (AUD-omp-52).** The pipeline carries an `IdleStateHandler` (reader-idle
-`HttpServer.READ_IDLE_SECONDS` = 60s); a connection sending no inbound bytes in that window is
-closed, so an "open and abandon" client cannot pin a worker forever. Independently, `HttpServer.start()`
-shuts down both `NioEventLoopGroup`s if bind fails (was: they leaked their NIO threads, and a caller
-retry loop stacked orphaned pools).
+**Idle / slow-loris (AUD-omp-52).** An `IdleStateHandler` (reader-idle `HttpServer.READ_IDLE_SECONDS`
+= 60s) closes a connection sending no inbound bytes in that window. Independently, `HttpServer.start()`
+shuts down both `NioEventLoopGroup`s if bind fails (was: leaked NIO threads on retry loops).
 
 ### 12.5 Deployment environment tag — `APP_ENV`
 
@@ -569,185 +513,54 @@ whitespace-trimmed:
 | `staging` | `stage`, `pre` | `STAGING` |
 | `prod` | `production` | `PROD` |
 
-- **Unset → `DEV`** (smoothest for local dev; the only consumer today is the
-  startup banner). **Unknown value → warn once + `PROD`** (safe side, same
-  fail-closed philosophy as auth); it never throws. Before this, an
-  IAC-supplied `stage`/`pre` hit `AppEnv.valueOf` and crashed startup with
-  `IllegalArgumentException`.
-- **Display / telemetry only — never a behaviour switch.** `APP_ENV` must not
-  gate code paths. A behavioural toggle gets its **own** env flag (template:
-  `KRPC_MCP` / `rpc.server.mcp.enabled`, §12.2). If a behaviour branch is ever
-  keyed off the environment, the unset default flips from `DEV` to `PROD`.
-- **Two axes — do not conflate.** The deployment-environment **label**
-  (`APP_ENV`) is independent of the **Quarkus runtime profile**
-  (`dev`/`test`/`prod`). In particular **staging runs the `prod` profile**
-  (prod-shaped config) while carrying `APP_ENV=staging` as its label — the two
-  must not be wired to the same value.
-- **Telemetry convention:** emit as the OpenTelemetry resource attribute
-  `deployment.environment.name` with the **lowercase** value
+- **Unset → `DEV`** (local-dev default; only consumer today is the startup banner). **Unknown →
+  warn once + `PROD`** (fail-closed, never throws — before this an IAC `stage`/`pre` crashed
+  startup via `AppEnv.valueOf`).
+- **Display / telemetry only — never a behaviour switch.** A behavioural toggle gets its **own**
+  env flag (template `KRPC_MCP` / `rpc.server.mcp.enabled`, §12.2); if a branch is ever keyed off
+  the environment, the unset default flips `DEV`→`PROD`.
+- **Two axes:** the `APP_ENV` **label** is independent of the **Quarkus runtime profile**
+  (`dev`/`test`/`prod`) — **staging runs the `prod` profile** while carrying `APP_ENV=staging`;
+  don't wire them to the same value.
+- **Telemetry:** emit as OTel resource attr `deployment.environment.name`, **lowercase**
   (`dev`/`test`/`staging`/`prod`).
 
 ### 12.6 Persistence & transaction discipline
 
-The **ecosystem default is weak transaction, throughput first** — the posture every
-data-access extension implements *safe-by-construction*. Under the virtual-thread
-runtime (one VT per RPC — [§10](#10-service-implementation)) the pooled connection is
-the scarce resource; holding one longer than the operation needs directly caps
-throughput, and the overwhelming majority of RPC methods are reads or single-statement
-writes that need no cross-statement atomicity.
-
-- **Default (no ceremony): per-operation auto-commit.** A connection is borrowed for
-  the operation and returned to the pool the moment it finishes — **never parked** on a
-  request, session, or thread. The shipped/minimal extension config already behaves this
-  way with no tuning flag; you write nothing.
-- **Heavy scenarios opt in explicitly.** A multi-write invariant — two or more writes
-  that must **live or die together** — is wrapped in an explicit transaction
-  (`@Transactional` / JTA). Inside it the connection is bound until the transaction ends;
-  that longer hold is the author's conscious trade.
-
-When to escalate — the one judgement call:
+The **ecosystem default is weak transaction, throughput first**, implemented
+*safe-by-construction* by every data-access extension. Under the VT runtime (one VT per RPC —
+[§10](#10-service-implementation)) the pooled connection is the scarce resource; most RPC methods
+are reads or single-statement writes needing no cross-statement atomicity, so the default borrows
+a connection per operation and returns it **immediately** (never parked on a request/session/
+thread) — no tuning flag, you write nothing. A multi-write invariant opts in explicitly to an
+`@Transactional`/JTA scope, binding the connection until it ends (the author's conscious trade).
 
 | your method does | posture |
 | --- | --- |
 | a read, or one single-statement write | default auto-commit — do nothing |
 | **≥ 2 writes that must all commit or all roll back** | explicit `@Transactional` / JTA |
 
-- **DON'T:** ship a **silent multi-write** with no transaction — each statement commits
-  on its own, so a mid-sequence failure leaves the earlier writes durably applied
-  (partial state, no rollback).
-- **DON'T:** cache a borrowed connection / `SqlSession` in a field or `ThreadLocal` to
-  "reuse" it — that pins the scarce resource and defeats the return-immediately default
-  (it is the leak class this posture exists to prevent).
+- **DON'T:** ship a **silent multi-write** with no transaction — each statement commits on its
+  own, so a mid-sequence failure leaves earlier writes durably applied (partial state, no rollback).
+- **DON'T:** cache a borrowed connection / `SqlSession` in a field or `ThreadLocal` — that pins the
+  scarce resource and defeats the return-immediately default (the leak class this posture prevents).
 
-The data-access extensions (`ext-mybatis` ≥ 1.0.2) are **safe-by-construction** under
-this principle: the default path cannot leak or pin a connection. Per-extension config
-detail lives in each extension's README; the rationale is ecosystem **ADR-0002
-(weak-transaction default)**.
+The data-access extensions (`ext-mybatis` ≥ 1.0.2) are safe-by-construction here (the default path
+cannot leak or pin a connection); per-extension config is in each extension's README, rationale =
+ecosystem **ADR-0002 (weak-transaction default)**.
 
 ---
 
 ## 13. Native image (GraalVM)
 
-Single source of truth for building krpc services as native images — humans and
-agents read the same section. Consumer-proven 2026-06 on 8 downstream Quarkus
-3.33.2 services (boot-to-ready 0.028s native). Items tagged `[gap → NATIVE-00x]`
-are framework defects with roadmap items: apply the workaround now, delete it
-when the item completes.
+Native-image builds are consumer-proven (2026-06, 8 downstream Quarkus 3.33.2 services,
+boot-to-ready 0.028s native). **Full recipes — io.grpc/Quarkus-LTS version matrix, `ext-rpc`
+server-side support, io_uring eval, reflection coverage → `skills/krpc/references/native-image.md`**
+(`[gap → NATIVE-00x]` = framework defects to delete when the roadmap item lands; the `§13.x`
+refs below point into that file). Day-1 checklist for a consumer service:
 
-### 13.1 io.grpc version alignment — Quarkus LTS support matrix
-
-krpc tracks the Quarkus LTS BOM's io.grpc version (Option A, ADR NATIVE-001).
-`gradle.properties` pins `grpcVersion` to what the supported Quarkus LTS ships, so
-a Quarkus consumer's highest-wins resolution converges on a single io.grpc — no
-consumer-side force, and native-image's `Target_io_grpc_ServiceProviders`
-substitution matches the class shape.
-
-| krpc release                    | Quarkus LTS | io.grpc | consumer force |
-|---------------------------------|-------------|---------|----------------|
-| ≥ 1.0.3 (this alignment)        | 3.33.x LTS  | 1.79.0  | none — aligned |
-| published ≤ 1.0.2               | 3.33.x LTS  | 1.82.0  | required (below) |
-
-(Bump `grpcVersion` in lockstep when adopting the next Quarkus LTS.)
-
-**For published krpc ≤1.0.2 only** (ships io.grpc 1.82.0, skewed above the BOM → native-image
-aborts during Initializing): force `io.grpc:*` back to the BOM version in the root
-build — `configurations.all { resolutionStrategy.eachDependency { if (it.requested.group == 'io.grpc') it.useVersion '1.79.0' } }`.
-
-### 13.2 Server-side native support — use `ext-rpc` ≥ 1.0.2 (NATIVE-002, shipped)
-
-Since `tech.krpc.ext:ext-rpc` **1.0.2**, the Quarkus extension registers everything a
-native SERVER needs with zero per-service glue: the deployment processor emits
-reflective registration for the grpc provider impls and a build-time GraalVM
-`Feature` that bakes `io.grpc.ServerProvider.provider()` into the image heap
-(krpc itself only covers the client side —
-`rpc-client/.../ext/GraalvmBuild.java:14-18`). It also gates its grpc-netty
-substitutions on `quarkus-grpc-common` absence, so they no longer collide with
-Quarkus's own.
-
-**On `ext-rpc` ≤ 1.0.1 only**, a native server dies at boot with
-`ManagedChannelProvider$ProviderNotFoundException: No functional server found`
-and duplicate-substitution aborts; either upgrade, or apply the legacy trio
-(per-service `ServerProvider` Feature + `@RegisterForReflection` provider holder +
-`quarkus.class-loading.removed-resources` strip) — recipe preserved in the
-`v1.0.3` tag of this file and in `ext-rpc` PR #2.
-
-### 13.3 Build recipe and known runtime issues
-
-- Build command: [§12](#12-build-test-release). Native needs
-  `-Dquarkus.package.jar.enabled=false` (Gradle can't output both), and the
-  builder image must match your Quarkus/JDK line — for the JDK 21 baseline use
-  `quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-21` (krpc's own
-  test-server was additionally validated on Mandrel 25 / jdk-25).
-- Static-heap violations are per-service: any `static final` SecureRandom /
-  Random / network-touching singleton fails analysis; fix with
-  `--initialize-at-run-time=<class>` (the native build error names the class).
-- Known issue: a native runner **SIGSEGVs at startup when datasource env/config
-  is absent** (logs "started", then exit 139). Ensure `QUARKUS_DATASOURCE_*` is
-  set; JVM mode fails gracefully, native does not.
-
-### 13.4 io_uring transport (evaluated 2026-07)
-
-Status: evaluated. A flag-gated PoC exists on eval branch `feat/iouring-eval` —
-**not shipped; the default transport stays NIO in native / epoll-or-NIO on JVM.**
-
-- **Netty artifact constraint.** Today's stack (Quarkus 3.33 LTS = Netty 4.1) can
-  only use the ARCHIVED incubator artifact
-  (`io.netty.incubator:netty-incubator-transport-native-io_uring:0.0.26.Final`).
-  The graduated transport (`io.netty.channel.uring`) is Netty-4.2-only, which
-  arrives with Quarkus 4 / Vert.x 5.
-- **Native-image: works.** Flag `KRPC_IOURING`, hand-authored JNI/reflect/resource
-  metadata, `--initialize-at-run-time`; +0.56 MiB image, +1.9 MiB RSS.
-- **Benchmark verdict (aarch64, containerized): 5–6% SLOWER than NIO** on krpc's
-  typical small-message unary path. io_uring's win case (many connections,
-  syscall-bound) is not this profile. Details:
-  workspace `docs/orchestration/IOURING-001_{RESEARCH,BENCH}_omp.md`.
-- **Ops note.** Docker's default seccomp profile blocks io_uring syscalls
-  (`io_uring_setup` → EPERM); running the flag ON in containers needs an allowing
-  seccomp profile.
-
-### 13.5 Reflection coverage (what the framework registers for you)
-
-Native is closed-world: the framework registers reflection at build time, but
-only for what its build-time scan can reach. Know what is and is not covered.
-
-- **The extensions must be on the native build.** DTO reflection is registered by
-  the `ext-rpc` Quarkus deployment processor: it indexes every `@RpcService`
-  interface (Jandex), walks each method's param + return types, and emits
-  `ReflectiveClassBuildItem` for the DTOs with `methods(true).fields(true)`
-  (`ext-rpc/ext-rpc-deployment/.../RpcProcessor.java:75-94,148-150`). `ext-mybatis`
-  does the equivalent for its mapper/entity types. Drop the extension and **nobody**
-  registers your DTOs — they reflect fine on JVM but fail at native runtime.
-- **Nested DTOs are auto-covered only 8 levels deep.** After the top-level DTOs, the
-  processor recurses through nested field types up to `max_level = 8`
-  (`RpcProcessor.java:158-170`); beyond that it logs `TOO DEEP Nest Dto`
-  (`:180`) and stops registering. Keep DTO nesting shallow, or register deeper types
-  by hand.
-- **Third-party bean types are not scanned.** The recursion explicitly skips `java.*`
-  types (`RpcProcessor.java:225`) and only follows types reachable from your own
-  DTO fields — an external-library class referenced by a DTO is outside the scan and
-  will throw at native runtime. Register it yourself with Quarkus's
-  `@RegisterForReflection` (`io.quarkus.runtime.annotations.RegisterForReflection`),
-  e.g. on an aggregate class:
-
-  ```java
-  import io.quarkus.runtime.annotations.RegisterForReflection;
-
-  @RegisterForReflection(targets = { com.vendor.lib.Foo.class, com.vendor.lib.Bar.class })
-  public final class NativeReflectionConfig {}
-  ```
-
-  Or add the class to a `META-INF/native-image/<group>/reflection-config.json`.
-- **Framework classes are already registered — don't re-register them.** krpc's own
-  runtime types ship reflection metadata in each module's
-  `META-INF/native-image/*/reflection-config.json` + `native-image.properties`
-  (`rpc-api/...`, `rpc-common/...`, `rpc-client/...`,
-  `rpc-server-quarkus/src/main/resources/META-INF/native-image/rpc-server/...`).
-  You only own the third-party types your DTOs pull in.
-
-### 13.6 Native checklist for a consumer service
-
-- [ ] **krpc ≤1.0.2 only:** `io.grpc:*` forced to the Quarkus BOM version (root build) — §13.1. (krpc >1.0.2 is aligned; skip.)
-- [ ] `ext-rpc` ≥ 1.0.2 on the build (server-side native support; ≤1.0.1 needs the legacy trio) — §13.2.
+- [ ] **krpc ≤1.0.2 only:** `io.grpc:*` forced to the Quarkus BOM version (root build) — §13.1. (krpc >1.0.2 aligned; skip.)
+- [ ] `ext-rpc` ≥ 1.0.2 on the build (server-side native; ≤1.0.1 needs the legacy trio) — §13.2.
 - [ ] Builder image matches Quarkus/JDK line; `package.jar.enabled=false` — §13.3.
 - [ ] Per-service `--initialize-at-run-time` for static-heap violations — §13.3.
 - [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.3.
@@ -755,7 +568,171 @@ only for what its build-time scan can reach. Know what is and is not covered.
 
 ---
 
-## 14. Quick checklist for a new service
+## 14. Contract evolution
+
+The contract is the `*-api` module (`@RpcService` interfaces + DTOs; NS-1 — the interface
+*is* the contract). Evolving it safely is publish-time discipline, not a runtime feature.
+
+### 14.1 Version policy — the major stays `1`
+
+`version` in `gradle.properties:5` (group `tech.krpc`); line `1.MINOR.PATCH`. Mirrors
+`docs/support-policy.md` (superseded minor → security-only); today = **author discipline**,
+not machine-enforced (§14.2).
+
+| bump | contract change | old clients | deploy |
+| --- | --- | --- | --- |
+| **major** (`1`) | **frozen, never increments** | — | wire envelope stable (NS-2: wire-compat originates in krpc) |
+| **minor** | **breaking** ("consumers must move") | may fail | front+back same window (§14.3) |
+| **patch** | **compatible** (additive/fix) | keep working | stagger OK |
+
+### 14.2 `*-api` publish gate — japicmp (recommended, NOT wired here)
+
+> **External recommendation** — grep `japicmp` = 0 hits; a reference impl runs in a downstream
+> consumer CI, not anchorable here. Manual REQUIRED step until krpc wires it.
+
+Run a binary/source compat check (`japicmp`) of the candidate `*-api` jar vs the last release,
+in the publish pipeline — "the interface is the contract" (NS-1) is real only once a machine
+verifies the diff:
+
+| candidate change | on patch bump | on minor bump |
+| --- | --- | --- |
+| incompatible (removed/renamed method, changed DTO field type, narrowed return) | **FAIL** | pass |
+| additive-only (new method, new optional field) | pass | pass |
+
+### 14.3 Deploy-window rule — breaking changes deploy together
+
+> External recommendation (field report; not a krpc-code fact).
+
+A **breaking** change (minor, §14.1) MUST deploy **front and back in the same window**;
+additive/compatible (patch) MAY stagger. The wire envelope is frozen (major `1`, NS-2), so a
+removed/renamed method or changed DTO shape has **no** compat bridge — cut over atomically.
+(Real staging outage: a one-day skew put the two sides on different contracts, calls failed.)
+
+---
+
+## 15. Consumer guide (calling a KRPC service)
+
+For agents/humans **calling** a running service (authoring is §1–§11).
+
+> **Standing instruction — method names are contract, not guessable.** The rpcurl/gRPC
+> path has no runtime schema handshake (external gap **RPCURL-001**; not in this repo's
+> roadmap/ADRs); HTTP `/agent/discover` *does* introspect (§12.2 / `docs/agent-guide.md`).
+> Until rpcurl introspection lands, **grep the `*-api` interface before calling** — a wrong
+> method/field guess resolves to `UNIMPLEMENTED`/`code:5`, not a hint (§15.4).
+
+### 15.1 Auth — two independent token lanes
+
+A JWT rides one of **two lanes**, both feeding the same verifier (§8.4):
+`Authorization: Bearer` is tried first, then cookie `access-token` (`JwsVerify.java:49`
+`DEFAULT_COOKIE_NAME`; selection `ServerContext.java:137-144`).
+
+| lane | wire | rpcurl | when |
+| --- | --- | --- | --- |
+| **Business** | `Cookie: access-token=<jwt>` | `-c "access-token=$TOK"` — value verbatim on `cookie`, use the `name=value` equals form (`rpcurl/.../RpcUrl.java:53-54,63-64`) | browser/frontend caller whose login set the cookie |
+| **Framework** | `authorization: Bearer <jwt>` | `-t "$TOK"` — prepends `Bearer ` (`rpcurl/.../RpcUrl.java:56-57,67-68`) | s2s / tooling with the raw JWT |
+
+- **No `KRPC_TOKEN` env var** — the framework lane is the `-t`/`--token` flag only.
+- The agent HTTP surface (`/agent/invoke`, `/mcp`) forwards only `Authorization`, not `Cookie`
+  → cookie lane unavailable there; send a bearer token (`docs/agent-guide.md` "Exposure model").
+
+### 15.2 URL construction
+
+Call path `{app}/{Service}/{method}` (§5); gateway URL `{gateway}/{app}/{Service}/{method}`,
+each piece from `RefUtils.rpcServiceName` (`RefUtils.java:173-198`, derivation `:179-196`):
+strip a leading `I`-before-uppercase and a trailing `Service`/`Rpc`, **no dots**.
+
+| service declaration | published name | gateway path | reachable |
+| --- | --- | --- | --- |
+| `@UnsafeWeb IDemoService` | `Demo` (`I` stripped) | `{gateway}/{app}/Demo/{method}` | frontend + s2s |
+| `@UnsafeWeb DemoService` | `Demo` (`Service` stripped) | `{gateway}/{app}/Demo/{method}` | frontend + s2s |
+| `@UnsafeWeb FooRpc` | `Foo` (`Rpc` stripped) | `{gateway}/{app}/Foo/{method}` | frontend + s2s |
+| `DemoService` (no `@UnsafeWeb`) | `-{app}/Demo` | *not web-served*; gRPC path `-{app}/Demo/{method}` (`rpcurl --no-web`) | **s2s only** |
+
+For a non-`@UnsafeWeb` service `RefUtils` prepends `HIDDEN_SERVICE` (`-`) to the **whole**
+`{app}/{Service}` → name `-{app}/{Service}`, gRPC method `-{app}/{Service}/{method}`
+(`RefUtils.java:192-196`); `@UnsafeWeb` stays prefixless (the `-` keeps a hidden service off
+the web gateway). CLI mirror: `rpcurl --no-web` prepends `-` to the app segment
+(`rpcurl/.../RpcUrl.java:97-99`). On the plain-HTTP agent surface the name is used
+**app-relative** (`{"service":"Demo","method":"..."}`), lookup = literal `"Service/method"`
+key (`WebMethodRegistry.java:36-40`) — hidden/unknown → `null` → `code:5` NOT_FOUND
+(`docs/agent-guide.md`).
+
+### 15.3 Field-format conventions (quick table)
+
+**DTO-authoring conventions** — how to *type* a field for clean polyglot round-trips, **not**
+serializer behaviour (`JsonUtils.java` only guarantees `NON_NULL` output (`:28`) + lenient
+input `FAIL_ON_UNKNOWN_PROPERTIES=false` (`:29`)). Combine with §4 (boxed scalars, `NON_NULL`).
+
+| logical type | represent as | why (convention, not serializer-enforced) |
+| --- | --- | --- |
+| date | `String`, `YYYY-MM-DD` | `java.time` is NOT ISO-configured — `JsonUtils` adds `JavaTimeModule` only if on classpath (`JsonUtils.java:31-38`), never disables `WRITE_DATES_AS_TIMESTAMPS`, so a raw `LocalDate`/`OffsetDateTime` serializes numeric (test DTOs keep it off the wire, `test-api/.../dto/TimeResult.java:23-25` commented) |
+| datetime | `String`, ISO-8601 with zone | same as date |
+| money | `Long`, integer **cents** (`1999`=19.99) | avoids float rounding — never `Float`/`Double` (contrast tolerant geo `Float`, `Book.java:10-17`) |
+| large id | `String` (`"7300000000000000001"`) | avoids the JSON/JS `2^53` cliff for 64-bit ids (`test-api/.../dto/Img.java:26` `String id`); a boxed `Long` risks silent precision loss in JS/TS/Dart |
+
+### 15.4 Error-code behavior — how to branch
+
+Branch on the failure *shape* (gRPC/rpcurl path):
+
+| failure | code | carries | caller action |
+| --- | --- | --- | --- |
+| **Jakarta validation** | `INVALID_ARGUMENT` | field detail `Dto : field=value(constraint)` (`ValidatorInvoke.java:35-41`) | self-correct the named field |
+| **Malformed JSON body** | `INVALID_ARGUMENT` | **no** field — `<traceId>,malformed JSON request body` (`UnaryMethod.java:243-249`) | fix the request JSON |
+| **Unauth / forbidden** | `UNAUTHENTICATED` / `PERMISSION_DENIED` | terse auth reason, no field hint: `"requireCredential but empty token"` (`JwsVerify.java:401`), `"Token expired at: …"` (`:485`), `"kid not found or expired"` (`:448`), `"invalid signature !"` (`:454`) | fix the token — can't infer a valid call (gap **RPCURL-001**) |
+| **Unimplemented / not found** | `UNIMPLEMENTED` (rpcurl) / `code:5` (agent HTTP: `{"code":5,"message":"Service/method not found"}`, `WebMethodRegistry.java:36-40`) | bare "method not found" | wrong/hidden method/service (hidden ≡ missing, by design) |
+
+`INVALID_ARGUMENT` spans two shapes (validation = field-level; malformed JSON = bare). On the
+HTTP face the rejected *value* is stripped even for validation errors (field path + constraint
+only, PII in the log — §12.4).
+
+### 15.5 Consuming releases & smoke example → reference
+
+`-rc` consumption routes (mavenLocal / vendored file-repo / Nexus — never shadows a Central
+GA) and the LH end-to-end smoke script → `skills/krpc/references/operations.md`.
+
+---
+
+## 16. Operations facts
+
+Ops/runtime facts that bite in production. Quick-ref below; observability contract,
+zero-trace fault tree, no-span inference, and release/rollback runbook →
+`skills/krpc/references/operations.md`.
+
+### 16.1 Config: build-time vs runtime boundary
+
+A native image bakes **build-time-consumed** config into the binary; **runtime-consumed**
+config (`@ConfigProperty`/env, read at bean init) flips on the *same* binary — no rebuild.
+
+- **General rule:** a value consumed in a *build* step (native static init / an Arc build
+  item) is frozen into the image; a runtime env override does nothing.
+- **Client routing URLs (`rpc.client.*.url`) — NOT verifiable here.** The build-bake concern
+  was recorded as **EXTRPC-URL-001** (`benchmark/RESULTS.md:24-29` is that historical bake,
+  **not** a fix); the runtime-URL fix lives in the `ext-rpc` repo (out of tree). No production
+  `rpc.client.*.url`, Quarkus RUN_TIME root, or native override test exists here, so "routing
+  keys are runtime-overridable" is **unverified here**.
+- **Verify (proven for `rpc.server.defaultExecutor` only):** `RPC_SERVER_DEFAULTEXECUTOR`
+  flips the VT-vs-pool branch on one native binary, seen in the startup log
+  (`benchmark/RESULTS.md:93-104`). Apply the same env-flip to any runtime key.
+
+### 16.2 Port authority
+
+Three server faces, three ports — do not conflate.
+
+| face | config key | default | speaks |
+| --- | --- | --- | --- |
+| gRPC gateway | `rpc.server.port` | **50051** (`RpcConstants.java:31` `DEFAULT_PORT`) | HTTP/2 gRPC (use `rpcurl`) |
+| krpc HTTP (agent/MCP) | `http.port` | **8080** (`HttpHandlerExpose.java:36`, `HttpServer.java:32`) | plain HTTP/1.1 JSON (`/agent/*`, `/mcp`) |
+| Quarkus REST | `quarkus.http.port` | **8080** (Quarkus default) | consumer's own Vert.x/REST |
+
+The krpc HTTP face is **its own netty server** (`new HttpServer(this, port)`,
+`HttpHandlerExpose.java:86`), separate from Quarkus's Vert.x HTTP — both default to **8080**,
+so a Quarkus consumer serving REST **collides**. A probe/`curl /agent/discover` at `:8080`
+hitting Quarkus REST (404 / wrong body / bind conflict) looks like a broken endpoint but is a
+port-identity mixup — reassign one face (e.g. `http.port` → `8088`). gRPC (50051) never collides.
+
+---
+
+## 17. Quick checklist for a new service
 
 - [ ] Interface annotated `@RpcService`; name has no dots.
 - [ ] Every method `RpcResult<Dto> m(OneDto)` or `m()` — never 2+ params, never raw return.

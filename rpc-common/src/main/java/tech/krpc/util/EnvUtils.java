@@ -84,6 +84,35 @@ public abstract class EnvUtils {
         return defaultValue;
     }
 
+    /** BIND-HOST: system property {@code rpc.server.bindHost}. */
+    public static final String BIND_HOST_PROP = "rpc.server.bindHost";
+    /** BIND-HOST: environment variable {@code KRPC_BIND_HOST} (aligns with the KRPC_* env family). */
+    public static final String BIND_HOST_ENV = "KRPC_BIND_HOST";
+
+    /**
+     * BIND-HOST: resolve the server listen address for both faces (gRPC {@code RpcServerBuilder},
+     * krpc-http {@code HttpServer}). Same dual-read + precedence discipline as the OTEL kill-switch
+     * (ADR-0006 {@code KrpcOtel}: {@code System.getProperty("rpc.otel.enabled")} wins over
+     * {@code System.getenv("KRPC_OTEL")}) — chosen over the SmallRye {@code @ConfigProperty}
+     * variant (KRPC_MCP) because both bind sites live in the netty-core layer, below any Quarkus
+     * config. System property {@code rpc.server.bindHost} wins over env {@code KRPC_BIND_HOST}.
+     *
+     * <p>NS-6 default-off: unset/blank on both → {@code null} = the current wildcard bind
+     * ({@code ServerBuilder.forPort} / {@code bind(port)}), i.e. zero behaviour change. Set → both
+     * faces bind exactly that address.
+     */
+    public static String bindHost() {
+        var prop = System.getProperty(BIND_HOST_PROP);
+        if (StringUtils.isNotBlank(prop)) {
+            return prop.trim();
+        }
+        var env = System.getenv(BIND_HOST_ENV);
+        if (StringUtils.isNotBlank(env)) {
+            return env.trim();
+        }
+        return null;
+    }
+
 
     public static String hostName(){
         try {

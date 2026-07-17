@@ -1,6 +1,7 @@
 package tech.krpc.server;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.time.Duration;
@@ -24,6 +25,7 @@ import tech.krpc.common.meta.ApiMeta;
 import tech.krpc.context.KrpcOtel;
 import tech.krpc.filter.FilterInvokeHelper;
 import tech.krpc.util.RefUtils;
+import tech.krpc.util.EnvUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -133,7 +135,14 @@ public class RpcServerBuilder {
 	}
 	
 	private  Server init(Map<Object,List<ServerFilter>> services,Executor executor) throws Exception {
-		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
+		// BIND-HOST: unset/blank KRPC_BIND_HOST (or -Drpc.server.bindHost) => EXACTLY the previous
+		// wildcard bind (ServerBuilder.forPort). Set => bind that address on the Netty provider
+		// (forPort resolves to NettyServerProvider at runtime; forAddress is the same builder with a
+		// specific host). grpc-netty is compileOnly here — same as the D2 instanceof cast below.
+		String bindHost = EnvUtils.bindHost();
+		ServerBuilder<?> serverBuilder = bindHost == null
+				? ServerBuilder.forPort(port)
+				: NettyServerBuilder.forAddress(new InetSocketAddress(bindHost, port));
 		//	XdsServerBuilder.forPort(port, InsecureServerCredentials.create());
 		//System.out.println("========XDS======XDS======XDS=====");
 

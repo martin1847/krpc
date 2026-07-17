@@ -4,6 +4,7 @@ import jakarta.annotation.PreDestroy;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -17,6 +18,8 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import java.util.concurrent.TimeUnit;
+import java.net.InetSocketAddress;
+import tech.krpc.util.EnvUtils;
 import lombok.extern.slf4j.Slf4j;
 
 //@ApplicationScoped
@@ -38,6 +41,9 @@ public class HttpServer {
     }
 
     EventLoopGroup bossGroup ,workerGroup ;
+    // BIND-HOST: the bound server channel, retained so the actual listen address is observable
+    // (its localAddress reflects the resolved KRPC_BIND_HOST / wildcard bind). null until start().
+    Channel serverChannel;
 
     // AUD-omp-52: a connection that sends no inbound bytes within this window is reaped, so a
     // slow-loris "open and abandon" client can no longer pin a worker forever. Generous enough
@@ -70,7 +76,13 @@ public class HttpServer {
                     }
                 }).childOption(ChannelOption.SO_KEEPALIVE, true);
 
-            b.bind(port).sync();
+            // BIND-HOST: unset KRPC_BIND_HOST (or -Drpc.server.bindHost) => EXACTLY the previous
+            // wildcard bind(port). Set => bind that address, same host as the gRPC face.
+            String bindHost = EnvUtils.bindHost();
+            ChannelFuture f = (bindHost == null
+                    ? b.bind(port)
+                    : b.bind(new InetSocketAddress(bindHost, port))).sync();
+            serverChannel = f.channel();
            ////Asynchronous monitoring
             //f.channel()
             //    .closeFuture()

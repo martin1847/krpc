@@ -21,6 +21,40 @@ KRPC does not own service discovery, load balancing, telemetry, ingress TLS, or 
 
 KRPC is used in production in e-commerce, education, and local service products. Public adopter names are omitted unless explicit approval is granted.
 
+## Try It Live
+
+A public sandbox runs the quickstart natively at `https://demo.krpc.tech` — no local
+build needed. `HelloService` only, with fake data. nginx is the only entry point.
+
+MCP (JSON-RPC 2.0 over Streamable HTTP) — list the tools, then call one:
+
+```bash
+curl -sS https://demo.krpc.tech/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+curl -sS https://demo.krpc.tech/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"Hello_hello","arguments":{"name":"you"}}}'
+```
+
+HTTP introspection — the web-only `ApiMeta`:
+
+```bash
+curl -sS https://demo.krpc.tech/agent/discover
+```
+
+rpcurl (needs `>=1.1.0` for the https discover path):
+
+```bash
+rpcurl discover https://demo.krpc.tech
+rpcurl https://demo.krpc.tech/quickstart/Hello/hello -d '{"name":"you"}'
+```
+
+> Public fake-data sandbox — may reset anytime. Error-envelope demo: call `Hello_hello`
+> with `{}` (empty args) to see `{code,message,violations}`, e.g.
+> `{"code":3,"message":"Invalid input","violations":[{"field":"name","constraint":"must not be blank"}]}`.
+
 ## Modules
 
 - `rpc-api`: annotations and shared API models.

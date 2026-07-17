@@ -87,8 +87,9 @@ Acceptance Criteria:
 
 ## AGENT-001: Agent-Friendly Introspection And MCP Surface
 
-Status: active  (P0 + P1 both delivered on `dev` and security-reviewed; P1 MCP bridge merged to
-`dev` as PR #14, `9be92e6`. Remaining scope = uncommitted P2 ideas only.)
+Status: completed  (released in 1.1.1, 2026-07-18. P0 HTTP discover/invoke + P1 MCP bridge +
+P2 field-test wave: MCP error envelope {code,message,violations}, did-you-mean, method-level
+@UnsafeWeb.AgentTool, real serverInfo — AGENT-002, PR #27. Live sandbox: demo.krpc.tech.)
 
 Capability: Expose KRPC's runtime self-description to AI agents (discover → call)
 
@@ -142,7 +143,9 @@ Acceptance Criteria:
 
 ## OTEL-001: OpenTelemetry Span Creation On KRPC's Faces
 
-Status: active
+Status: completed  (released in 1.1.1, 2026-07-18: ADR-0006 spans on both faces + OTEL-002
+field fixes — HTTP-face MDC binding, LogRedact, W3C forward-compat parse. Ghost-CLIENT-span
+export-boundary investigation continues with consumers; tracked outside this item.)
 
 Capability: KRPC creates SERVER/CLIENT spans and extracts/injects W3C trace context on its own
 Netty faces (gRPC + HTTP), so a consumer with a provisioned OTLP pipeline gets connected traces

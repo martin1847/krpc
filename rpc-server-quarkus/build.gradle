@@ -33,6 +33,11 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
     testImplementation "io.grpc:grpc-stub:${grpcVersion}"
     testImplementation "io.netty:netty-codec-http:$nettyGrpcVersion"
+    // NS-6 default-OFF contract test reflects on @ConfigProperty (MicroProfile Config, via
+    // quarkus-arc) to assert defaultValue=="false" on the mcp-enable flags. quarkus-arc is
+    // compileOnly for main and compileOnly is NOT inherited by test; this is reflection only
+    // (no CDI container is booted — the tests are plain JUnit, not @QuarkusTest).
+    testImplementation "io.quarkus:quarkus-arc:$quarkusMiniSupport"
 
 
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
@@ -62,4 +67,3 @@ compileTestJava {
 test {
     useJUnitPlatform()
 }
-

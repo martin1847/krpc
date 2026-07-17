@@ -216,3 +216,110 @@ NB5 (r6): the anchors must be plain directories — `requireNotSymlinked` reject
 symlinked module dir or `build/` (intra-repo redirection); a scratch-temp-dir probe
 (`modx/build -> ../mody/build`) proves the guard trips and a plain dir passes.
 All six `ScopeGuardTest` cases green; frozen store md5 unchanged across every round.
+
+## ARCH-002 addendum — scan-face completeness guard + NS-1/NS-4/NS-6 gates
+
+Status: accepted. Date: 2026-07-17 (r1 review incorporated). Extends the decision above;
+no existing rule or store entry changes.
+
+### The silent-miss weakness this closes
+
+The v1 analysis subject is a HARDCODED scan face: the six-module list in
+`OnlyCoreModules.MODULES` and the matching `testImplementation project(':...')` deps in
+`arch-test/build.gradle`. A new core module added to the build but not to BOTH places would
+be silently UNSCANNED — its classes never enter the ArchUnit import, so R1..R4 pass
+vacuously for it (a false green). This is the "hardcoded scan-face silent miss" class the
+fitness-test doctrine guards against by comparing the build's real project set against the
+scanned set.
+
+### Mechanism (`ScanFaceCompletenessTest`, plain test)
+
+The authoritative module set is Gradle's **evaluated project model**, emitted by the
+`writeArchInventory` task (`arch-test/build.gradle`) into `build/arch-inventory/` and read
+by `BuildInventory`. Using Gradle's own model — not a hand-rolled `settings.gradle` text
+parser — means every included project is seen regardless of `include` syntax
+(`include 'x'`, `include "x"`, `include('x')`, multiline), including intermediate projects
+(Gradle materializes `:examples` as the parent of `:examples:quickstart`) and custom
+`projectDir`. (A prior text parser matched only single-quoted tokens on `include`-prefixed
+lines and silently dropped the other forms — the r1 review's blocking finding #1.)
+
+The inventory is staleness-proof on a NORMAL run (no `--rerun-tasks`): `writeArchInventory`
+is `outputs.upToDateWhen { false }` (always regenerates the model — a few ms), and `test`
+declares the inventory files as inputs, so a model change (added/renamed/removed module,
+source-root or dependency edit) changes the file content and re-runs the test. A prior
+version declared outputs but no inputs, so Gradle skipped it as up-to-date and a stale
+snapshot could pass a plain `:arch-test:test` — the r2 review's blocking finding.
+
+The test forces EVERY included project to be consciously classified as **SCANNED**
+(`OnlyCoreModules.MODULES`) or **EXCLUDED** (a documented allowlist, each entry justified);
+a project that is neither turns RED naming it — mechanically identical to R2's completeness
+guard. A second assertion pins `OnlyCoreModules.MODULES` == arch-test's `testImplementation
+project(...)` set (also from Gradle's dependency model), so a scanned module can never be
+missing from the analysis classpath (importing zero classes = vacuous green). A third,
+filesystem-independent assertion walks the repo's first-level directories and requires every
+`build.gradle`-bearing dir to be classified — a nested STANDALONE build (its own
+`settings.gradle`, e.g. `benchmark`) is skipped as not-a-subproject.
+
+The EXCLUDED allowlist and its reasons (honest derivation): `test-*` (test fixture/demo
+modules), `examples` + `examples:quickstart` (unpublished example aggregator + module),
+`arch-test` (the gate itself, owns no production classes), `ext-rpc-gen` (build-time codegen
+tool, not the runtime contract graph), and `rpc-client-spring` / `rpc-server-spring` (Spring
+Boot autoconfig ADAPTER modules — this ADR scopes the gate to the six transport/runtime core
+modules; DI-framework integration glue is consumer-facing surface, not the core contract
+graph). **Policy-review trigger (r1 advisory #5):** the Spring adapters currently hold only
+autoconfig glue; before non-trivial runtime behavior is added to any adapter, revisit adapter
+runtime ownership — either move it into the scan face (add to `MODULES` + `testImplementation`)
+or stand up a separately scoped adapter gate. This guard forces that decision rather than
+letting an adapter drift in unscanned.
+
+### NS gates added (all plain tests, NOT frozen ArchUnit rules)
+
+NS-1/NS-4/NS-6 are contracts a bytecode analyzer cannot express (source files on disk, the
+default wire-decode path, annotation/env defaults), so they are plain JUnit tests, not
+`FreezingArchRule`s. **No new frozen store entry exists and the committed `archunit_store/`
+is byte-for-byte unchanged.** Each lives in its owning module:
+
+- **NS-1** (`arch-test/NoProtoInProductionSourceTest`): no `*.proto` under any production
+  module's source. Module dirs come from Gradle's model (real `projectDir`); the scan covers
+  the union of the whole `<projectDir>/src` tree (catches an unregistered `src/main/proto/`)
+  and every registered main source-set root (catches a root placed outside `src`). Real
+  state: the sole wire-envelope proto lives at repo-top-level `proto/internal.proto`, outside
+  every module source, so the production scan is empty and the allowlist is empty.
+- **NS-4** (`rpc-client/DefaultCodecJsonTest`): JSON is the default wire codec, exercised on
+  the ACTUAL decode path. A DEFAULT (codec-unset) envelope parsed via `InputMarshaller.parse`
+  yields `InputProto.getEValue()==0`, and the exact server-dispatch resolver
+  `Serial.Instance.get(arg.getEValue())` (`UnaryMethod.java:183`, `DynamicInvoke.java:15`)
+  maps it to the JSON serial. The generated `getEValue()` + the resolver are the source of
+  truth (NOT `proto/internal.proto`, whose `e` field is commented out). Also pins the client
+  registration default `RpcClientFactory.globalSerialEnum == JSON`.
+- **NS-6** (`rpc-server-quarkus/McpDefaultOffContractTest`): the agent surface is opt-in —
+  `@UnsafeWeb.agentTool()` defaults `false`; and the MCP-enable flag defaults OFF as the
+  runtime observes it — the test reflects the runtime-retained
+  `@ConfigProperty(name="rpc.server.mcp.enabled", defaultValue="false")` on
+  `McpHandler.mcpEnabled` / `McpGetHandler.mcpEnabled` (so flipping the production
+  `defaultValue` to `"true"` turns it RED), keeps `enabled()` flip as a non-vacuity check,
+  and asserts `KRPC_MCP` unset resolves to `"false"`. Reading `@ConfigProperty` needs
+  MicroProfile Config on the test classpath, so `quarkus-arc` (already `compileOnly` for
+  main; `compileOnly` is not inherited by test) is added as `testImplementation` — reflection
+  only, no CDI container is booted (plain JUnit, not `@QuarkusTest`).
+
+### Store counts (unchanged)
+
+Frozen rule count stays at the v1 set (R1, R2 direction ×4, R2 completeness, R3, R4);
+per-rule frozen counts unchanged (R1 = 2 grandfathered cycles; all others = 0). The
+ARCH-002 / NS additions are plain tests and add zero store entries — the ADR-0005
+"adding a rule" store procedure was followed vacuously (nothing to write).
+
+### Evidence (ARCH-002, 2026-07-17, `docs/orchestration/ARCH-TEST-V2_IMPL_omp.md`)
+
+`gradle :arch-test:test :rpc-client:test :rpc-server-quarkus:test --rerun-tasks
+--max-workers=2` green: ArchitectureTest 8, ScopeGuardTest 6, ScanFaceCompletenessTest 3,
+NoProtoInProductionSourceTest 1, DefaultCodecJsonTest 3, McpDefaultOffContractTest 6
+(0 skipped). Scan-face self-proof (both include forms, real dummy dir): `include
+"rpc-phantom"` AND `include("rpc-phantom")` each turned it RED (2 failures each —
+`everyIncludedModuleIsConsciouslyClassified` via the Gradle model AND
+`everyOnDiskModuleDirectoryIsClassified` via the filesystem) — "not classified by
+arch-test: [rpc-phantom]"; removed → green. NS-1 self-proof: a seeded
+`rpc-api/src/main/proto/seed.proto` (an unregistered `proto/` dir) turned the gate RED —
+"Offenders: [rpc-api/src/main/proto/seed.proto]"; removed → green. Frozen store /
+`settings.gradle` / `archunit.properties` unchanged across every round.

@@ -63,7 +63,7 @@ final class McpSchema {
     private static Map<String, Object> toolDef(Api api, Method m) {
         var tool = new LinkedHashMap<String, Object>();
         tool.put("name", McpToolRegistry.toolName(api.getName(), m.getName()));
-        tool.put("description", description(api, m));
+        tool.put("description", description(m));
         tool.put("inputSchema", inputSchema(m.getArg()));
         var out = schemaOf(m.getRes(), 0, new ArrayList<>());
         // outputSchema SHOULD be an object; only emit when we can express one.
@@ -73,16 +73,17 @@ final class McpSchema {
         return tool;
     }
 
-    private static String description(Api api, Method m) {
+    private static String description(Method m) {
         var doc = docText(m.getAnnotations());
         var sb = new StringBuilder();
+        // AGENT-002 finding #4: when a method has no @Doc, do NOT echo "Service.method" as a
+        // fake description head (it told an agent nothing it didn't already have from `name`).
+        // Emit only the honest RpcResult-envelope note; DTO field-level @Doc still flows into
+        // inputSchema/outputSchema untouched.
         if (null != doc && !doc.isBlank()) {
-            sb.append(doc);
-        } else {
-            sb.append(api.getName()).append('.').append(m.getName());
+            sb.append(doc).append("\n\n");
         }
-        // Honest RpcResult unwrap note (the moat: rich semantics, no proto).
-        sb.append("\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; "
+        sb.append("(krpc: the call returns an RpcResult envelope {code,message,data}; "
                 + "code 0 = success. structuredContent is the unwrapped data.)");
         return sb.toString();
     }

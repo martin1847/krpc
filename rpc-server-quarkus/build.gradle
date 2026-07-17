@@ -59,6 +59,18 @@ compileTestJava {
     dependsOn('jandex')
 }
 
+// AGENT-002 finding #5: stamp the real build version into the runtime jar manifest so
+// McpHandler.krpcVersion() can report it in MCP serverInfo (falls back to RpcConstants.VERSION
+// when absent, e.g. unit tests / native images that drop package metadata).
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': 'krpc-rpc-server-quarkus',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
 test {
     useJUnitPlatform()
 }

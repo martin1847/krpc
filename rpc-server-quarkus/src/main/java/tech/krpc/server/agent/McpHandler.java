@@ -22,6 +22,7 @@ import tech.krpc.internal.OutputProto;
 import tech.krpc.internal.SerialEnum;
 import tech.krpc.server.ServerResult;
 import tech.krpc.server.WebInvoker;
+import tech.krpc.server.invoke.ValidationException;
 import tech.krpc.server.jws.HttpConst;
 import tech.krpc.util.EnvUtils;
 import tech.krpc.util.JsonUtils;
@@ -177,8 +178,11 @@ public class McpHandler implements PostHandler<String> {
         var caps = new LinkedHashMap<String, Object>();
         caps.put("tools", new LinkedHashMap<>()); // listChanged omitted: tool set is static per boot
         var serverInfo = new LinkedHashMap<String, Object>();
-        serverInfo.put("name", "krpc");
-        serverInfo.put("version", tech.krpc.common.RpcConstants.VERSION);
+        // AGENT-002 finding #5: name is the exposed app/service name (what RpcServerBuilder
+        // stamped into the ApiMeta), so a multi-service agent can verify it connected to the
+        // right server; version is the real krpc build version, never a hardcode.
+        serverInfo.put("name", serverName());
+        serverInfo.put("version", krpcVersion());
         var res = new LinkedHashMap<String, Object>();
         res.put("protocolVersion", negotiated);
         res.put("capabilities", caps);
@@ -188,7 +192,18 @@ public class McpHandler implements PostHandler<String> {
 
     private Map<String, Object> toolsList(Object id) {
         var res = new LinkedHashMap<String, Object>();
-        res.put("tools", McpSchema.toolDefs(registry.apiMeta()));
+        var tools = McpSchema.toolDefs(registry.apiMeta());
+        res.put("tools", tools);
+        // AGENT-002 finding #3b: an empty face is valid but silent — a real MCP client sees
+        // "0 tools" and cannot tell "misconfigured" from "nothing exposed". The base MCP
+        // Result carries an optional _meta; use it (initialize's `instructions` slot is not on
+        // tools/list) to explain the empty set without inventing a non-spec field.
+        if (tools.isEmpty()) {
+            var meta = new LinkedHashMap<String, Object>();
+            meta.put("tech.krpc/hint",
+                    "0 tools: KRPC_MCP enabled but no @UnsafeWeb(agentTool=true) interfaces");
+            res.put("_meta", meta);
+        }
         return result(id, res);
     }
 
@@ -206,8 +221,9 @@ public class McpHandler implements PostHandler<String> {
 
         WebInvoker invoker = registry.lookup(toolName);
         if (null == invoker) {
-            // Unknown OR non-agentTool OR hidden: identical opaque error, no disclosure.
-            return errorResponse(id, INVALID_PARAMS, "Unknown tool: " + toolName);
+            // Unknown OR non-agentTool OR hidden: identical opaque error, no disclosure. But
+            // AGENT-002 finding #3: a typo deserves a nudge, and an empty face deserves a hint.
+            return errorResponse(id, INVALID_PARAMS, unknownToolMessage(toolName));
         }
 
         // Build the krpc JSON input from the MCP arguments object. The arg-shape rule
@@ -225,10 +241,12 @@ public class McpHandler implements PostHandler<String> {
             ServerResult sr = invoker.invokeWeb(input.build(), headers);
             return toolResult(id, sr.output);
         } catch (Throwable ex) {
-            // Credential failure / dispatch error: MCP tool execution error (isError), not
-            // a protocol error. Message kept generic; detail already logged server-side.
+            // Credential failure / dispatch error -> MCP tool execution error (isError), not a
+            // protocol error. AGENT-002 F1/F2/F3: surface the structured envelope (gRPC status
+            // code + safe message + typed jakarta violations, no rejected value) instead of the
+            // bare exception class name. Full detail is already logged server-side by the dispatch.
             log.warn("mcp tools/call {} failed: {}", toolName, ex.toString());
-            return toolError(id, ex.getClass().getSimpleName());
+            return toolError(id, envelopeFromThrowable(ex));
         }
     }
 
@@ -274,9 +292,13 @@ public class McpHandler implements PostHandler<String> {
         String dataJson = output.hasUtf8() ? output.getUtf8() : null;
 
         if (code != 0) {
-            // Business failure (RpcResult.code != 0) -> MCP tool execution error.
+            // Business failure (RpcResult.code != 0) -> MCP tool execution error carrying the
+            // full {code,message} envelope (AGENT-002 finding #2), not a bare message string.
             var msg = output.getM();
-            return toolError(id, (null != msg && !msg.isEmpty()) ? msg : ("code " + code));
+            var envelope = new LinkedHashMap<String, Object>();
+            envelope.put("code", code);
+            envelope.put("message", (null != msg && !msg.isEmpty()) ? msg : ("code " + code));
+            return toolError(id, envelope);
         }
 
         var content = new java.util.ArrayList<Map<String, Object>>();
@@ -296,16 +318,65 @@ public class McpHandler implements PostHandler<String> {
         return result(id, res);
     }
 
-    private Map<String, Object> toolError(Object id, String message) {
+    /**
+     * Tool execution error. The structured envelope {@code {code,message,violations?}} is
+     * serialized as the JSON text of a single text content block (MCP spec 2025-06-18: tool
+     * errors are unstructured {@code content} + {@code isError:true}; {@code structuredContent}
+     * is reserved for outputSchema-conformant success data, so an error is NOT put there).
+     */
+    private Map<String, Object> toolError(Object id, Map<String, Object> envelope) {
         var content = new java.util.ArrayList<Map<String, Object>>();
         var text = new LinkedHashMap<String, Object>();
         text.put("type", "text");
-        text.put("text", message);
+        text.put("text", JsonUtils.stringify(envelope));
         content.add(text);
         var res = new LinkedHashMap<String, Object>();
         res.put("content", content);
         res.put("isError", true);
         return result(id, res);
+    }
+
+    /**
+     * AGENT-002 F1/F3: build the error envelope from a thrown status. gRPC status code +
+     * description are recovered via {@link io.grpc.Status#fromThrowable} (which walks the causal
+     * chain). Violations come ONLY from the typed {@link ValidationException} channel — a
+     * generic message plus {@code {field, constraint}} pairs, never a rejected value and never a
+     * string reparse. Any other status is code + its own description, with NO violations key (so
+     * business prose is never mistaken for a jakarta violation).
+     */
+    private static Map<String, Object> envelopeFromThrowable(Throwable ex) {
+        io.grpc.Status status = io.grpc.Status.fromThrowable(ex);
+        var envelope = new LinkedHashMap<String, Object>();
+        envelope.put("code", status.getCode().value());
+
+        ValidationException validation = findValidation(ex);
+        if (null != validation) {
+            // Secret-safe: generic message + typed {field, constraint} only (no rejected value).
+            envelope.put("message", "Invalid input");
+            var violations = new java.util.ArrayList<Map<String, Object>>();
+            for (var v : validation.violations()) {
+                var m = new LinkedHashMap<String, Object>();
+                m.put("field", v.field());
+                m.put("constraint", v.constraint());
+                violations.add(m);
+            }
+            envelope.put("violations", violations);
+            return envelope;
+        }
+
+        String desc = status.getDescription();
+        envelope.put("message", (null != desc && !desc.isBlank()) ? desc : status.getCode().name());
+        return envelope;
+    }
+
+    /** The typed validation carrier from the causal chain, or null if this is not one. */
+    private static ValidationException findValidation(Throwable ex) {
+        for (Throwable t = ex; null != t; t = t.getCause()) {
+            if (t instanceof ValidationException ve) {
+                return ve;
+            }
+        }
+        return null;
     }
 
     private static Object parseStructured(String dataJson) {
@@ -338,6 +409,98 @@ public class McpHandler implements PostHandler<String> {
         env.put("id", id); // null id is valid for pre-dispatch errors
         env.put("error", err);
         return env;
+    }
+
+    // --- serverInfo (AGENT-002 finding #5) ----------------------------------------------
+
+    /**
+     * The exposed application/service name — {@code RpcServerBuilder} stamps it into the
+     * live {@link tech.krpc.common.meta.ApiMeta#getApp()}. Falls back to {@code "krpc"} only
+     * when the surface has not been initialised (e.g. a bare unit handler).
+     */
+    private String serverName() {
+        var meta = registry.apiMeta();
+        if (null != meta && null != meta.getApp() && !meta.getApp().isBlank()) {
+            return meta.getApp();
+        }
+        return "krpc";
+    }
+
+    /**
+     * The real krpc build version, read from the runtime jar's {@code Implementation-Version}
+     * manifest attribute (populated by the Gradle build), never hardcoded here. Falls back to
+     * {@link tech.krpc.common.RpcConstants#VERSION} when the manifest is absent (unit tests,
+     * exploded classpaths, and native images that drop package metadata).
+     */
+    static String krpcVersion() {
+        var v = McpHandler.class.getPackage().getImplementationVersion();
+        return (null != v && !v.isBlank()) ? v : tech.krpc.common.RpcConstants.VERSION;
+    }
+
+    // --- did-you-mean (AGENT-002 finding #3) --------------------------------------------
+
+    /**
+     * Unknown-tool message: append the nearest known tool name(s) (edit distance ≤ 2, max 3)
+     * as a did-you-mean nudge, or an explicit "0 tools" hint when the face is empty. No
+     * disclosure beyond names already returned by {@code tools/list}.
+     */
+    private String unknownToolMessage(String toolName) {
+        var names = registry.toolNames();
+        if (names.isEmpty()) {
+            return "Unknown tool: " + toolName
+                    + " (0 tools registered: KRPC_MCP enabled but no @UnsafeWeb(agentTool=true) interfaces)";
+        }
+        var suggestions = suggest(toolName, names);
+        if (suggestions.isEmpty()) {
+            return "Unknown tool: " + toolName;
+        }
+        return "Unknown tool: " + toolName + ". Did you mean: " + String.join(", ", suggestions) + "?";
+    }
+
+    /** Names within edit distance 2 of {@code toolName}, nearest first, at most 3. */
+    static List<String> suggest(String toolName, java.util.Collection<String> names) {
+        record Cand(String name, int dist) {}
+        var cands = new java.util.ArrayList<Cand>();
+        for (String n : names) {
+            int d = editDistance(toolName, n);
+            if (d <= 2) {
+                cands.add(new Cand(n, d));
+            }
+        }
+        cands.sort(java.util.Comparator.comparingInt(Cand::dist).thenComparing(Cand::name));
+        var out = new java.util.ArrayList<String>();
+        for (int i = 0; i < cands.size() && i < 3; i++) {
+            out.add(cands.get(i).name());
+        }
+        return out;
+    }
+
+    /** Iterative Levenshtein with a rolling row — bounded by the (short) tool-name lengths. */
+    private static int editDistance(String a, String b) {
+        int n = a.length();
+        int m = b.length();
+        if (0 == n) {
+            return m;
+        }
+        if (0 == m) {
+            return n;
+        }
+        int[] prev = new int[m + 1];
+        int[] curr = new int[m + 1];
+        for (int j = 0; j <= m; j++) {
+            prev[j] = j;
+        }
+        for (int i = 1; i <= n; i++) {
+            curr[0] = i;
+            for (int j = 1; j <= m; j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            }
+            int[] tmp = prev;
+            prev = curr;
+            curr = tmp;
+        }
+        return prev[m];
     }
 
     // --- headers / transport ------------------------------------------------------------

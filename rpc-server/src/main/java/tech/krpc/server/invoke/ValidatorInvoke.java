@@ -10,7 +10,6 @@ import jakarta.validation.Validator;
 
 import tech.krpc.model.RpcResult;
 import tech.krpc.server.ServerContext;
-import io.grpc.Status;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -31,14 +30,17 @@ public abstract class ValidatorInvoke<DTO>  implements DynamicInvoke<DTO>{
     @Override
     public RpcResult<DTO> invoke(ServerContext sc) throws Throwable {
         var input = readInput(sc);
-        //TODO log.debug("ValidatorInvoke get  PageQuery, no validator  input {}",input);
         var violationSet = validator.validate(input);
-        if(violationSet.size() > 0){
-            throw Status.INVALID_ARGUMENT.withDescription(
-                    input.getClass().getSimpleName() +" : " + violationSet.stream()
-                            .map(it-> it.getPropertyPath()+"="+it.getInvalidValue() +"("+it.getMessage()+")")
-                            .collect(Collectors.joining(";"))
-            ).asRuntimeException();
+        if (!violationSet.isEmpty()) {
+            // AGENT-002 F1: carry typed {field, constraint} pairs only. The rejected value
+            // (getInvalidValue()) is deliberately NEVER read — it may be a secret (password/
+            // token). ValidationException encodes field+constraint into BOTH the typed carrier
+            // (MCP face) and the status description (classic gRPC face), never the value.
+            var violations = violationSet.stream()
+                    .map(it -> new ValidationException.Violation(
+                            it.getPropertyPath().toString(), it.getMessage()))
+                    .collect(Collectors.toList());
+            throw new ValidationException(input.getClass().getSimpleName(), violations);
         }
         return caller.call(input);
     }

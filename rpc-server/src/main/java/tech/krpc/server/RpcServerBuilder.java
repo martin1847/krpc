@@ -201,7 +201,9 @@ public class RpcServerBuilder {
 				// in their service name and are never registered into the web surface.
 				boolean web = clz.isAnnotationPresent(UnsafeWeb.class);
 				// ADR-0004 (AGENT-001 P1): agentTool is a strict subset of web — MCP tools only.
-				boolean agentTool = web && ((UnsafeWeb) clz.getAnnotation(UnsafeWeb.class)).agentTool();
+				// AGENT-002: interface-level agentTool=true exposes every method; otherwise a
+				// method opts in individually via @UnsafeWeb.AgentTool. Default all-OFF (NS-6).
+				boolean ifaceAgentTool = web && ((UnsafeWeb) clz.getAnnotation(UnsafeWeb.class)).agentTool();
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
@@ -213,6 +215,8 @@ public class RpcServerBuilder {
 						var webKey = webKey(stub.methodDescriptor.getFullMethodName());
 						webMethods.put(webKey, methodInvokation);
 						webMetaMethods.add(toMeta(stub,attr));
+						boolean agentTool = ifaceAgentTool
+								|| stub.method.isAnnotationPresent(UnsafeWeb.AgentTool.class);
 						if(agentTool){
 							mcpMethods.put(webKey, methodInvokation);
 							mcpMetaMethods.add(toMeta(stub,attr));

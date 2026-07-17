@@ -85,8 +85,15 @@ class McpBridgeQuarkusTest {
         assertEquals("2025-06-18", result.get("protocolVersion"),
                 () -> "initialize did not echo protocolVersion: " + res.body());
         Map<String, Object> serverInfo = asMap(result.get("serverInfo"), "serverInfo");
-        assertEquals("krpc", serverInfo.get("name"),
-                () -> "serverInfo.name != krpc: " + res.body());
+        // AGENT-002 finding #5: serverInfo.name is the exposed app name ("quickstart"), not a
+        // hardcoded "krpc", so a multi-service agent can verify which server it reached.
+        assertEquals("quickstart", serverInfo.get("name"),
+                () -> "serverInfo.name != app name (quickstart): " + res.body());
+        // version is present and non-blank (krpc build version via jar manifest, fallback
+        // RpcConstants.VERSION); never absent.
+        Object version = serverInfo.get("version");
+        assertInstanceOf(String.class, version, () -> "serverInfo.version missing: " + res.body());
+        assertFalse(((String) version).isBlank(), () -> "serverInfo.version blank: " + res.body());
         // capabilities.tools present (object) -> the server declares it serves tools.
         Map<String, Object> caps = asMap(result.get("capabilities"), "capabilities");
         assertInstanceOf(Map.class, caps.get("tools"),

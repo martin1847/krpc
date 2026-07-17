@@ -12,7 +12,9 @@ import java.time.format.DateTimeFormatter;
  */
 public interface RpcConstants {
 
-    String VERSION = "1.0.0";
+    // AGENT-002 F2: single source of truth — generated from Gradle project.version at build time
+    // (see rpc-common/build.gradle generateBuildVersion). Never hand-maintained here.
+    String VERSION = BuildVersion.VERSION;
 
     String INNER_PROVIDER = "GRPC";
 

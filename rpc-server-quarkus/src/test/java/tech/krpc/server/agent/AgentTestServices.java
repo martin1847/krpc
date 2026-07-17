@@ -39,6 +39,20 @@ final class AgentTestServices {
         RpcResult<String> secret(String in);
     }
 
+    /**
+     * AGENT-002: interface is {@code @UnsafeWeb} (agentTool defaults false), so only the
+     * methods annotated {@code @UnsafeWeb.AgentTool} are MCP tools — a per-method subset. Here
+     * {@code exposed} is a tool; {@code hidden} stays web-only.
+     */
+    @UnsafeWeb
+    @RpcService(description = "partial agent-tool service")
+    public interface PartialToolService {
+        @UnsafeWeb.AgentTool
+        RpcResult<String> exposed(String in);
+
+        RpcResult<String> hidden(String in);
+    }
+
     public static class WebEcho implements WebEchoService {
         @Override
         public RpcResult<String> echo(String in) {
@@ -57,6 +71,18 @@ final class AgentTestServices {
         @Override
         public RpcResult<String> secret(String in) {
             return RpcResult.ok("secret:" + in);
+        }
+    }
+
+    public static class PartialTool implements PartialToolService {
+        @Override
+        public RpcResult<String> exposed(String in) {
+            return RpcResult.ok("exposed:" + in);
+        }
+
+        @Override
+        public RpcResult<String> hidden(String in) {
+            return RpcResult.ok("hidden:" + in);
         }
     }
 }

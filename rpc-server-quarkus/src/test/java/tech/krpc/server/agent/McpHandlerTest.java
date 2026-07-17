@@ -175,8 +175,24 @@ class McpHandlerTest {
 
             var info = res.get("serverInfo");
             assertInstanceOf(Map.class, info, "serverInfo present");
-            assertEquals("krpc", ((Map<?, ?>) info).get("name"), "serverInfo.name");
+            // AGENT-002 finding #5: name is the exposed app name (ApiMeta.app), not "krpc".
+            assertEquals("test-app", ((Map<?, ?>) info).get("name"), "serverInfo.name = app name");
+            // version is sourced from krpcVersion() (jar manifest, fallback RpcConstants.VERSION),
+            // never the old "1.0.0" literal in the handler.
+            assertEquals(McpHandler.krpcVersion(), ((Map<?, ?>) info).get("version"),
+                    "serverInfo.version = resolved krpc build version, not a hardcode");
         }
+    }
+
+    @Test
+    void krpcVersion_fallbackIsGeneratedProjectVersion_notStaleHardcode() {
+        // AGENT-002 F2: on the exploded test classpath the module manifest is absent, so
+        // krpcVersion() takes the fallback — which is now the generated project version (single
+        // source of truth), never a hand-maintained stale constant.
+        assertEquals(tech.krpc.common.BuildVersion.VERSION, McpHandler.krpcVersion(),
+                "krpcVersion fallback = generated build version");
+        assertEquals(tech.krpc.common.BuildVersion.VERSION, tech.krpc.common.RpcConstants.VERSION,
+                "RpcConstants.VERSION derives from the generated build version (no duplicate)");
     }
 
     @Test
@@ -313,7 +329,11 @@ class McpHandlerTest {
 
         var env = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"));
         assertTrue(isError(env), "code!=0 -> isError:true");
-        assertEquals("nope", firstText(env), "business message surfaced as tool error text");
+        // AGENT-002 finding #2: the error content is the {code,message} envelope JSON, not a
+        // bare message string.
+        var envelope = (Map<?, ?>) JsonUtils.parse(firstText(env), Object.class);
+        assertEquals(5, ((Number) envelope.get("code")).intValue(), "RpcResult code surfaced");
+        assertEquals("nope", envelope.get("message"), "business message surfaced in envelope");
     }
 
     // --- protocol errors ----------------------------------------------------------------

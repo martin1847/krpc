@@ -67,6 +67,14 @@ public class McpToolRegistry {
         return tools.get(toolName);
     }
 
+    /**
+     * @return the live set of MCP tool names ("Service_method"). Used for did-you-mean
+     * suggestions on an unknown-tool error; never null (empty when the face is empty).
+     */
+    public java.util.Set<String> toolNames() {
+        return tools.keySet();
+    }
+
     public ApiMeta apiMeta() {
         return toolApiMeta;
     }

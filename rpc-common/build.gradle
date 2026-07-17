@@ -44,6 +44,33 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
+// AGENT-002 F2: the krpc build version has ONE source of truth — the Gradle project.version.
+// Generate a compile-time constant (BuildVersion.VERSION) from it; RpcConstants.VERSION derives
+// from that constant. A compile-time String constant is inlined into bytecode, so it is
+// native-image safe (no runtime resource lookup) and cannot drift from gradle.properties.
+def generatedVersionDir = layout.buildDirectory.dir('generated/sources/version')
+def generateBuildVersion = tasks.register('generateBuildVersion') {
+    def outDir = generatedVersionDir
+    def ver = project.version.toString()
+    inputs.property('version', ver)
+    outputs.dir(outDir)
+    doLast {
+        def pkgDir = outDir.get().dir('tech/krpc/common').asFile
+        pkgDir.mkdirs()
+        new File(pkgDir, 'BuildVersion.java').text = """package tech.krpc.common;
+
+/** Generated from Gradle {@code project.version} — do not edit. Single source of the krpc build version. */
+public final class BuildVersion {
+    private BuildVersion() {}
+    public static final String VERSION = "${ver}";
+}
+"""
+    }
+}
+sourceSets.main.java.srcDir generatedVersionDir
+tasks.named('compileJava') { dependsOn generateBuildVersion }
+tasks.matching { it.name in ['sourcesJar', 'javadoc'] }.configureEach { dependsOn generateBuildVersion }
+
 test {
     useJUnitPlatform()
 }

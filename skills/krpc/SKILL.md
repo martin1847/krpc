@@ -108,6 +108,13 @@ bypassed). Methods: `initialize`, `notifications/initialized` (202), `tools/list
 `tools/call`, `ping`; JSON-response mode, no SSE. Full contract: **SPEC §12.2**;
 handshake transcript: `docs/agent-guide.md`.
 
+## Live endpoint (self-verify)
+
+A public sandbox at `https://demo.krpc.tech` runs the quickstart (`HelloService` only,
+fake data, `agentTool=true`) with `/mcp`, `/agent/discover`, and gRPC-over-443 all live.
+Agents can self-verify the discover→invoke and MCP examples above against it instead of
+standing up a local server. Fake-data sandbox — may reset anytime; don't rely on state.
+
 ## Native image (GraalVM / Quarkus)
 
 Building a krpc consumer as a native image? The single source of truth is

@@ -573,6 +573,14 @@ refs below point into that file). Day-1 checklist for a consumer service:
 The contract is the `*-api` module (`@RpcService` interfaces + DTOs; NS-1 — the interface
 *is* the contract). Evolving it safely is publish-time discipline, not a runtime feature.
 
+**On the wire, the field layout *is* the contract.** Polyglot clients do not key on any
+version string — they encode the `InputProto`/`OutputProto` field numbers directly
+(`InputProto{e=1,utf8=2,bs=3}`, `OutputProto{code=1, data oneof{msg=2,utf8=3,bs=4}}`;
+`RpcConstants.VERSION` rides as `ApiMeta.sdkVersion` metadata only). This is why
+years-old clients stay compatible across krpc build versions — and why those field
+numbers are effectively frozen: reusing or renumbering one is a wire break regardless of
+any version bump (verified across the Rust/TS/Python/Dart clients, 2026-07).
+
 ### 14.1 Version policy — the major stays `1`
 
 `version` in `gradle.properties:5` (group `tech.krpc`); line `1.MINOR.PATCH`. Mirrors

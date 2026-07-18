@@ -1,6 +1,6 @@
 package tech.krpc.ext.gen.meta;
 
-import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.List;
 import java.util.Set;
 
@@ -25,7 +25,9 @@ public class Api {
 
 
     public Set<String> getCustomerDtos(){
-        Set<String> dtos = new HashSet<>();
+        // GENDET-001: TreeSet (not HashSet) so the generated service-file import list is
+        // emitted in a deterministic, name-sorted order regardless of method/scan order.
+        Set<String> dtos = new TreeSet<>();
         methods.forEach(m->{
             addDtos(dtos,m.arg);
             addDtos(dtos,m.res);

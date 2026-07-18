@@ -12,6 +12,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import tech.krpc.annotation.RpcService;
 import tech.krpc.annotation.UnsafeWeb;
 import tech.krpc.common.MethodStub;
+import tech.krpc.ext.gen.meta.Api;
 import tech.krpc.ext.gen.meta.ApiMetaRoot;
 import tech.krpc.ext.gen.meta.Dto;
 import tech.krpc.server.RpcServerBuilder;
@@ -147,6 +149,17 @@ public class Gen {
         var dtos = metas.getDtos().stream().filter(Dto::hasChild).collect(Collectors.toList());
         //JSON dtos;
         dtos.forEach(template.remapping::remapping);
+        // GENDET-001: deterministic DTO emission order. Upstream `dtos` derive from a
+        // HashMap in RpcMetaServiceImpl.buildApiMeta (values() iteration order varies by
+        // JVM/classpath/File enumeration). Primary key = emitted (post-remap) simple name;
+        // secondary key = originName (the PRE-remap simple name, which is upstream cls2dto's
+        // getSimpleName() dedup key and therefore UNIQUE across the emitted DTO list). The
+        // secondary key breaks post-remap name collisions deterministically — e.g. distinct
+        // sources Integer/Long both remapped to TS `number` (codex review counterexample) —
+        // where a simple-name-only comparator would tie and Java's stable sort would retain
+        // the nondeterministic upstream input order. Sort AFTER remapping so getName() is final.
+        dtos.sort(Comparator.comparing(Dto::getName)
+                .thenComparing(Dto::getOriginName, Comparator.nullsFirst(Comparator.naturalOrder())));
         root.put("dtos",dtos );
 
         Template dtoTemp ;
@@ -165,7 +178,16 @@ public class Gen {
         try {
             dtoTemp.process(root, toWriter(outFolder,dtoFileName));
             Template serviceTemp = cfg.getTemplate(template.serive);
-            for (var api :metas.getApis()) {
+            // GENDET-001: deterministic service-file emission order. Upstream `apis` come
+            // from Collectors.groupingBy (HashMap) in buildApiMeta. Primary key = service
+            // name; secondary key = description (null-safe) so two services whose emitted
+            // (prefix-stripped, lower-cased) filename would collide still order — and thus
+            // last-write to a shared path resolves — deterministically instead of retaining
+            // input order. (Distinct gRPC services carry distinct registered names in practice.)
+            var apis = new ArrayList<>(metas.getApis());
+            apis.sort(Comparator.comparing(Api::getName)
+                    .thenComparing(Api::getDescription, Comparator.nullsFirst(Comparator.naturalOrder())));
+            for (var api : apis) {
                 root.put("service",api );
                 api.getMethods().forEach(m->{
                     template.remapping.remapping(m.getArg());

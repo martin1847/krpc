@@ -1,7 +1,7 @@
 # KRPC operations & consumer-ops — full reference
 
 Deployment/runtime + release-consumption depth extracted from `SPEC.md` (§16.3–16.5 and
-§15.5–15.6) to keep the contract lean. `SPEC.md` holds the authoring/calling contract and the
+§15.6–15.7) to keep the contract lean. `SPEC.md` holds the authoring/calling contract and the
 quick-ref config/port facts (§16.1–16.2) and points here. Section numbers below match their
 original SPEC positions. Not part of the SPEC mirror (only `SPEC.md` is mirrored).
 
@@ -67,7 +67,7 @@ normally-spanned request that just misses the `WebMethodRegistry` lookup
 
 ## Consuming releases
 
-### 15.5 Consuming a release-candidate (`-rc`) artifact
+### 15.6 Consuming a release-candidate (`-rc`) artifact
 
 An `-rc` (e.g. `1.1.1-rc1`) is a producer pre-release for verification. Routes by scope:
 
@@ -84,7 +84,7 @@ An `-rc` (e.g. `1.1.1-rc1`) is a producer pre-release for verification. Routes b
 > Consumer-side operational guidance (standard Maven semantics); only the `mavenLocal()` /
 > `MAVEN_REPO` scaffold (`build.gradle:16-19`) is anchored in-repo. Nexus has no in-repo anchor.
 
-### 15.6 Living example — the consumer smoke script
+### 15.7 Living example — the consumer smoke script
 
 The LH umbrella owns a runnable end-to-end smoke script `scripts/staging-smoke.sh` (**not
 vendored here**): points at a staging service, runs `discover → invoke` (or `rpcurl -a <app>

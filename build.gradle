@@ -1,4 +1,20 @@
 
+// JAPICMP-001 (SPEC §14.2): put the japicmp plugin on the ROOT buildscript classpath. Unlike the
+// plugins-DSL `apply false`, a buildscript classpath is inherited by every subproject AND by
+// `apply from:` scripts, so gradle/japicmp.gradle can both import the rule types and apply the
+// plugin to the covered modules. me.champeau.gradle.japicmp is the de-facto Gradle japicmp wrapper
+// (Gradle 6+, used by Gradle/Micronaut/OpenSearch); its rich-report rule DSL is what lets us
+// ENCODE the patch/minor/ack policy (SPEC §14.1), not merely report the diff.
+buildscript {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'me.champeau.gradle:japicmp-gradle-plugin:0.4.6'
+    }
+}
+
 plugins {
     id 'java-library'
     id "jacoco"
@@ -94,3 +110,7 @@ subprojects {
     task allDeps(type: DependencyReportTask) {}
 
 }
+
+// JAPICMP-001 (SPEC §14.2): binary/source-compat gate — task `japicmpCheck`. Applied last so
+// the covered subprojects (rpc-api, rpc-common) already have their java-library config.
+apply from: "$rootProject.projectDir/gradle/japicmp.gradle"

@@ -1,0 +1,256 @@
+// JAPICMP-001 (SPEC §14.2, NS-1): machine-enforced binary/source-compat gate for the
+// consumer CONTRACT surface. "The interface is the contract" (NS-1) is only real once a
+// machine verifies the diff — an unchecked principle is a comment (NORTH_STAR).
+//
+// This script wires a `japicmpCheck` aggregate task that diffs the working tree's compiled
+// classes against the last released baseline on Maven Central (tech.krpc:*:<japicmp.baseline>)
+// and ENCODES the SPEC §14.1 version policy (major frozen at 1; minor = breaking allowed;
+// patch = compatible-only) rather than merely reporting the diff.
+//
+// POLICY MATRIX — mode is derived from the in-dev `version` vs `japicmp.baseline`:
+//
+//   | mode   | trigger                          | binary-incompatible change      |
+//   | ------ | -------------------------------- | ------------------------------- |
+//   | PATCH  | minor equal (e.g. 1.1.0→1.1.x)   | BUILD FAILURE (always)          |
+//   | MINOR  | minor bumped (e.g. 1.1→1.2)      | FAIL unless -Pjapicmp.acceptBreaking=true |
+//   | MAJOR  | major bumped (off-policy!)       | FAIL unless -Pjapicmp.acceptBreaking=true, + loud warning |
+//
+// Additive-only changes (new method, new optional field) always PASS. The ack flag is
+// IGNORED in PATCH mode — a patch can never carry a breaking change, by definition.
+//
+// Module coverage rationale: see docs/orchestration/JAPICMP-001_IMPL_omp.md.
+
+import me.champeau.gradle.japicmp.JapicmpTask
+import me.champeau.gradle.japicmp.report.ViolationRule
+import me.champeau.gradle.japicmp.report.Violation
+import japicmp.model.JApiCompatibility
+
+// `apply from:` scripts get their own script classloader that does NOT inherit the root
+// buildscript classpath, so the japicmp types above must be put on THIS script's classpath too
+// (the imports/class-def compile against it). The root build.gradle keeps the same dependency so
+// the covered subprojects (which inherit the root buildscript classpath) can apply the plugin by id.
+buildscript {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'me.champeau.gradle:japicmp-gradle-plugin:0.4.6'
+    }
+}
+
+// ── Policy rule ────────────────────────────────────────────────────────────────────────
+// A single generic rich-report rule covering BOTH binary and source compatibility (SPEC §14.2
+// requires both). A member that is binary- OR source-incompatible becomes an `error` violation
+// (which fails the build) when `failOnBreaking` is true; otherwise it is explicitly `accept`ed
+// (recorded in the report, no failure). Compatible/additive members produce no violation. This is
+// the only rule, so the plugin's default rules do NOT apply — the patch/minor/ack decision is
+// fully under our control.
+class KrpcCompatPolicyRule implements ViolationRule {
+    private final Map<String, String> params
+
+    KrpcCompatPolicyRule(Map<String, String> params) {
+        this.params = params
+    }
+
+    @Override
+    Violation maybeViolation(JApiCompatibility member) {
+        boolean binaryBreak = !member.binaryCompatible
+        boolean sourceBreak = !member.sourceCompatible
+        if (!binaryBreak && !sourceBreak) {
+            return null
+        }
+        String kind = binaryBreak ? (sourceBreak ? 'binary+source' : 'binary') : 'source'
+        if (Boolean.parseBoolean(params.get('failOnBreaking'))) {
+            return Violation.error(member, "Is not ${kind} compatible".toString())
+        }
+        return Violation.accept(member, "${kind}-incompatible change ${params.getOrDefault('acceptReason', 'accepted under minor-bump policy')}".toString())
+    }
+}
+
+// ── Version / mode computation ──────────────────────────────────────────────────────────
+static List<Integer> parseSemver(String v) {
+    def core = v.replaceAll(/[-+].*$/, '') // strip -SNAPSHOT / -rc / +meta
+    def parts = core.tokenize('.')
+    [0, 1, 2].collect { i -> (i < parts.size() ? parts[i].replaceAll(/\D/, '') : '') ?: '0' }
+             .collect { it as int }
+}
+
+def baseline = (project.findProperty('japicmp.baseline') ?: '1.1.1').toString()
+def acceptBreaking = Boolean.parseBoolean((project.findProperty('japicmp.acceptBreaking') ?: 'false').toString())
+def current = project.version.toString()
+
+def cur = parseSemver(current)
+def base = parseSemver(baseline)
+def mode
+if (cur[0] != base[0]) {
+    mode = 'MAJOR' // off-policy: SPEC §14.1 freezes major at 1 forever (enforced by japicmpMajorPolicyCheck below)
+} else if (cur[1] > base[1]) {
+    mode = 'MINOR'
+} else {
+    mode = 'PATCH' // minor equal (incl. equal version or patch bump), or a downgrade → strictest
+}
+// The acknowledgement path exists ONLY for a MINOR breaking release. PATCH never tolerates a break
+// (ack ignored). MAJOR is rejected UNCONDITIONALLY by japicmpMajorPolicyCheck (a dependency of every
+// japicmp task) before any comparison runs — there is deliberately no MAJOR ack path (SPEC §14.1).
+def failOnBreaking = (mode == 'MINOR') ? !acceptBreaking : true
+
+def policyBanner = { String projName ->
+    def sb = new StringBuilder()
+    sb << "\n────────────────────────────────────────────────────────────────────────────\n"
+    sb << "japicmp binary+source-compat gate — ${projName}  (SPEC §14, JAPICMP-001)\n"
+    sb << "  current version : ${current}\n"
+    sb << "  baseline        : tech.krpc:${projName}:${baseline}  (Maven Central)\n"
+    sb << "  policy mode     : ${mode}   failOnBreaking=${failOnBreaking}   acceptBreaking=${acceptBreaking}\n"
+    sb << "  ┌────────┬────────────────────────────────┬──────────────────────────────────────────┐\n"
+    sb << "  │ mode   │ trigger                        │ binary- OR source-incompatible change     │\n"
+    sb << "  ├────────┼────────────────────────────────┼──────────────────────────────────────────┤\n"
+    sb << "  │ PATCH  │ minor equal (1.1.x vs 1.1.y)   │ BUILD FAILURE (always; ack ignored)       │\n"
+    sb << "  │ MINOR  │ minor bumped (1.2 vs 1.1)      │ FAIL unless -Pjapicmp.acceptBreaking=true  │\n"
+    sb << "  │ MAJOR  │ major != 1 (off-policy)        │ REJECTED UNCONDITIONALLY — no ack path     │\n"
+    sb << "  └────────┴────────────────────────────────┴──────────────────────────────────────────┘\n"
+    sb << "  major stays 1 FOREVER (SPEC §14.1, wire envelope stable NS-2). Additive-only changes pass.\n"
+    sb << "  On PATCH failure: the change is binary- or source-incompatible and the next release is a\n"
+    sb << "  PATCH. Either make the change additive, or bump the MINOR version (a breaking release) and\n"
+    sb << "  re-run with -Pjapicmp.acceptBreaking=true to acknowledge the break.\n"
+    sb << "────────────────────────────────────────────────────────────────────────────\n"
+    sb.toString()
+}
+
+// ── Covered modules ─────────────────────────────────────────────────────────────────────
+// rpc-api: MANDATORY — it IS the contract (@RpcService interfaces + DTOs, NS-1).
+// rpc-common: covered IN FULL — every public type, INCLUDING the wire packages
+//   tech.krpc.internal.* (InputProto/OutputProto/SerialEnum) and tech.krpc.common.proto.*
+//   (the marshallers/codec).
+//
+// F3 (codex r1): the earlier build excluded those two wire packages as "internal, consumers
+// never import them". That was wrong and is REMOVED. Evidence: covered public API already exposes
+// the wire types in public signatures — MethodStub.methodDescriptor (MethodDescriptor<InputProto,
+// OutputProto>) and buildMd(...), ResultWrapper.output/ctor (OutputProto), Serial.supported()
+// (SerialEnum[]), JsonSerial.read/writeOutput/readInput/id, ClientReader.readOutput. Excluding a
+// package that a covered signature exposes silently drops real public contract (the exact F3 risk).
+// And the wire FIELD LAYOUT is frozen contract (NS-2; dev commit 62cf205 "field numbers frozen") —
+// frozen contract is precisely what a compat gate must ENFORCE, not exclude. Full coverage is the
+// cheapest honest impl: nothing is excluded, so there is no exclusion to drift and no guard needed.
+//
+// Server/framework modules (rpc-server*, http-server, *-spring, *-quarkus, ext-rpc-gen) remain NOT
+// covered: their public surface is dominated by grpc/netty/quarkus/spring runtime plumbing that
+// churns legitimately (SPEC §14 scope = the *-api contract). Add a module by listing it here.
+def japicmpModules = ['rpc-api', 'rpc-common']
+
+def japicmpCheck = tasks.register('japicmpCheck') {
+    group = 'verification'
+    description = 'Binary+source-compat gate vs the last Central release (SPEC §14, JAPICMP-001).'
+}
+
+// F1 (codex r1): SPEC §14.1 freezes the major at 1 FOREVER (wire envelope stable, NS-2). A candidate
+// or baseline whose major != 1 is off-policy and is REJECTED UNCONDITIONALLY — no compatibility
+// result and no japicmp.acceptBreaking flag can let it through (ack is a MINOR-only path). This runs
+// as a dependency of every japicmp task, so it fails before any comparison.
+def majorPolicyCheck = tasks.register('japicmpMajorPolicyCheck') {
+    group = 'verification'
+    description = 'SPEC §14.1: reject any major version != 1 (frozen forever); no acknowledgement path.'
+    def curMajor = cur[0]
+    def baseMajor = base[0]
+    def curV = current
+    def baseV = baseline
+    doLast {
+        if (curMajor != 1 || baseMajor != 1) {
+            throw new GradleException(
+                    "SPEC §14.1 violation: the krpc major version is frozen at 1 FOREVER (wire envelope " +
+                    "stable, NS-2). Refusing the compat gate — current version='${curV}' (major ${curMajor}), " +
+                    "baseline='${baseV}' (major ${baseMajor}). A major bump is off-policy and has NO " +
+                    "acknowledgement path (japicmp.acceptBreaking is a MINOR-only escape hatch). Keep the " +
+                    "major at 1 and use a MINOR bump for a breaking release.")
+        }
+    }
+}
+japicmpCheck.configure { dependsOn(majorPolicyCheck) }
+
+japicmpModules.each { moduleName ->
+    project(":${moduleName}") { sub ->
+        sub.plugins.apply('me.champeau.gradle.japicmp')
+
+        // Baseline = the PUBLISHED release jar. We deliberately do NOT resolve it through a Gradle
+        // configuration: in a single multi-project build Gradle's implicit project substitution
+        // rewrites any external tech.krpc:<module>:<ver> dependency to the local same-coordinate
+        // PROJECT (matched on group:name; neither an explicit module→module substitution rule nor
+        // useGlobalDependencySubstitutionRules overrides it), which makes old==new and every diff a
+        // silent "No changes" — a useless gate. So we fetch the canonical artifact straight from
+        // Maven Central (with the Aliyun mirror as fallback). The baseline is BY DEFINITION the
+        // Central release, so a direct download is also the most honest source.
+        def baselineJar = sub.layout.buildDirectory.file("japicmp/baseline/${moduleName}-${baseline}.jar")
+        def downloadBaseline = sub.tasks.register('japicmpBaselineDownload') {
+            description = "Fetch the published baseline jar tech.krpc:${moduleName}:${baseline} from Maven Central."
+            def out = baselineJar
+            def relPath = "tech/krpc/${moduleName}/${baseline}/${moduleName}-${baseline}.jar"
+            inputs.property('coordinate', "tech.krpc:${moduleName}:${baseline}")
+            outputs.file(out)
+            doLast {
+                def f = out.get().asFile
+                f.parentFile.mkdirs()
+                def sources = [
+                        "https://repo1.maven.org/maven2/${relPath}",
+                        "https://maven.aliyun.com/repository/public/${relPath}",
+                ]
+                Exception lastErr = null
+                for (String u : sources) {
+                    try {
+                        def conn = new URL(u).openConnection()
+                        conn.connectTimeout = 15000
+                        conn.readTimeout = 60000
+                        conn.inputStream.withStream { i -> f.newOutputStream().withStream { o -> o << i } }
+                        if (f.length() > 0) {
+                            logger.lifecycle("japicmp baseline ${moduleName}:${baseline} <- ${u} (${f.length()} bytes)")
+                            return
+                        }
+                    } catch (Exception e) {
+                        lastErr = e
+                        logger.info("japicmp baseline source failed (${u}): ${e.message}")
+                    }
+                }
+                throw new GradleException("Could not download japicmp baseline tech.krpc:${moduleName}:${baseline} from ${sources}", lastErr)
+            }
+        }
+
+        def reportsDir = sub.layout.buildDirectory.dir('reports/japicmp')
+
+        def task = sub.tasks.register('japicmp', JapicmpTask) {
+            group = 'verification'
+            description = "japicmp diff of ${moduleName} vs tech.krpc:${moduleName}:${baseline}"
+            dependsOn(majorPolicyCheck) // SPEC §14.1 major!=1 is rejected before any comparison
+
+            oldClasspath.from(downloadBaseline)
+            newClasspath.from(sub.tasks.named('jar'))
+
+            // Public API is the contract; tolerate types from transitive deps absent on the
+            // (artifact-only) classpaths. onlyModified keeps the report focused. No packageExcludes:
+            // the whole public surface of each covered module is gated (F3 — see the coverage note).
+            accessModifier = 'public'
+            ignoreMissingClasses = true
+            onlyModified = true
+            // Report BOTH binary and source incompatibilities (the policy rule fails on either).
+            failOnSourceIncompatibility = false // failure is decided by KrpcCompatPolicyRule, not this flag
+
+            txtOutputFile = reportsDir.map { it.file("${moduleName}.txt") }.get().asFile
+            htmlOutputFile = reportsDir.map { it.file("${moduleName}.html") }.get().asFile
+
+            richReport {
+                addRule(KrpcCompatPolicyRule, [
+                        failOnBreaking: failOnBreaking.toString(),
+                        acceptReason  : "accepted under ${mode}-bump policy (japicmp.acceptBreaking=true)".toString(),
+                ])
+                addDefaultRules = false
+                destinationDir = reportsDir.get().asFile
+                reportName = "${moduleName}-rich-report.html"
+                title = "krpc compat gate — ${moduleName} (${mode} mode vs ${baseline})"
+            }
+
+            doFirst {
+                logger.lifecycle(policyBanner(moduleName))
+            }
+        }
+
+        japicmpCheck.configure { dependsOn(task) }
+    }
+}

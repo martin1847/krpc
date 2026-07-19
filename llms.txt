@@ -1,29 +1,35 @@
 # KRPC
 
-> KRPC is an interface-first RPC framework for cloud-native services: write a Java
-> interface plus DTOs and the framework handles gRPC/HTTP2 transport, JSON
-> serialization, validation, metadata, and client generation — service authors
-> write no proto files. Service discovery, load balancing, and telemetry are left
-> to Kubernetes / Istio / the deployment platform.
+> KRPC is a contract-first, agent-native RPC framework for the JVM (JDK 21): write
+> one Java interface plus DTOs and the framework turns that single contract into a
+> gRPC/HTTP2 service, a JSON HTTP API, typed clients for TypeScript/Dart/Python, and
+> an opt-in MCP tool surface AI agents call directly — service authors write no proto
+> files. Service discovery, load balancing, and telemetry are left to Kubernetes /
+> Istio / the deployment platform.
 
-For coding agents: read `SPEC.md` before writing or calling a service, and the
-agent guide before discovering/invoking a running service over HTTP. When this file
-and a linked document disagree, the linked document wins.
+Homepage: https://krpc.tech — docs site: https://martin1847.github.io/krpc/
+Central coordinates (group `tech.krpc`): `rpc-api`, `rpc-client`, `rpc-server`,
+`rpc-server-quarkus`, `rpc-server-spring`, `rpc-client-spring`, `http-server`.
+
+For coding agents: read `SPEC.md` before writing or calling a service, and the agent
+guide before discovering/invoking a running service over HTTP (MCP bridge is off by
+default; agent tools are opt-in via `@UnsafeWeb(agentTool=true)`). When this file and a
+linked document disagree, the linked document wins.
 
 ## Core documentation
 
-- [SPEC.md](https://raw.githubusercontent.com/martin1847/krpc/dev/SPEC.md): the authoring handbook — method contract, RpcResult envelope, soft/hard error model, DTO rules, @RpcService naming, @UnsafeWeb, validation, auth/JWKS, native image (§13). Source of truth for authoring.
-- [Agent guide](https://raw.githubusercontent.com/martin1847/krpc/dev/docs/agent-guide.md): how an agent discovers and calls a KRPC service over plain HTTP (P0 /agent/discover + /agent/invoke), with a real transcript.
-- [krpc skill](https://raw.githubusercontent.com/martin1847/krpc/dev/skills/krpc/SKILL.md): portable, tool-agnostic quick-reference — the five rules that bite first plus the agent call path.
+- [SPEC.md](https://raw.githubusercontent.com/martin1847/krpc/dev/SPEC.md): the authoring handbook — method contract, RpcResult envelope, soft/hard error model, DTO rules, @RpcService naming, @UnsafeWeb, validation, auth/JWKS, MCP bridge (§12.2), native image (§13). Source of truth for authoring.
+- [Agent guide](https://raw.githubusercontent.com/martin1847/krpc/dev/docs/agent-guide.md): how an agent discovers and calls a KRPC service over plain HTTP (P0 /agent/discover + /agent/invoke) and MCP (POST /mcp), with real transcripts.
+- [krpc skill](https://raw.githubusercontent.com/martin1847/krpc/dev/skills/krpc/SKILL.md): portable, tool-agnostic quick-reference — the rules that bite first plus the agent call path.
 - [Quickstart](https://raw.githubusercontent.com/martin1847/krpc/dev/examples/quickstart/README.md): a 5-minute, DB-free, JWT-free service that clones, runs, and answers an RPC call.
-- [Support policy](https://raw.githubusercontent.com/martin1847/krpc/dev/docs/support-policy.md): version/support lifecycle (SPEC §13.1 is the canonical version matrix).
-- [Changelog](https://raw.githubusercontent.com/martin1847/krpc/dev/changelog.md): release notes.
-- [Documentation site](https://martin1847.github.io/krpc/): the published docs site (Getting Started + Reference, linking the canonical repo documents).
+- [Starter repo](https://github.com/martin1847/krpc-starter): a clone-and-run project template.
+- [Architecture decision records](https://github.com/martin1847/krpc/tree/dev/docs/decisions): repository scope (ADR-0001), JDK 21 / virtual threads (ADR-0002), W3C trace context (ADR-0003), agent-friendly introspection + MCP (ADR-0004).
+- [README](https://raw.githubusercontent.com/martin1847/krpc/dev/README.md): project overview, agent-era rationale, FAQ, module map, and install coordinates.
 
 ## Optional deeper reading
 
 - [Documentation index](https://raw.githubusercontent.com/martin1847/krpc/dev/docs/INDEX.md): the map of the repository source of truth (decisions, modules, roadmap, AI context).
-- [Architecture decision records](https://github.com/martin1847/krpc/tree/dev/docs/decisions): repository scope (ADR-0001), JDK 21 / virtual threads (ADR-0002), W3C trace context (ADR-0003), agent-friendly introspection (ADR-0004).
 - [Active roadmap](https://raw.githubusercontent.com/martin1847/krpc/dev/docs/roadmap/active-roadmap.md): in-flight capabilities, including agent-friendly introspection (AGENT-001).
+- [Support policy](https://raw.githubusercontent.com/martin1847/krpc/dev/docs/support-policy.md): version/support lifecycle (SPEC §13.1 is the canonical version matrix).
+- [Changelog](https://raw.githubusercontent.com/martin1847/krpc/dev/changelog.md): release notes.
 - [SECURITY.md](https://raw.githubusercontent.com/martin1847/krpc/dev/SECURITY.md): how to report a vulnerability, response targets, and scope.
-- [README](https://raw.githubusercontent.com/martin1847/krpc/dev/README.md): project overview, module map, and install coordinates.

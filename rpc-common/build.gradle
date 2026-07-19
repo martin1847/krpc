@@ -1,4 +1,5 @@
 
+description = 'Shared krpc runtime internals — codec, gRPC proto bridge, and ApiMeta introspection powering the krpc client and server runtimes.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 

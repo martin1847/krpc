@@ -1,4 +1,5 @@
 
+description = 'krpc server runtime core — exposes plain Java interfaces as agent-native gRPC and HTTP microservices with runtime discover/invoke.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 // B1 (OTEL-001 / ADR-0006): a test source set whose runtimeClasspath EXCLUDES every OTel SDK

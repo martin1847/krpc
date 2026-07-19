@@ -1,5 +1,10 @@
 # Unreleased
 
+* **ext-rpc-gen 1.0.2 — agent-native client generator dependency fix (2026-07-19, GEN-NETTY-102).**
+  1.0.1 regression on clean consumer classpaths: `Gen.scan` loads `RpcServerBuilder` →
+  `NoClassDefFoundError: NettyServerBuilder` (rpc-server keeps grpc-netty `compileOnly` by
+  design; gen is a leaf and must carry it). POM now declares `io.grpc:grpc-netty` (runtime,
+  1.79.0) + a clean-classpath scan smoke test. Field-reported by the LH consumer ecosystem.
 * **ext-rpc-gen 1.0.1 shipped standalone (2026-07-19, GENDET-002 #37).** DTO emission is
   topological (referenced-before-referencing, Tarjan SCC condensation, alphabetical
   tie-break) — fixes consumer-side TDZ under `emitDecoratorMetadata` from single-file TS

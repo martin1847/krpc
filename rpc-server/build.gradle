@@ -54,6 +54,9 @@ dependencies {
     testImplementation "io.grpc:grpc-inprocess:${grpcVersion}"
     testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
     testImplementation project(':rpc-client')
+    // META-ARRAY-001: real logback backend on the main test classpath so the Map-field WARN
+    // (RpcMetaServiceImpl.checkFieldContract) is capturable via a ListAppender.
+    testImplementation "ch.qos.logback:logback-classic:1.5.18"
 
     // B1: SDK-free source set — opentelemetry-api only (via rpc-common), NO sdk / sdk-testing.
     noSdkTestImplementation "org.junit.jupiter:junit-jupiter:5.11.4"

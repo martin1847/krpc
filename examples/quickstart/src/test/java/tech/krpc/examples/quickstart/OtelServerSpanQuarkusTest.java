@@ -8,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.inject.Instance;
@@ -43,7 +42,7 @@ import tech.krpc.context.KrpcOtel;
 class OtelServerSpanQuarkusTest {
 
     @Inject
-    InMemorySpanExporter spanExporter;
+    RecordingSpanExporter spanExporter;
 
     @Inject
     Instance<OpenTelemetry> openTelemetry;

@@ -36,9 +36,21 @@ dependencies {
     testImplementation("io.quarkus:quarkus-opentelemetry") {
         exclude module: 'quarkus-bootstrap-maven-resolver'
     }
-    testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    // OTEL-003: NO opentelemetry-sdk-testing. Its SettableContextStorageProvider SPI hijacks OTel's
+    // LazyStorage and pins tests to ThreadLocal storage, hiding the QuarkusContextStorage cross-thread
+    // defect this suite exists to catch. RecordingSpanExporter (opentelemetry-sdk, transitive via
+    // quarkus-opentelemetry) replaces InMemorySpanExporter.
     testImplementation project(':rpc-client')
     testImplementation "io.grpc:grpc-stub:${grpcVersion}"
+}
+
+// OTEL-003 (test scope only): a real Quarkus consumer resolves QuarkusContextStorage as the OTel
+// ContextStorage (via the quarkus-opentelemetry ContextStorageProvider SPI). Pin it explicitly so
+// the container tests deterministically exercise the SAME cross-thread context propagation the real
+// consumer assembly uses. See docs/orchestration/OTEL-003_IMPL_omp.md ("the wiring diff").
+test {
+    systemProperty 'io.opentelemetry.context.contextStorageProvider',
+            'io.quarkus.opentelemetry.runtime.OpenTelemetryContextStorageProvider'
 }
 
 // Convenience alias so `gradle :examples:quickstart:run` starts the server in

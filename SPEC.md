@@ -150,6 +150,17 @@ public class Book {            // Book.java:10-17
 - Generic DTOs are supported (`PagedQuery<T>`, `PagedList<T>`, `List<T>`); the
   server resolves type args by reflection on the method signature.
 
+### Collection fields — use `List<T>`, not arrays
+- Use **`List<T>`** for a sequence field; do **not** use Java arrays. Arrays are
+  **UNSUPPORTED**: the contract meta does not model array component types, so generation
+  would reference an undeclared type. The meta scan **fails fast** on an object-array field
+  (`Zebra[]`, `String[]`), naming the declaring DTO + field (`RpcMetaServiceImpl.checkFieldContract`).
+- **Exemption:** a **single-dimension** array of a *primitive* (`byte[]`, `int[]`) is allowed
+  — the binary/scalar-payload convention (`test-api/.../dto/Img.java:30`). **Multi-dimensional**
+  arrays (`int[][]`) and object arrays are UNSUPPORTED — use `List<T>` / `List<List<T>>`.
+- **`Map<K,V>` is NOT RECOMMENDED** — generated client code loses readability; model the shape
+  as an explicit DTO class. Not an error: the scan logs a WARN (deduped per DTO field).
+
 ### Deserialization is lenient
 `FAIL_ON_UNKNOWN_PROPERTIES=false` — extra fields from clients are tolerated
 (forward compatibility). `JavaTimeModule` auto-registers if jsr310 is present.

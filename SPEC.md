@@ -566,6 +566,18 @@ refs below point into that file). Day-1 checklist for a consumer service:
 - [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.3.
 - [ ] `ext-rpc` / `ext-mybatis` extensions on the build (DTO reflection) — §13.5.
 
+**Known issue — Caffeine + native reflection (field experience, consumer ecosystem 2026-07-19).**
+A krpc native-image service using Caffeine's **bounded** cache path (a builder with bounded
+features — `weakKeys`/`softValues`/`expireAfter*`/`maximumSize`/etc.) hits a dynamic
+class resolution: Caffeine selects a pre-generated internal implementation class by its
+*feature-encoded name* (names like `SSMSW`/`PSWMS`; the concrete class **varies** with the
+feature combination). Green on the JVM, `ClassNotFoundException` at native runtime. Remedy:
+register the concrete generated class(es) for reflection (`@RegisterForReflection(classNames
+= …)` or reflect-config), and **re-verify whenever the feature combination changes** —
+adding/removing features changes the encoded name (numeric capacity/duration values do not).
+(Mechanism: method-handle-based dynamic class lookup in Caffeine 3.x, not `Class.forName`;
+the exact class-name letters are field-reported, not pinned to a Caffeine version here.)
+
 ---
 
 ## 14. Contract evolution

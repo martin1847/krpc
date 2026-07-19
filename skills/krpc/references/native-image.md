@@ -56,6 +56,16 @@ and duplicate-substitution aborts; either upgrade, or apply the legacy trio
 - Known issue: a native runner **SIGSEGVs at startup when datasource env/config
   is absent** (logs "started", then exit 139). Ensure `QUARKUS_DATASOURCE_*` is
   set; JVM mode fails gracefully, native does not.
+- Known issue: **Caffeine on the bounded cache path** (a builder with bounded
+  features — `weakKeys`/`softValues`/`expireAfter*`/`maximumSize`/etc.) resolves a
+  pre-generated internal implementation class by its *feature-encoded name* (names
+  like `SSMSW`/`PSWMS`; method-handle-based dynamic lookup in Caffeine 3.x, not
+  `Class.forName`) — green on JVM, `ClassNotFoundException` at native runtime.
+  Register the concrete generated class(es) with `@RegisterForReflection(classNames
+  = …)` (or reflect-config) and re-verify whenever the FEATURE COMBINATION changes:
+  the encoded name tracks which features are enabled, not numeric capacity/duration
+  values. Field-reported (consumer ecosystem 2026-07-19); exact class-name letters
+  not pinned to a Caffeine version here.
 
 ### 13.4 io_uring transport (evaluated 2026-07)
 

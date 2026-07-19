@@ -1,4 +1,5 @@
 
+description = 'krpc client runtime — a JDK 21 gRPC/HTTP2 client for calling krpc microservices from plain Java, no generated stubs.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 

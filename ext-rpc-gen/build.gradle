@@ -1,6 +1,7 @@
 group = "tech.krpc.ext"
 version = "1.0.1"
 
+description = 'krpc polyglot client generator — emits typed TypeScript/Dart clients from krpc contract metadata for agent frontends.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 dependencies {

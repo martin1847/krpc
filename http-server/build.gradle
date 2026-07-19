@@ -2,6 +2,7 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "$jandexVersion"
 }
 
+description = 'krpc HTTP face — netty host serving HTTP/JSON, gRPC-Web, and the agent/MCP gateway (/agent, /mcp) for krpc services.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 

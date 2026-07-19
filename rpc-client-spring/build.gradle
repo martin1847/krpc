@@ -1,4 +1,5 @@
 
+description = 'krpc Spring client — wires the krpc gRPC/HTTP2 client into Spring apps for calling krpc microservices.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 

@@ -2,6 +2,7 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "$jandexVersion"
 }
 
+description = 'krpc on Quarkus — server integration that adds the MCP bridge exposing krpc Java services as agent MCP tools over HTTP.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 

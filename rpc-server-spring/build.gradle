@@ -2,6 +2,7 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "$jandexVersion"
 }
 
+description = 'krpc on Spring — server integration that runs the krpc runtime inside Spring Boot services and microservices.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 //version = "1.0.0"

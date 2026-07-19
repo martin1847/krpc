@@ -1,5 +1,5 @@
 group = "tech.krpc.ext"
-version = "1.0.1"
+version = "1.0.2"
 
 description = 'krpc polyglot client generator — emits typed TypeScript/Dart clients from krpc contract metadata for agent frontends.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
@@ -8,6 +8,12 @@ dependencies {
 
     implementation project(':rpc-api')
     implementation project(':rpc-server')
+    // GEN-NETTY-102: rpc-server keeps grpc-netty compileOnly BY DESIGN (server consumers get it via
+    // rpc-server-quarkus/-spring runtimeOnly). ext-rpc-gen depends on rpc-server directly and Gen.scan
+    // loads tech.krpc.server.RpcServerBuilder (→ io.grpc.netty.NettyServerBuilder) at scan time, so
+    // this leaf must carry grpc-netty at runtime itself — else standalone gen consumers hit
+    // NoClassDefFoundError (1.0.1 regression). Version is BOM-tracked (root gradle.properties).
+    implementation "io.grpc:grpc-netty:${grpcVersion}"
 
 //    implementation 'com.zlkj.common:cdn-api:1.1.1220'
 //    api 'javax.validation:validation-api:2.0.1.Final'

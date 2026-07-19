@@ -1,5 +1,11 @@
 # Unreleased
 
+* **ext-rpc-gen 1.0.1 shipped standalone (2026-07-19, GENDET-002 #37).** DTO emission is
+  topological (referenced-before-referencing, Tarjan SCC condensation, alphabetical
+  tie-break) — fixes consumer-side TDZ under `emitDecoratorMetadata` from single-file TS
+  output; cycles emit deterministically with a per-SCC WARN. The `tech.krpc.ext:ext-rpc-gen`
+  coordinate versions independently of the krpc train.
+
 # 1.1.1, 2026-07-18
 
 OTel semantic layer + architecture gates + the full agent surface (AI-native code face complete). Merged to `dev` via PRs #22-#29 under heterogeneous adversarial review.

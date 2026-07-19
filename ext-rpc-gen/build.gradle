@@ -16,4 +16,16 @@ dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
+    // GENDET-002: module had NO test source set. Plain JUnit 5 unit tests over the emit
+    // pipeline (Gen.genApiMetaRoot / topoOrderDtos) — no Quarkus boot, no DB. logback-classic
+    // is the slf4j backend so the cycle WARN is capturable via a ListAppender.
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "ch.qos.logback:logback-classic:1.5.18"
+
+}
+
+// Root subprojects{} test block does NOT call useJUnitPlatform(); JUnit 5 tests here need it.
+test {
+    useJUnitPlatform()
 }

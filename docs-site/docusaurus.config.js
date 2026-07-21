@@ -17,8 +17,8 @@ const config = {
   },
 
   // GitHub Pages: project site at https://martin1847.github.io/krpc/
-  url: 'https://martin1847.github.io',
-  baseUrl: '/krpc/',
+  url: 'https://krpc.tech',
+  baseUrl: '/',
   organizationName: 'martin1847',
   projectName: 'krpc',
 

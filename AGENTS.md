@@ -12,6 +12,23 @@ Key boundaries read from the repository:
 - Service discovery, load balancing, and telemetry are delegated to Kubernetes, Istio, or deployment infrastructure.
 - The repository contains API contracts, common runtime code, Java client/server runtime modules, framework/native-image integrations, HTTP gateway support, code generation, tests, demos, and rpcurl tooling.
 
+## Repo Facts (branches, releases, mirrors)
+
+- Development and releases both happen on **`dev`** (the default branch). `main` is
+  not the release branch, and the docs site deploys **only on pushes to `dev`**
+  (`.github/workflows/docs.yml`, `docs-site/**` paths filter) — a docs-site fix
+  landed on `main` will never deploy.
+- `SPEC.md` and `skills/krpc/references/SPEC.md` are a byte-identical mirror pair:
+  any change to one must update the other in the same commit.
+- `ext-rpc-gen/` is a standalone-versioned artifact (`tech.krpc.ext:ext-rpc-gen`,
+  version in its own `build.gradle`, not the root `gradle.properties`) and is
+  excluded from krpc Central release bundles (duplicate-GAV guard); it releases
+  separately.
+- Central publishing runs through `gradle/publish-central.sh`
+  (bundle → upload → status → publish; the publish step is irreversible).
+- Integration tests expect a reachable test database; without it `gradle build`
+  hangs in `test`. For offline/local builds use `gradle build -x test`.
+
 ## Source Of Truth Priority
 
 When architecture sources conflict, use this priority order:
@@ -106,7 +123,7 @@ Do not comment obvious code.
 - This is a Gradle multi-module Java repository.
 - JDK 21 is the Java baseline.
 - Virtual threads are a supported runtime feature, not a roadmap item.
-- Existing Claude guidance used `/opt/gradle/gradle/bin/gradle` for local builds; use the repo wrapper `./gradlew` only when it is known to work in the current environment.
+- Local builds: use the repo wrapper `./gradlew` or a system `gradle`.
 - Public documentation and examples must use `gradle`, not machine-specific Gradle paths.
 - Prefer `rg` for search.
 - Do not add Codex, Claude, or AI-generated signatures to commits.

@@ -139,6 +139,14 @@ gradle clean
 gradle allDeps
 ```
 
+## PR Self-Check And Push Gates
+
+Before opening a PR, walk `docs/PR_SELF_CHECK.md` (every item traces to a real
+incident). Machine-checkable items are enforced by `.githooks/pre-push` —
+install once with `git config core.hooksPath .githooks`; CI re-runs the same
+script on every PR (`selfcheck` workflow), so `--no-verify` only skips the local
+reminder, not the gate.
+
 ## Validation And Completion
 
 For non-trivial changes, completion notes must state:

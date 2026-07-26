@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# pre-push — diff-scoped gates distilled from real incidents (not theory).
+# Every check MUST cite its source incident and ship with a negative probe.
+# Checklist (human/agent side): docs/PR_SELF_CHECK.md
+#
+# Install (once): git config core.hooksPath .githooks
+# Baseline branch: git config hooks.baseline origin/dev   (default origin/dev)
+# CI / manual re-run: .githooks/pre-push --range origin/dev..HEAD [remote_ref]
+#   The hook is a fast reminder (bypassable via --no-verify); CI re-running the
+#   same script (.github/workflows/selfcheck.yml) is the actual gate.
+set -u
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$ROOT" || exit 1
+BASELINE="$(git config --get hooks.baseline 2>/dev/null || echo origin/dev)"
+ZERO=0000000000000000000000000000000000000000
+FAIL=0
+
+# ① SPEC mirror drift.
+#   Source: SPEC.md and skills/krpc/references/SPEC.md are a byte-identical pair
+#   (AGENTS.md Repo Facts); until this hook the discipline was manual-only.
+#   Negative probe: append a char to SPEC.md, commit, run
+#   `.githooks/pre-push --range HEAD~1..HEAD` → BLOCKED; then reset.
+check_spec_mirror() {
+  local range="$1" tip a b
+  git diff --name-only "$range" -- SPEC.md skills/krpc/references/SPEC.md 2>/dev/null \
+    | grep -q . || return 0
+  tip="${range##*..}"
+  a=$(git rev-parse --verify -q "$tip:SPEC.md") || return 0
+  b=$(git rev-parse --verify -q "$tip:skills/krpc/references/SPEC.md") || return 0
+  if [ "$a" != "$b" ]; then
+    printf 'pre-push: BLOCKED — SPEC.md and skills/krpc/references/SPEC.md differ at %s.\n' "$tip" >&2
+    printf '  They are a byte-identical mirror pair: update both in the same commit.\n' >&2
+    FAIL=1
+  fi
+}
+
+# ② docs-site changes pushed to main never deploy.
+#   Source: 2026-07-21 baseUrl incident — fix landed on main, site stayed broken;
+#   .github/workflows/docs.yml triggers only on dev pushes.
+#   Negative probe: `.githooks/pre-push --range <range-touching-docs-site> refs/heads/main`
+#   → BLOCKED; same range with refs/heads/dev → clean.
+check_docs_site_branch() {
+  local range="$1" remote_ref="$2"
+  [ "$remote_ref" = "refs/heads/main" ] || return 0
+  git diff --name-only "$range" -- 'docs-site/*' 2>/dev/null | grep -q . || return 0
+  printf 'pre-push: BLOCKED — this push targets main but touches docs-site/**.\n' >&2
+  printf '  The docs site deploys only on dev pushes (docs.yml); land docs-site changes on dev.\n' >&2
+  FAIL=1
+}
+
+check_range() {
+  local range="$1" remote_ref="${2:-}"
+  check_spec_mirror "$range"
+  check_docs_site_branch "$range" "$remote_ref"
+}
+
+# driver: hook mode (ranges on stdin) or --range mode (CI / manual re-run)
+if [ "${1:-}" = "--range" ] && [ -n "${2:-}" ]; then
+  check_range "$2" "${3:-}"
+else
+  while read -r _local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$ZERO" ] && continue
+    if [ "$remote_sha" = "$ZERO" ]; then
+      base=$(git merge-base "$BASELINE" "$local_sha" 2>/dev/null || true)
+      [ -n "$base" ] || continue
+      check_range "$base..$local_sha" "$remote_ref"
+    else
+      check_range "$remote_sha..$local_sha" "$remote_ref"
+    fi
+  done
+fi
+
+exit "$FAIL"

@@ -394,7 +394,7 @@ handlers may block on IO freely; don't add your own bounded RPC thread pool.
 ./gradlew clean build -x test    # only for environments without Docker
 ./gradlew allDeps
 ```
-JDK 21 baseline; pinned Gradle wrapper 8.14.5. When you skip tests, say so and
+JDK 21 baseline; pinned Gradle wrapper 9.6.0. When you skip tests, say so and
 list what was not validated.
 
 Native (container build, Mandrel/JDK 25):

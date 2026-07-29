@@ -1,5 +1,27 @@
 # Unreleased
 
+* **GraalVM/Mandrel 25 native metadata — migrated to `reachability-metadata.json`, deprecated
+  `-H:` options removed (NATIVE-META-001).** Every published krpc jar now ships its native-image
+  metadata at the standard auto-detected location `META-INF/native-image/tech.krpc/<artifactId>/`
+  instead of passing `-H:ReflectionConfigurationResources` /
+  `-H:DynamicProxyConfigurationResources` from `native-image.properties`. Those options are
+  deprecated **and** experimental on Mandrel/GraalVM 25, so a consumer building 10 services saw the
+  warnings once per krpc jar per module; they are gone (6 warning lines → 1, see below), and the
+  stack survives the eventual removal of the legacy options — agent-era native readiness, since an
+  agent reading a build log cannot tell a deprecation warning from a real defect. Each directory
+  carries the modern combined `reachability-metadata.json` (GraalVM/Mandrel 24+; dynamic proxies now
+  live in its `reflection` array as `{"type": {"proxy": [...]}}`) **and** the legacy
+  `reflect-config.json` / `proxy-config.json`, because **GraalVM/Mandrel 21–23 ignore the combined
+  file silently** — dropping the legacy pair while krpc's Java baseline is JDK 21 would un-register
+  every framework type with no build-time signal. `native-image.properties` survives only where it
+  carried non-metadata `Args` (`rpc-common`'s `--initialize-at-run-time`, the `rpc-server-*` builder
+  `-J--add-exports`). No metadata entry changed meaning: 35 reflection types + 1 proxy migrated,
+  set-equality asserted old-vs-new. Metadata for `rpc-server-quarkus` and `rpc-server-spring` also
+  stops colliding — both previously shipped `META-INF/native-image/rpc-server/`, the same path in
+  two jars. Residual: an auto-detected `proxy-config.json` still trips one
+  `DynamicProxyConfigurationResources` deprecation line per build until the 21–23 floor is retired.
+  Docs: SPEC §13 + `skills/krpc/references/native-image.md` §13.6 (with the verified
+  toolchain-support matrix).
 * **MCP 2026-07-28 (stateless) alignment for the `POST /mcp` agent-tool bridge.** Additive and
   backwards compatible — the bridge was already stateless (no session id, one self-contained
   JSON object per POST, no SSE), so 07-28 ratifies its shape rather than forcing a rewrite.

@@ -93,7 +93,7 @@ curl -X POST http://HOST:8080/agent/invoke \
   a deliberate subset of web exposure. `/agent/discover` + `/agent/invoke` are
   unaffected (still the full `@UnsafeWeb` set).
 - Reachable in a **default consumer, JVM + native** (handlers carry `@Unremovable`;
-  native reflection-config included). See `docs/agent-guide.md` for a real
+  native reflection metadata included). See `docs/agent-guide.md` for a real
   discover→invoke transcript.
 
 ## MCP bridge — `POST /mcp` (P1, ADR-0004, default OFF)

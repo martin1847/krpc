@@ -118,10 +118,50 @@ only for what its build-time scan can reach. Know what is and is not covered.
   public final class NativeReflectionConfig {}
   ```
 
-  Or add the class to a `META-INF/native-image/<group>/reflection-config.json`.
+  Or add the class to your own
+  `META-INF/native-image/<groupId>/<artifactId>/reachability-metadata.json` (§13.6).
 - **Framework classes are already registered — don't re-register them.** krpc's own
-  runtime types ship reflection metadata in each module's
-  `META-INF/native-image/*/reflection-config.json` + `native-image.properties`
-  (`rpc-api/...`, `rpc-common/...`, `rpc-client/...`,
-  `rpc-server-quarkus/src/main/resources/META-INF/native-image/rpc-server/...`).
+  runtime types ship reflection metadata inside each published jar at
+  `META-INF/native-image/tech.krpc/<artifactId>/` (`rpc-api`, `rpc-common`, `rpc-client`,
+  `rpc-server-quarkus`, `rpc-server-spring`) — see §13.6 for the file set.
   You only own the third-party types your DTOs pull in.
+
+### 13.6 Metadata layout — combined `reachability-metadata.json` + legacy pair
+
+Each published krpc jar carries its native metadata at the standard, **auto-detected**
+location `META-INF/native-image/tech.krpc/<artifactId>/`. krpc passes **no**
+`-H:ReflectionConfigurationResources` / `-H:DynamicProxyConfigurationResources`: those
+options are deprecated + experimental on GraalVM/Mandrel 25 and emitted a warning per
+krpc jar in every consumer build. Consumers do nothing — presence on the classpath is
+the whole mechanism.
+
+| file | read by | contents |
+|---|---|---|
+| `reachability-metadata.json` | GraalVM/Mandrel **24+** | combined `reflection` array; proxies are `{"type": {"proxy": [...]}}` entries |
+| `reflect-config.json` | GraalVM/Mandrel **21+** | same types in the legacy `"name"` schema |
+| `proxy-config.json` | GraalVM/Mandrel **21+** | `[{"interfaces": [...]}]` (`rpc-client` only) |
+| `native-image.properties` | all | **only** non-metadata `Args` (`--initialize-at-run-time`, builder `-J--add-exports`); absent where there were none |
+
+**Why both formats ship.** GraalVM/Mandrel **21–23 do not know
+`reachability-metadata.json` and ignore it silently** — no warning, no error, just an
+unregistered type that throws `ClassNotFoundException` at native runtime. krpc's Java
+baseline is JDK 21, so the legacy pair is load-bearing, not vestigial. Verified on a
+local toolchain matrix (GraalVM 21.0 vs 25.0.3, reflection + proxy probes, jar with the
+metadata stripped as the negative control):
+
+| metadata present | GraalVM 21 | GraalVM 25 |
+|---|---|---|
+| none (control) | fails | fails |
+| legacy pair only | works | works |
+| `reachability-metadata.json` only | **fails silently** | works |
+| both (what krpc ships) | works | works |
+
+**Editing rule: change both files or neither.** A type added to one and not the other is
+a version-dependent runtime crash — the failure mode that makes this wire-compat-adjacent.
+
+**Residual warning.** An auto-detected `proxy-config.json` still trips GraalVM 25's
+`DynamicProxyConfigurationResources` deprecation warning (once per build, from
+`rpc-client`); the `reflect-config.json` half is silent. There is no version conditional in
+`native-image.properties`, so the choice is that one cosmetic warning or a real regression
+for 21–23 consumers. Delete `rpc-client/.../proxy-config.json` (and the other
+`reflect-config.json` files) the day the GraalVM/Mandrel 21–23 native floor is retired.

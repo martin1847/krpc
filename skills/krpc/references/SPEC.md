@@ -626,6 +626,16 @@ refs below point into that file). Day-1 checklist for a consumer service:
 - [ ] Datasource config present at runtime (SIGSEGV otherwise) — §13.3.
 - [ ] `ext-rpc` / `ext-mybatis` extensions on the build (DTO reflection) — §13.5.
 
+**Metadata layout — `reachability-metadata.json`, auto-detected (GraalVM/Mandrel 25 ready).** Every
+published krpc jar ships its native metadata under the standard
+`META-INF/native-image/tech.krpc/<artifactId>/` and native-image picks it up **by location** — krpc
+no longer passes the deprecated `-H:ReflectionConfigurationResources` /
+`-H:DynamicProxyConfigurationResources` options, so those build warnings are gone. Each directory
+carries the modern combined `reachability-metadata.json` (GraalVM/Mandrel 24+) **and** the legacy
+`reflect-config.json` / `proxy-config.json`, because GraalVM/Mandrel 21–23 ignore the combined file
+outright — dropping the legacy pair before the JDK 21 native floor is retired would silently
+un-register every type. Both are read and registration is a union. Consumers add nothing — §13.6.
+
 **Known issue — Caffeine + native reflection (field experience, consumer ecosystem 2026-07-19).**
 A krpc native-image service using Caffeine's **bounded** cache path (a builder with bounded
 features — `weakKeys`/`softValues`/`expireAfter*`/`maximumSize`/etc.) hits a dynamic

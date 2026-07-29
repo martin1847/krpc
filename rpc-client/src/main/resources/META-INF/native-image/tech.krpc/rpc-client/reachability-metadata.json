@@ -1,0 +1,23 @@
+{
+  "reflection": [
+    {
+      "type": "io.netty.channel.socket.nio.NioSocketChannel",
+      "allDeclaredConstructors": true,
+      "allPublicConstructors": true,
+      "allDeclaredMethods": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "io.grpc.netty.NettyClientHandler",
+      "allDeclaredMethods": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": {
+        "proxy": [
+          "tech.krpc.common.RpcMetaService"
+        ]
+      }
+    }
+  ]
+}

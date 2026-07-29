@@ -5,7 +5,7 @@ spring:
 rpc:
   server:
     app: ${spring.application.name}
-    jwks:  https://zlkj-jwks.oss-cn-shanghai.aliyuncs.com/.well-known/test.bo.jwks.json
+    # jwks: <your-jwks-endpoint>   # auth disabled for the public demo
   #这里当时只想着支持client，只对client起作用
   enable: true
   clients:

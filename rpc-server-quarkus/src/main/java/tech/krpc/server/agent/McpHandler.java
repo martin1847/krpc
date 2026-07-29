@@ -41,12 +41,24 @@ import lombok.extern.slf4j.Slf4j;
  * services are already double-filtered upstream.
  *
  * <p><b>2026-07-28 alignment (stateless).</b> The 07-28 line removed sessions and the
- * {@code initialize}/{@code ping} handshake: a client states its version per request via
- * {@code _meta["io.modelcontextprotocol/protocolVersion"]} and discovers the server through
+ * {@code initialize}/{@code ping} handshake: a client states its version per request in
+ * {@code params._meta["io.modelcontextprotocol/protocolVersion"]} (the canonical position —
+ * a message-level {@code _meta} is not read) and discovers the server through
  * {@code server/discover}. This bridge has always been stateless (no session id, one
  * self-contained JSON object per POST), so the alignment is additive: both version lines are
  * served side by side and {@code initialize}/{@code ping} stay for the 12-month deprecation
- * window. Deliberately <b>not</b> implemented, because the bridge is stateless JSON-mode and
+ * window.
+ *
+ * <p><b>Deliberate dual-stack deviation from the 07-28 REQUIRED wording.</b> 07-28 makes the
+ * per-request {@code _meta} protocol version REQUIRED. Enforcing that literally would break
+ * every pre-07-28 client on the same endpoint, which is the whole point of serving both lines,
+ * so the rule here is: a <em>stated</em> version is always enforced (malformed or unsupported
+ * → HTTP 400 + {@code -32600}, for every method including {@code initialize}), while a request
+ * carrying <em>neither</em> {@code params._meta} nor the {@code MCP-Protocol-Version} header is
+ * accepted as the legacy path. {@code server/discover} is the exception that proves it: the
+ * method only exists in 07-28, so it has no legacy callers and its version IS required.
+ *
+ * <p>Deliberately <b>not</b> implemented, because the bridge is stateless JSON-mode and
  * krpc tools are unary: SSE and its resumability, sessions, MRTR / {@code input_required}
  * (no server-initiated requests), and {@code subscriptions}/{@code listen} (the tool set is
  * static per boot). These are design exemptions, not gaps — see SPEC §12.2.
@@ -72,10 +84,24 @@ public class McpHandler implements PostHandler<String> {
     private static final List<String> SUPPORTED_VERSIONS =
             List.of("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05");
 
+    /**
+     * Version ceiling for the legacy {@code initialize} handshake. 2026-07-28 <em>removed</em>
+     * {@code initialize}, so agreeing on that revision here would hand the client a version
+     * whose own rules say this very call cannot exist. The newest revision {@code initialize}
+     * may negotiate is therefore 2025-11-25, and it is also the fallback when the client asks
+     * for something unsupported.
+     */
+    static final String INITIALIZE_MAX_VERSION = "2025-11-25";
+
     /// Streamable HTTP protocol-version header (spec 2025-06-18).
     static final String MCP_PROTOCOL_VERSION_HEADER = "mcp-protocol-version";
 
-    /// Per-request protocol version carried in {@code _meta} (spec 2026-07-28, Required).
+    /**
+     * Per-request protocol version key (spec 2026-07-28, Required). Its canonical position is
+     * {@code params._meta} — the ONLY place read here. A message-level {@code _meta} is
+     * deliberately not a fallback: two accepted positions mean two things to spoof and two
+     * things for a proxy to disagree about, so a top-level-only {@code _meta} counts as absent.
+     */
     static final String META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
 
     /// L7 routing headers (spec 2026-07-28): they MUST agree with the JSON-RPC body.
@@ -164,23 +190,44 @@ public class McpHandler implements PostHandler<String> {
             return bytes(errorResponse(id, INVALID_REQUEST, "Invalid Request: missing method"));
         }
 
+        // JSON-RPC 2.0 / MCP: a notification is the ABSENCE of "id". An explicit "id":null is a
+        // request carrying an invalid RequestId (MCP forbids null), so answering it with a 202
+        // would silently drop a call the client is waiting on — reject it instead.
+        boolean notification = !msg.containsKey("id");
+        if (!notification && null == id) {
+            return bytes(errorResponse(null, INVALID_REQUEST, "Invalid Request: id must not be null"));
+        }
+
+        // Version gate. Spec 2026-07-28 carries the protocol version per request in
+        // params._meta; a STATED version is always enforced — malformed shape or unsupported
+        // value is 400 + -32600 for every method, initialize included (silently ignoring a
+        // version the client asserted is how two peers end up disagreeing about the wire).
+        var mv = metaVersion(msg);
+        if (mv.malformed()) {
+            badRequest(resHeader);
+            return bytes(errorResponse(id, INVALID_REQUEST, "Invalid _meta " + META_PROTOCOL_VERSION));
+        }
+        if (mv.present() && !SUPPORTED_VERSIONS.contains(mv.version())) {
+            badRequest(resHeader);
+            return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported protocolVersion: " + mv.version()));
+        }
+        // server/discover exists ONLY in 2026-07-28, so it has no legacy callers and the
+        // REQUIRED per-request version is enforced literally here (absent = 400). Every other
+        // method accepts "no version stated at all" as the legacy path — see the dual-stack
+        // deviation in the class javadoc.
+        if ("server/discover".equals(method) && !mv.present()) {
+            badRequest(resHeader);
+            return bytes(errorResponse(id, INVALID_REQUEST,
+                    "server/discover requires _meta " + META_PROTOCOL_VERSION));
+        }
         // Transport (spec 2025-06-18): the client MUST send MCP-Protocol-Version on every
         // request after initialize; an invalid/unsupported value MUST be 400. initialize is
         // exempt (it negotiates via the body). Absent header -> assume default, don't fail.
-        // Spec 2026-07-28 states the same version per request in _meta instead; the two are
-        // validated identically. server/discover is exempt from both gates for the same
-        // reason initialize is: it is the call that TELLS a client which versions exist, so
-        // gating it on a version the client does not yet know would deadlock discovery.
-        if (!"initialize".equals(method) && !"server/discover".equals(method)) {
+        if (!"initialize".equals(method)) {
             var pv = requestHeaders.get(MCP_PROTOCOL_VERSION_HEADER);
             if (null != pv && !SUPPORTED_VERSIONS.contains(pv)) {
                 badRequest(resHeader);
                 return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported MCP-Protocol-Version: " + pv));
-            }
-            var mv = metaProtocolVersion(msg);
-            if (null != mv && !SUPPORTED_VERSIONS.contains(mv)) {
-                badRequest(resHeader);
-                return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported protocolVersion: " + mv));
             }
         }
 
@@ -193,8 +240,8 @@ public class McpHandler implements PostHandler<String> {
             return bytes(errorResponse(id, HEADER_MISMATCH, "HeaderMismatch"));
         }
 
-        // Notifications (no id) get 202 Accepted with an empty body, per Streamable HTTP.
-        if (null == id) {
+        // Notifications (no "id" member) get 202 Accepted with an empty body, per Streamable HTTP.
+        if (notification) {
             accepted(resHeader);
             return AsciiHeader_EMPTY;
         }
@@ -252,11 +299,14 @@ public class McpHandler implements PostHandler<String> {
             + "the message, fix the arguments or the credential, then retry; do not retry unchanged.";
 
     private Map<String, Object> initialize(Object id, Map<String, Object> msg) {
-        String negotiated = PROTOCOL_VERSION;
+        // Ceiling, not PROTOCOL_VERSION: 2026-07-28 removed this very method, so it can never be
+        // the negotiated outcome of it. Unsupported / too-new request -> the legacy ceiling.
+        String negotiated = INITIALIZE_MAX_VERSION;
         Object params = msg.get("params");
         if (params instanceof Map<?, ?> p) {
             var requested = p.get("protocolVersion");
-            if (requested instanceof String rv && SUPPORTED_VERSIONS.contains(rv)) {
+            if (requested instanceof String rv && SUPPORTED_VERSIONS.contains(rv)
+                    && !PROTOCOL_VERSION.equals(rv)) {
                 negotiated = rv;
             }
         }
@@ -595,43 +645,65 @@ public class McpHandler implements PostHandler<String> {
     // --- 2026-07-28 per-request version + L7 header consistency -------------------------
 
     /**
-     * The 2026-07-28 per-request protocol version, or null when the client did not state one.
-     * Read from the message-level {@code _meta} and, failing that, from {@code params._meta}
-     * (both placements occur in the wild: {@code _meta} is defined on the base request and on
-     * params). Returns null for a non-string value — the version gate only rejects a value it
-     * can compare, mirroring the header gate's "present-and-bad only" rule.
+     * Tri-state read of the per-request protocol version: a usable value, {@code ABSENT} (the
+     * client stated none — legacy path), or {@code MALFORMED} (it stated one this server cannot
+     * even compare, which is a 400 rather than a shrug).
      */
-    private static String metaProtocolVersion(Map<String, Object> msg) {
-        var v = metaValue(msg.get("_meta"));
-        if (null != v) {
-            return v;
+    private record MetaVersion(String version, boolean malformed) {
+        static final MetaVersion ABSENT = new MetaVersion(null, false);
+        static final MetaVersion MALFORMED = new MetaVersion(null, true);
+
+        boolean present() {
+            return null != version;
         }
-        return msg.get("params") instanceof Map<?, ?> p ? metaValue(p.get("_meta")) : null;
     }
 
-    private static String metaValue(Object meta) {
-        if (meta instanceof Map<?, ?> m && m.get(META_PROTOCOL_VERSION) instanceof String s && !s.isBlank()) {
-            return s;
+    /**
+     * Reads {@code params._meta["io.modelcontextprotocol/protocolVersion"]} — the canonical and
+     * only accepted position. A {@code _meta} that is present but not an object, or a version
+     * value that is present but not a non-blank string, is MALFORMED (400), never ignored.
+     */
+    private static MetaVersion metaVersion(Map<String, Object> msg) {
+        if (!(msg.get("params") instanceof Map<?, ?> params) || !params.containsKey("_meta")) {
+            return MetaVersion.ABSENT;
         }
-        return null;
+        if (!(params.get("_meta") instanceof Map<?, ?> meta)) {
+            return MetaVersion.MALFORMED; // _meta must be an object
+        }
+        if (!meta.containsKey(META_PROTOCOL_VERSION)) {
+            return MetaVersion.ABSENT; // a _meta without our key carries no claim
+        }
+        return meta.get(META_PROTOCOL_VERSION) instanceof String s && !s.isBlank()
+                ? new MetaVersion(s, false)
+                : MetaVersion.MALFORMED;
     }
 
     /**
      * Whether an L7 routing header contradicts the body it describes: {@code Mcp-Method} vs the
-     * JSON-RPC {@code method}, and {@code Mcp-Name} vs {@code params.name} on {@code tools/call}.
-     * Header lookup is case-insensitive (netty {@link HttpHeaders}). Absent headers are fine.
+     * JSON-RPC {@code method}, and {@code Mcp-Name} vs {@code params.name} on {@code tools/call}
+     * (a name header over a body with no usable {@code name} contradicts it too — there is
+     * nothing it can be truthfully describing). A header sent twice with two distinct values is
+     * itself a mismatch: each hop on the path may read a different one. Header lookup is
+     * case-insensitive (netty {@link HttpHeaders}); absent headers are fine (legacy clients).
      */
     private static boolean headerMismatch(Map<String, Object> msg, String method, HttpHeaders requestHeaders) {
-        var hm = requestHeaders.get(MCP_METHOD_HEADER);
-        if (null != hm && !hm.equals(method)) {
+        var hm = distinctValues(requestHeaders, MCP_METHOD_HEADER);
+        if (hm.size() > 1 || (1 == hm.size() && !hm.get(0).equals(method))) {
             return true;
         }
-        var hn = requestHeaders.get(MCP_NAME_HEADER);
-        if (null == hn || !"tools/call".equals(method)) {
+        var hn = distinctValues(requestHeaders, MCP_NAME_HEADER);
+        if (hn.size() > 1) {
+            return true;
+        }
+        if (hn.isEmpty() || !"tools/call".equals(method)) {
             return false;
         }
         var name = msg.get("params") instanceof Map<?, ?> p ? p.get("name") : null;
-        return name instanceof String s && !hn.equals(s);
+        return !(name instanceof String s) || !hn.get(0).equals(s);
+    }
+
+    private static List<String> distinctValues(HttpHeaders headers, String name) {
+        return headers.getAll(name).stream().distinct().toList();
     }
 
     // --- headers / transport ------------------------------------------------------------

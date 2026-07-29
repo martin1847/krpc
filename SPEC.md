@@ -447,19 +447,35 @@ alignment, not a rewrite:
 
 - **Dual version track.** `SUPPORTED_VERSIONS` = `2026-07-28`, `2025-11-25`, `2025-06-18`,
   `2025-03-26`, `2024-11-05`. A 07-28 client sends **no `initialize`**: it states its version
-  per request in `_meta["io.modelcontextprotocol/protocolVersion"]` (message-level or under
-  `params`), validated exactly like the `MCP-Protocol-Version` header (present-and-unsupported
-  → HTTP `400` + `-32600`; absent → default). `initialize` + `ping` keep working for the older
-  line through the 12-month deprecation window.
+  per request in **`params._meta["io.modelcontextprotocol/protocolVersion"]` — the canonical
+  and only accepted position** (a message-level `_meta` is not read; two accepted positions are
+  two things to spoof). `initialize` + `ping` keep working for the older line through the
+  12-month deprecation window, and `initialize` **never negotiates `2026-07-28`** (that revision
+  removed `initialize`): its ceiling and its fallback for an unsupported/too-new request are
+  both `2025-11-25`.
+- **Version enforcement — deliberate dual-stack deviation from the 07-28 REQUIRED wording.**
+  A *stated* version is always enforced, for **every** method including `initialize`: a
+  malformed `_meta` (not an object, or a version that is not a non-blank string) or an
+  unsupported value is HTTP `400` + `-32600`, never silently ignored. A request stating
+  **neither** `params._meta` nor `MCP-Protocol-Version` is accepted as the legacy path —
+  enforcing REQUIRED literally would break every pre-07-28 client on the same endpoint, which
+  is the point of serving both lines. `server/discover` is the exception: it exists only in
+  07-28, has no legacy callers, and therefore **requires** a valid stated version (absent →
+  `400` + `-32600`).
 - **`server/discover`** (MUST in 07-28): the stateless replacement for the handshake — returns
   `supportedVersions`, `capabilities` (tools), `serverInfo` (app name + krpc build version),
   `instructions` (natural-language usage for the driving LLM), `ttlMs` `86400000` and
-  `cacheScope` `public`. Exempt from the version gate, like `initialize`: it is the call that
-  tells a client which versions exist.
+  `cacheScope` `public`.
 - **L7 header consistency.** `Mcp-Method` / `Mcp-Name` (case-insensitive) are accepted when
   absent, but a value **disagreeing** with the JSON-RPC `method` / `params.name` is HTTP `400`
   + `-32020 HeaderMismatch` — a proxy routing on the header while the server executes the body
-  is a split-brain surface, and krpc sits on the middleware side of it.
+  is a split-brain surface, and krpc sits on the middleware side of it. Also `HeaderMismatch`:
+  the same routing header sent twice with **distinct** values (each hop may read a different
+  one; identical repeats are fine), and an `Mcp-Name` over a `tools/call` whose `params.name`
+  is missing or not a string (nothing it can truthfully describe).
+- **JSON-RPC id discipline.** A notification is the **absence** of `id`. An explicit
+  `"id": null` is a request with an invalid RequestId → `-32600`, not a `202` — answering 202
+  would silently drop a call the client is waiting on.
 - **`tools/list`** additionally carries `ttlMs` `86400000` + `cacheScope` `public` (the tool set
   is static per boot and identical for every caller) and is **sorted by tool name** (reflection
   order is not stable across builds).

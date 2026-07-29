@@ -3,6 +3,7 @@ package tech.krpc.server.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -155,12 +156,15 @@ class McpHandlerTest {
 
     @Test
     void initialize_negotiatesVersionAndAnnouncesToolsAndServerInfo() {
-        // requested -> echoed; unknown -> falls back to the latest.
+        // requested -> echoed; unknown -> falls back to the legacy ceiling. 2026-07-28 REMOVED
+        // initialize, so it is never the negotiated outcome of initialize either.
         record Case(String requested, String expected) {}
         var cases = List.of(
+                new Case("2025-11-25", "2025-11-25"),
                 new Case("2025-06-18", "2025-06-18"),
                 new Case("2025-03-26", "2025-03-26"),
-                new Case("1999-01-01", McpHandler.PROTOCOL_VERSION));
+                new Case("2026-07-28", McpHandler.INITIALIZE_MAX_VERSION),
+                new Case("1999-01-01", McpHandler.INITIALIZE_MAX_VERSION));
 
         var h = handler(Map.of());
         for (var c : cases) {
@@ -197,11 +201,14 @@ class McpHandlerTest {
     }
 
     @Test
-    void initialize_noParams_defaultsToLatestVersion() {
+    void initialize_noParams_defaultsToTheLegacyCeiling() {
         var h = handler(Map.of());
         var res = result(call(h,
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}"));
-        assertEquals(McpHandler.PROTOCOL_VERSION, res.get("protocolVersion"));
+        assertEquals(McpHandler.INITIALIZE_MAX_VERSION, res.get("protocolVersion"),
+                "initialize defaults to the newest revision that still HAS initialize");
+        assertNotEquals(McpHandler.PROTOCOL_VERSION, res.get("protocolVersion"),
+                "initialize must never negotiate the revision that removed it");
     }
 
     // --- notifications ------------------------------------------------------------------
@@ -442,7 +449,7 @@ class McpHandlerTest {
         // Spec 2026-07-28 MUST: the stateless replacement for initialize. One response must
         // carry everything a client needs before its first call.
         var h = handler(Map.of());
-        var res = result(call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\"}"));
+        var res = result(call(h, withMeta("server/discover", "2026-07-28")));
 
         var versions = (List<String>) res.get("supportedVersions");
         assertTrue(versions.contains("2026-07-28"), "07-28 advertised: " + versions);
@@ -467,35 +474,54 @@ class McpHandlerTest {
         assertEquals("public", res.get("cacheScope"), "discover cacheScope");
     }
 
+    @Test
+    void serverDiscover_withoutMetaVersion_is400InvalidRequest() {
+        // server/discover exists ONLY in 2026-07-28, so it has no legacy callers: the REQUIRED
+        // per-request version is enforced literally here — absent is 400, not a legacy pass.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\"}",
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders),
+                "discover without a stated version is 400: " + resHeaders);
+        assertEquals(-32600, errorCode(env), "missing _meta version on discover -> INVALID_REQUEST");
+    }
+
+    @Test
+    void serverDiscover_unsupportedMetaVersion_is400InvalidRequest() {
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, withMeta("server/discover", "1999-01-01"),
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders), "discover version gate: " + resHeaders);
+        assertEquals(-32600, errorCode(env), "unsupported version on discover -> INVALID_REQUEST");
+    }
+
     // --- 2026-07-28: per-request _meta protocol version ----------------------------------
 
+    /** A request whose canonical {@code params._meta} states the protocol version. */
     private static String withMeta(String method, String version) {
-        return "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"" + method + "\","
-                + "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"" + version + "\"}}";
+        return "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"" + method + "\",\"params\":"
+                + "{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"" + version + "\"}}}";
+    }
+
+    /** A request whose {@code params._meta} carries the given raw JSON in place of a version. */
+    private static String withRawMeta(String metaJson) {
+        return "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":"
+                + "{\"_meta\":" + metaJson + "}}";
     }
 
     @Test
     void metaProtocolVersion_newLineWithoutInitialize_dispatchesNormally() {
-        // 07-28 clients never call initialize: they state the version per request in _meta.
+        // 07-28 clients never call initialize: they state the version per request in params._meta.
         var h = handler(Map.of());
         var resHeaders = new ArrayList<AsciiHeader>();
         var env = call(h, withMeta("tools/list", "2026-07-28"), new DefaultHttpHeaders(), resHeaders);
 
         assertNull(statusOverride(resHeaders), "supported _meta version adds no 400: " + resHeaders);
         assertInstanceOf(Map.class, env.get("result"), "07-28 request dispatches: " + env);
-    }
-
-    @Test
-    void metaProtocolVersion_inParams_alsoAccepted() {
-        // _meta is defined on the base request and on params; both placements occur in the wild.
-        var h = handler(Map.of());
-        var resHeaders = new ArrayList<AsciiHeader>();
-        var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":"
-                + "{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2025-11-25\"}}}";
-        var env = call(h, body, new DefaultHttpHeaders(), resHeaders);
-
-        assertNull(statusOverride(resHeaders), "params._meta version accepted: " + resHeaders);
-        assertInstanceOf(Map.class, env.get("result"), "request dispatches: " + env);
     }
 
     @Test
@@ -508,6 +534,107 @@ class McpHandlerTest {
         assertEquals("400", statusOverride(resHeaders),
                 "unsupported _meta protocolVersion maps to HTTP 400: " + resHeaders);
         assertEquals(-32600, errorCode(env), "unsupported _meta version -> INVALID_REQUEST");
+    }
+
+    @Test
+    void metaProtocolVersion_malformedShapes_are400InvalidRequest() {
+        // A version the server cannot even compare is a 400, never a silent shrug: the client
+        // asserted something about the wire and must be told the assertion was rejected.
+        record Case(String label, String metaJson) {}
+        var cases = List.of(
+                new Case("_meta is a number", "7"),
+                new Case("_meta is an array", "[]"),
+                new Case("_meta is a string", "\"2026-07-28\""),
+                new Case("_meta is null", "null"),
+                new Case("version is a number",
+                        "{\"io.modelcontextprotocol/protocolVersion\":20260728}"),
+                new Case("version is an array",
+                        "{\"io.modelcontextprotocol/protocolVersion\":[\"2026-07-28\"]}"),
+                new Case("version is an object",
+                        "{\"io.modelcontextprotocol/protocolVersion\":{\"v\":\"2026-07-28\"}}"),
+                new Case("version is null",
+                        "{\"io.modelcontextprotocol/protocolVersion\":null}"),
+                new Case("version is blank",
+                        "{\"io.modelcontextprotocol/protocolVersion\":\"  \"}"));
+
+        var h = handler(Map.of());
+        for (var c : cases) {
+            var resHeaders = new ArrayList<AsciiHeader>();
+            var env = call(h, withRawMeta(c.metaJson()), new DefaultHttpHeaders(), resHeaders);
+            assertEquals("400", statusOverride(resHeaders), c.label() + " -> HTTP 400");
+            assertEquals(-32600, errorCode(env), c.label() + " -> INVALID_REQUEST");
+        }
+    }
+
+    @Test
+    void metaProtocolVersion_metaWithoutTheVersionKey_isTreatedAsAbsent() {
+        // A _meta carrying other keys makes no version claim -> legacy path, not a 400.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, withRawMeta("{\"vendor.example/trace\":\"x\"}"),
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders), "no version claim, no 400: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"), "request dispatches: " + env);
+    }
+
+    @Test
+    void metaProtocolVersion_messageLevelMeta_isNotACanonicalPosition() {
+        // params._meta is the ONLY accepted position: two accepted positions are two things to
+        // spoof. A top-level-only _meta counts as absent — including a bogus version in it,
+        // which must NOT be enforced (it is not a claim we read) nor make the request fail.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\","
+                + "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"1999-01-01\"}}";
+        var env = call(h, body, new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders),
+                "top-level _meta is not read, so it cannot trip the gate: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"), "legacy path dispatches: " + env);
+    }
+
+    @Test
+    void initialize_malformedMetaVersion_is400_gateAppliesToEveryMethod() {
+        // "Everywhere" includes initialize: the _meta gate is not scoped to the new line.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":"
+                + "{\"protocolVersion\":\"2025-06-18\","
+                + "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":42}}}";
+        var env = call(h, body, new DefaultHttpHeaders(), resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders), "initialize is not exempt: " + resHeaders);
+        assertEquals(-32600, errorCode(env), "malformed _meta on initialize -> INVALID_REQUEST");
+    }
+
+    @Test
+    void noVersionStatedAtAll_legacyClientStillWorks() {
+        // Deliberate dual-stack deviation from the 07-28 REQUIRED wording: neither params._meta
+        // nor MCP-Protocol-Version = pre-07-28 client, which must keep working on this endpoint.
+        var h = handler(Map.of("Calc/add", okInv("{\"ok\":true}")));
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"),
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders), "legacy client is not rejected: " + resHeaders);
+        assertFalse(isError(env), "legacy tools/call still dispatches: " + env);
+    }
+
+    // --- JSON-RPC id discipline ---------------------------------------------------------
+
+    @Test
+    void explicitNullId_isInvalidRequest_notANotification() {
+        // "id":null is a request with an invalid RequestId, not the absence of id. Treating it
+        // as a notification would answer 202 to a client that is waiting for a result.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":\"tools/list\"}",
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertNotNull(env, "explicit null id must produce a body, not an empty 202");
+        assertEquals(-32600, errorCode(env), "explicit null id -> INVALID_REQUEST");
+        assertNull(statusOverride(resHeaders), "no 202 status override was added: " + resHeaders);
     }
 
     // --- 2026-07-28: L7 header / body consistency ---------------------------------------
@@ -562,6 +689,68 @@ class McpHandlerTest {
 
         assertNull(statusOverride(resHeaders), "matching headers add no status override: " + resHeaders);
         assertFalse(isError(env), "matching headers dispatch to a normal tool result: " + env);
+    }
+
+    @Test
+    void mcpNameHeader_bodyNameMissingOrNotAString_is400HeaderMismatch() {
+        // A name header over a body with no usable name describes nothing — the header and the
+        // body cannot be shown to agree, so it is a mismatch, not a pass.
+        record Case(String label, String paramsJson) {}
+        var cases = List.of(
+                new Case("params.name missing", "{\"arguments\":{}}"),
+                new Case("params.name is a number", "{\"name\":7}"),
+                new Case("params.name is null", "{\"name\":null}"),
+                new Case("params absent", null));
+
+        var h = handler(Map.of("Calc/add", okInv("{}")));
+        for (var c : cases) {
+            var resHeaders = new ArrayList<AsciiHeader>();
+            var body = null == c.paramsJson()
+                    ? "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\"}"
+                    : "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":"
+                            + c.paramsJson() + "}";
+            var headers = new DefaultHttpHeaders().set("Mcp-Name", "Calc_add");
+            var env = call(h, body, headers, resHeaders);
+
+            assertEquals("400", statusOverride(resHeaders), c.label() + " -> HTTP 400");
+            assertEquals(-32020, errorCode(env), c.label() + " -> HeaderMismatch");
+        }
+    }
+
+    @Test
+    void duplicateRoutingHeaders_withDistinctValues_are400HeaderMismatch() {
+        // Two values for one routing header is the same split-brain in a different shape: each
+        // hop may read a different one. Only DISTINCT values conflict — a repeated identical
+        // value is harmless.
+        var h = handler(Map.of("Calc/add", okInv("{\"ok\":true}")));
+
+        var dupMethod = new ArrayList<AsciiHeader>();
+        var methodHeaders = new DefaultHttpHeaders()
+                .add("Mcp-Method", "tools/list")
+                .add("Mcp-Method", "tools/call");
+        var env1 = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+                methodHeaders, dupMethod);
+        assertEquals("400", statusOverride(dupMethod), "duplicate Mcp-Method -> HTTP 400");
+        assertEquals(-32020, errorCode(env1), "duplicate Mcp-Method -> HeaderMismatch");
+
+        var dupName = new ArrayList<AsciiHeader>();
+        var nameHeaders = new DefaultHttpHeaders()
+                .add("Mcp-Method", "tools/call")
+                .add("Mcp-Name", "Calc_add")
+                .add("Mcp-Name", "Calc_ping");
+        var env2 = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"), nameHeaders, dupName);
+        assertEquals("400", statusOverride(dupName), "duplicate Mcp-Name -> HTTP 400");
+        assertEquals(-32020, errorCode(env2), "duplicate Mcp-Name -> HeaderMismatch");
+
+        // Non-vacuity: the same header repeated with the SAME value is not a conflict.
+        var repeated = new ArrayList<AsciiHeader>();
+        var sameHeaders = new DefaultHttpHeaders()
+                .add("Mcp-Method", "tools/list")
+                .add("Mcp-Method", "tools/list");
+        var env3 = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+                sameHeaders, repeated);
+        assertNull(statusOverride(repeated), "identical repeats are not a conflict: " + repeated);
+        assertInstanceOf(Map.class, env3.get("result"), "identical repeats dispatch: " + env3);
     }
 
     @Test
@@ -631,7 +820,7 @@ class McpHandlerTest {
 
         assertNull(statusOverride(resHeaders),
                 "initialize is exempt: no 400 from a bad version header: " + resHeaders);
-        assertEquals(McpHandler.PROTOCOL_VERSION, result(env).get("protocolVersion"),
+        assertEquals(McpHandler.INITIALIZE_MAX_VERSION, result(env).get("protocolVersion"),
                 "initialize still negotiates a normal result");
     }
 }

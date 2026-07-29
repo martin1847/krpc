@@ -1,0 +1,55 @@
+# TESTCONTAINERS-001: the JVM test gate.
+#
+# Before this workflow NOTHING in CI ran the repo's tests: japicmp only diffs the API surface,
+# native-smoke builds the DB-free quickstart with `-x test`, and selfcheck runs shell gates. The
+# suite was un-gated because the DB-backed tests dialled a host that only existed on the
+# maintainer's network. Now the database is provisioned by Testcontainers, so a GitHub runner
+# (Docker preinstalled) can run the FULL build — tests included — and every PR is gated on it.
+name: build
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      # --init-script pins Maven Central: GitHub's US runners 502 on the Aliyun mirror this repo
+      # lists first, and Gradle treats a 5xx as fatal rather than falling through (see ci-init.gradle).
+      # -x :test-server-spring:test is a KNOWN-RED exclusion, not a convenience: that module's
+      # @SpringBootTest currently fails (RpcClientAutoConfigure NPE) and, once that is fixed,
+      # hangs forever (RpcServiceExposer blocks on server.awaitTermination() inside the
+      # ApplicationReadyEvent listener, so SpringApplication.run() never returns). Both bugs are
+      # in published modules and predate this workflow — see the Repo Facts section of AGENTS.md.
+      # Delete the exclusion the moment they are fixed; everything else is gated today.
+      - name: Full build WITH tests (Docker-provisioned MySQL)
+        run: ./gradlew --init-script .github/ci-init.gradle build -x :test-server-spring:test --no-daemon
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
+          retention-days: 7

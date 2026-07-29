@@ -9,4 +9,6 @@ deployment:
   env:
     APP_ENV: TEST
     LOG_LEVEL: warn
-    QUARKUS_DATASOURCE_JDBC_URL: "jdbc:mysql://mysql-primary.infra/example"
+    # Placeholder: the real coordinate is supplied per-environment at deploy time
+    # (values override / sealed secret), never committed here.
+    QUARKUS_DATASOURCE_JDBC_URL: "jdbc:mysql://mysql.example.invalid:3306/example"

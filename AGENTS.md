@@ -26,8 +26,20 @@ Key boundaries read from the repository:
   separately.
 - Central publishing runs through `gradle/publish-central.sh`
   (bundle → upload → status → publish; the publish step is irreversible).
-- Integration tests expect a reachable test database; without it `gradle build`
-  hangs in `test`. For offline/local builds use `gradle build -x test`.
+- The test suite no longer needs a site-local database. The DB-backed `test-server`
+  tests provision their own MySQL via Testcontainers
+  (`test-server/src/test/java/test/krpc/db/MySqlTestResource.java`), so Docker is the
+  only prerequisite; with Docker down they fail in seconds with an actionable message
+  instead of hanging. In a Docker-less environment use `gradle build -x test`.
+- **Known red — `:test-server-spring:test`.** `gradle build` still does not go green,
+  for a reason unrelated to the database: `RpcClientAutoConfigure.autoRpcClientScannerConfigurer`
+  is a non-static `@Bean` returning a `BeanDefinitionRegistryPostProcessor`, so Spring
+  instantiates the config class before `@Autowired` processing and `afterPropertiesSet`
+  NPEs on a null `Environment`. Making that method `static` fixes the NPE and then
+  uncovers a second bug: `RpcServiceExposer.onApplicationEvent` blocks on
+  `server.awaitTermination()`, so `SpringApplication.run()` never returns and any
+  `@SpringBootTest` hangs forever. Both are in published modules and need a decision;
+  until then run `gradle build -x :test-server-spring:test`.
 
 ## Source Of Truth Priority
 

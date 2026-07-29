@@ -52,6 +52,11 @@ dependencies {
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
 
+    // TESTCONTAINERS-001: throwaway MySQL for the DB-backed tests (test.krpc.db). Pulls in
+    // testcontainers core + jdbc; no JUnit extension is needed because the container lifecycle
+    // is driven by a Quarkus QuarkusTestResourceLifecycleManager (MySqlTestResource).
+    testImplementation "org.testcontainers:testcontainers-mysql:$testcontainersVersion"
+
     // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
     testImplementation 'org.openjdk.jmh:jmh-core:1.37'
     testImplementation 'org.openjdk.jmh:jmh-generator-annprocess:1.37'

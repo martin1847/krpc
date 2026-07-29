@@ -387,11 +387,14 @@ handlers may block on IO freely; don't add your own bounded RPC thread pool.
 ## 12. Build, test, release
 
 ```bash
-./gradlew clean build -x test    # -x test: integration tests need an internal
-                                 # MySQL host absent in clean envs and will hang
+./gradlew clean build -x :test-server-spring:test   # tests included; needs Docker (the
+                                 # DB-backed tests start their own MySQL via
+                                 # Testcontainers — no site-local database). The
+                                 # exclusion is a known-red Spring module, see AGENTS.md
+./gradlew clean build -x test    # only for environments without Docker
 ./gradlew allDeps
 ```
-JDK 21 baseline; pinned Gradle wrapper 8.14.5. When you skip tests, say so and
+JDK 21 baseline; pinned Gradle wrapper 9.6.0. When you skip tests, say so and
 list what was not validated.
 
 Native (container build, Mandrel/JDK 25):

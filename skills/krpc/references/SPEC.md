@@ -433,13 +433,40 @@ providers (none ship by default) ignore the cap with a warning rather than faili
 ### 12.2 MCP bridge (agent tools over `POST /mcp`)
 
 ADR-0004 P1: a hand-written [Model Context Protocol](https://modelcontextprotocol.io) bridge
-(spec `2025-06-18`, JSON-RPC 2.0 over Streamable HTTP) on the same netty HTTP host as
+(spec `2026-07-28`, JSON-RPC 2.0 over Streamable HTTP) on the same netty HTTP host as
 `/agent/*` (`http.port`, default `8080`). No third-party SDK, no new module/artifact.
 **Default OFF** (the `/mcp` path is not even registered); tools = the
 `@UnsafeWeb(agentTool=true)` subset only (`@UnsafeWeb` alone does **not** create a tool).
 `tools/call` runs the identical dispatch as `/agent/invoke` — credential check **not**
 bypassed. Full behavior (JSON-Schema derivation, methods, dispatch/error mapping, GET→405,
 verification transcripts) → `skills/krpc/references/mcp-bridge.md`.
+
+**MCP 2026-07-28 alignment.** The bridge was stateless from day one (no session id, one
+self-contained JSON object per POST, no SSE), so the 07-28 "stateless" line is an additive
+alignment, not a rewrite:
+
+- **Dual version track.** `SUPPORTED_VERSIONS` = `2026-07-28`, `2025-11-25`, `2025-06-18`,
+  `2025-03-26`, `2024-11-05`. A 07-28 client sends **no `initialize`**: it states its version
+  per request in `_meta["io.modelcontextprotocol/protocolVersion"]` (message-level or under
+  `params`), validated exactly like the `MCP-Protocol-Version` header (present-and-unsupported
+  → HTTP `400` + `-32600`; absent → default). `initialize` + `ping` keep working for the older
+  line through the 12-month deprecation window.
+- **`server/discover`** (MUST in 07-28): the stateless replacement for the handshake — returns
+  `supportedVersions`, `capabilities` (tools), `serverInfo` (app name + krpc build version),
+  `instructions` (natural-language usage for the driving LLM), `ttlMs` `86400000` and
+  `cacheScope` `public`. Exempt from the version gate, like `initialize`: it is the call that
+  tells a client which versions exist.
+- **L7 header consistency.** `Mcp-Method` / `Mcp-Name` (case-insensitive) are accepted when
+  absent, but a value **disagreeing** with the JSON-RPC `method` / `params.name` is HTTP `400`
+  + `-32020 HeaderMismatch` — a proxy routing on the header while the server executes the body
+  is a split-brain surface, and krpc sits on the middleware side of it.
+- **`tools/list`** additionally carries `ttlMs` `86400000` + `cacheScope` `public` (the tool set
+  is static per boot and identical for every caller) and is **sorted by tool name** (reflection
+  order is not stable across builds).
+- **Design-exempt, deliberately not implemented**: SSE and its resumability, sessions,
+  MRTR / `input_required` (the bridge never initiates a request to the client), and
+  `subscriptions` / `listen` (the tool set cannot change at runtime). These are not gaps; do
+  not "fix" them without an ADR.
 
 ```properties
 # Default OFF = byte-level zero new surface (the /mcp path is not even registered).

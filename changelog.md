@@ -1,5 +1,19 @@
 # Unreleased
 
+* **MCP 2026-07-28 (stateless) alignment for the `POST /mcp` agent-tool bridge.** Additive and
+  backwards compatible — the bridge was already stateless (no session id, one self-contained
+  JSON object per POST, no SSE), so 07-28 ratifies its shape rather than forcing a rewrite.
+  Dual version track: `2026-07-28` / `2025-11-25` join `SUPPORTED_VERSIONS` and a 07-28 client
+  sends **no `initialize`** — it states its version per request in
+  `_meta["io.modelcontextprotocol/protocolVersion"]`, validated exactly like the
+  `MCP-Protocol-Version` header (unsupported → `400` + `-32600`); `initialize` + `ping` keep
+  working for the older line through the 12-month deprecation window. New `server/discover`
+  (MUST in 07-28) returns `supportedVersions` / `capabilities` / `serverInfo` / `instructions`
+  / `ttlMs` / `cacheScope`. L7 header consistency: `Mcp-Method` / `Mcp-Name` disagreeing with
+  the JSON-RPC `method` / `params.name` → `400` + `-32020 HeaderMismatch` (a proxy routing on
+  the header while the server executes the body is a split-brain surface). `tools/list` gains
+  `ttlMs`/`cacheScope` and a deterministic name sort. SSE resumability, sessions, MRTR /
+  `input_required` and `subscriptions`/`listen` stay **design-exempt** (SPEC §12.2).
 * **ext-rpc-gen 1.0.2 — agent-native client generator dependency fix (2026-07-19, GEN-NETTY-102).**
   1.0.1 regression on clean consumer classpaths: `Gen.scan` loads `RpcServerBuilder` →
   `NoClassDefFoundError: NettyServerBuilder` (rpc-server keeps grpc-netty `compileOnly` by

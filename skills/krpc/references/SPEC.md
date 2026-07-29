@@ -433,13 +433,62 @@ providers (none ship by default) ignore the cap with a warning rather than faili
 ### 12.2 MCP bridge (agent tools over `POST /mcp`)
 
 ADR-0004 P1: a hand-written [Model Context Protocol](https://modelcontextprotocol.io) bridge
-(spec `2025-06-18`, JSON-RPC 2.0 over Streamable HTTP) on the same netty HTTP host as
+(spec `2026-07-28`, JSON-RPC 2.0 over Streamable HTTP) on the same netty HTTP host as
 `/agent/*` (`http.port`, default `8080`). No third-party SDK, no new module/artifact.
 **Default OFF** (the `/mcp` path is not even registered); tools = the
 `@UnsafeWeb(agentTool=true)` subset only (`@UnsafeWeb` alone does **not** create a tool).
 `tools/call` runs the identical dispatch as `/agent/invoke` — credential check **not**
 bypassed. Full behavior (JSON-Schema derivation, methods, dispatch/error mapping, GET→405,
 verification transcripts) → `skills/krpc/references/mcp-bridge.md`.
+
+**MCP 2026-07-28 alignment.** The bridge was stateless from day one (no session id, one
+self-contained JSON object per POST, no SSE), so the 07-28 "stateless" line is an additive
+alignment, not a rewrite:
+
+- **Dual version track.** `SUPPORTED_VERSIONS` = `2026-07-28`, `2025-11-25`, `2025-06-18`,
+  `2025-03-26`, `2024-11-05`. A 07-28 client sends **no `initialize`**: it states its version
+  per request in **`params._meta["io.modelcontextprotocol/protocolVersion"]` — the canonical
+  and only accepted position** (a message-level `_meta` is not read; two accepted positions are
+  two things to spoof). `initialize` + `ping` keep working for the older line through the
+  12-month deprecation window, and `initialize` **never negotiates `2026-07-28`** (that revision
+  removed `initialize`): its ceiling and its fallback for an unsupported/too-new request are
+  both `2025-11-25`.
+- **Version enforcement — deliberate dual-stack deviation from the 07-28 REQUIRED wording.**
+  A *stated* version is always enforced, for **every** method including `initialize`: a
+  malformed `_meta` (not an object, or a version that is not a non-blank string) or an
+  unsupported value is HTTP `400` + `-32600`, never silently ignored. A request stating
+  **neither** `params._meta` nor `MCP-Protocol-Version` is accepted as the legacy path —
+  enforcing REQUIRED literally would break every pre-07-28 client on the same endpoint, which
+  is the point of serving both lines.
+- **Method × declared version must be compatible.** A declared version binds the client to a
+  wire, so the method it calls must exist on that wire: `server/discover` **requires** a declared
+  `2026-07-28` (absent, or a legacy version this server otherwise supports → `400` + `-32600`;
+  discover did not exist before 07-28), and symmetrically `initialize` / `ping` **reject** a
+  declared `2026-07-28` (that revision removed them). `tools/*` live on both wires and are
+  unconstrained. Legacy clients declare nothing, so this binds only clients that made a claim.
+- **`server/discover`** (MUST in 07-28): the stateless replacement for the handshake — returns
+  `supportedVersions`, `capabilities` (tools), `serverInfo` (app name + krpc build version),
+  `instructions` (natural-language usage for the driving LLM), `ttlMs` `86400000` and
+  `cacheScope` `public`.
+- **L7 header consistency.** `Mcp-Method` / `Mcp-Name` (case-insensitive) are accepted when
+  absent, but a value **disagreeing** with the JSON-RPC `method` / `params.name` is HTTP `400`
+  + `-32020 HeaderMismatch` — a proxy routing on the header while the server executes the body
+  is a split-brain surface, and krpc sits on the middleware side of it. Also `HeaderMismatch`:
+  the same routing header sent twice with **distinct** values (each hop may read a different
+  one; identical repeats are fine), and an `Mcp-Name` over a `tools/call` whose `params.name`
+  is missing or not a string (nothing it can truthfully describe). `Mcp-Name` names a tool, so
+  it is checked **only** on `tools/call` — the method is short-circuited before the header is
+  read, and any `Mcp-Name` shape on another method (duplicates included) is ignored.
+- **JSON-RPC id discipline.** A notification is the **absence** of `id`. An explicit
+  `"id": null` is a request with an invalid RequestId → `-32600`, not a `202` — answering 202
+  would silently drop a call the client is waiting on.
+- **`tools/list`** additionally carries `ttlMs` `86400000` + `cacheScope` `public` (the tool set
+  is static per boot and identical for every caller) and is **sorted by tool name** (reflection
+  order is not stable across builds).
+- **Design-exempt, deliberately not implemented**: SSE and its resumability, sessions,
+  MRTR / `input_required` (the bridge never initiates a request to the client), and
+  `subscriptions` / `listen` (the tool set cannot change at runtime). These are not gaps; do
+  not "fix" them without an ADR.
 
 ```properties
 # Default OFF = byte-level zero new surface (the /mcp path is not even registered).

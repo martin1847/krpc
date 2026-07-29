@@ -6,7 +6,7 @@ Extracted from `SPEC.md §12.2` to keep the contract lean. Enable flag + summary
 ### 12.2 MCP bridge (agent tools over `POST /mcp`)
 
 ADR-0004 P1: a hand-written [Model Context Protocol](https://modelcontextprotocol.io)
-bridge (spec `2025-06-18`, JSON-RPC 2.0 over Streamable HTTP), on the same netty
+bridge (spec `2026-07-28`, JSON-RPC 2.0 over Streamable HTTP), on the same netty
 HTTP host as `/agent/*` (`http.port`, default `8080`). No third-party MCP SDK; no
 new module or Central artifact.
 
@@ -32,13 +32,81 @@ Env: `KRPC_MCP=true` (also honoured directly) or the SmallRye mapping
   (unknown/non-agentTool/hidden → JSON-RPC `-32602`). Success → `content` text +
   `structuredContent` (unwrapped `data`); a non-zero `RpcResult.code` or a thrown
   credential/system error → `isError:true`.
-- **Methods**: `initialize`, `notifications/initialized` (→ HTTP 202), `tools/list`,
-  `tools/call`, `ping`. Transport is JSON-response mode only (one JSON object per
-  POST); SSE is spec-optional and not used (krpc tools are unary). Per spec 2025-06-18:
+- **Methods**: `server/discover`, `initialize`, `notifications/initialized` (→ HTTP 202),
+  `tools/list`, `tools/call`, `ping`. Transport is JSON-response mode only (one JSON
+  object per POST); SSE is spec-optional and not used (krpc tools are unary). Per spec:
   `GET /mcp` → `405 Method Not Allowed` (`Allow: POST`, no SSE stream offered here);
   an `MCP-Protocol-Version` header the server does not support → `400`
   (`initialize` is exempt — it negotiates via the body). Auth/rate-limit remain the
   gateway's responsibility, same as the P0 agent surface.
+
+### MCP 2026-07-28 alignment
+
+The bridge has been stateless since it shipped in 1.1.0 (no session id, one self-contained
+JSON object per POST, no SSE), so the 07-28 stateless line is an **additive** alignment.
+
+- **Dual version track.** `SUPPORTED_VERSIONS` = `2026-07-28`, `2025-11-25`, `2025-06-18`,
+  `2025-03-26`, `2024-11-05`; `PROTOCOL_VERSION` (the newest revision implemented) is
+  `2026-07-28`. A 07-28 client sends **no `initialize`** — it states its version on every
+  request in `params._meta["io.modelcontextprotocol/protocolVersion"]`. That is the
+  **canonical and only accepted position**: a message-level `_meta` is deliberately not a
+  fallback (two accepted positions = two things to spoof and two things for a proxy to
+  disagree about), so a top-level-only `_meta` counts as absent.
+- **`initialize` never negotiates `2026-07-28`.** That revision *removed* `initialize`, so
+  agreeing on it would hand the client a version whose own rules say the call cannot exist.
+  `INITIALIZE_MAX_VERSION` = `2025-11-25` is both the ceiling and the fallback for an
+  unsupported (or too-new) requested version; `initialize` + `ping` stay for the older line
+  through the 12-month deprecation window (do not delete them earlier).
+- **Version enforcement, and the deliberate dual-stack deviation.** 07-28 makes the
+  per-request `_meta` version REQUIRED. Enforced literally it would break every pre-07-28
+  client sharing this endpoint, so the rule is: a **stated** version is always enforced — for
+  every method, `initialize` included — while **nothing stated at all** (no `params._meta`,
+  no `MCP-Protocol-Version` header) is the legacy path and keeps working. Enforcement means
+  HTTP `400` + JSON-RPC `-32600` when the `_meta` container is not an object, when the version
+  value is not a non-blank string (number / array / object / null / blank), or when the value
+  is a well-formed version this server does not support. A `_meta` carrying other keys but not
+  ours makes no claim → absent.
+- **Method × declared version compatibility.** A declared version binds the client to a wire,
+  so the method it calls must exist on that wire. `server/discover` **requires** a declared
+  `2026-07-28`: absent → `400` + `-32600`, and so is a legacy version this server otherwise
+  supports (discover did not exist before 07-28). Symmetrically `initialize` and `ping`
+  **reject** a declared `2026-07-28` → `400` + `-32600`, because that revision removed them.
+  `tools/list` / `tools/call` exist on both wires and are unconstrained. Legacy clients declare
+  no `_meta` at all, so this rule binds only clients that made a claim — and the claim is a wire
+  assertion, not a negotiation input: `initialize` still negotiates from
+  `params.protocolVersion`.
+- **`server/discover`** (MUST in 07-28) returns, in one cacheable response:
+  `supportedVersions`, `capabilities` (`tools`), `serverInfo` (`name` = the exposed app name
+  from `ApiMeta.app`, `version` = the real krpc build version), `instructions` — a short
+  English paragraph telling the driving LLM that tools are `@UnsafeWeb(agentTool=true)` krpc
+  methods named `Service_method`, that arguments are the JSON DTO described by `inputSchema`
+  (single scalars wrapped as `{"value": …}`), and that a failure comes back as
+  `isError:true` with an actionable `{code,message}` envelope — plus `ttlMs` `86400000` and
+  `cacheScope` `public`.
+- **L7 header consistency check.** `Mcp-Method` and `Mcp-Name` (case-insensitive) are
+  optional on the wire here — absent is fine, old clients never send them — but a value that
+  **disagrees** with the body is HTTP `400` + JSON-RPC `-32020` `"HeaderMismatch"`:
+  `Mcp-Method` vs the JSON-RPC `method`, and `Mcp-Name` vs `params.name` on `tools/call`.
+  Two further shapes count as disagreement: the same routing header sent **twice with
+  distinct values** (each hop on the path may read a different one — identical repeats are
+  harmless), and an `Mcp-Name` over a `tools/call` whose `params.name` is missing or not a
+  string (there is nothing it can be truthfully describing). `Mcp-Name` names a tool, so it is
+  checked **only** on `tools/call`: the method is short-circuited before the header is read at
+  all, and any `Mcp-Name` shape on another method — duplicates included — is ignored rather
+  than half-validated. A load balancer routing on the header while the server executes the body
+  is a real split-brain attack surface, and krpc is the middleware sitting on that seam.
+- **JSON-RPC id discipline.** A notification is the **absence** of the `id` member (→ HTTP
+  `202`, empty body). An explicit `"id": null` is a request carrying an invalid RequestId
+  (MCP forbids null) → `-32600`; treating it as a notification would answer `202` to a client
+  that is waiting for a result.
+- **`tools/list`** carries `ttlMs` `86400000` + `cacheScope` `public` (the tool set is static
+  per boot and identical for every caller — no per-credential variation) and is **sorted by
+  tool name** (`McpSchema.toolDefs`), because reflection order is not stable across
+  JVMs/builds and an unstable listing defeats client caching.
+- **Design-exempt — deliberately NOT implemented** (do not "fix" without an ADR): SSE and its
+  resumability (JSON-mode only, unary tools), sessions (`Mcp-Session-Id` never existed here),
+  MRTR / `input_required` (the bridge never initiates a request toward the client), and
+  `subscriptions` / `listen` (the tool set cannot change at runtime).
 - **Verified** with real MCP clients over Streamable HTTP — `initialize` captured via a
   `@modelcontextprotocol/sdk` client script (the Inspector CLI does not print the raw
   result), `tools/list` + `tools/call` via the official `@modelcontextprotocol/inspector`

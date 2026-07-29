@@ -1,5 +1,28 @@
 # Unreleased
 
+* **MCP 2026-07-28 (stateless) alignment for the `POST /mcp` agent-tool bridge.** Additive and
+  backwards compatible — the bridge was already stateless (no session id, one self-contained
+  JSON object per POST, no SSE), so 07-28 ratifies its shape rather than forcing a rewrite.
+  Dual version track: `2026-07-28` / `2025-11-25` join `SUPPORTED_VERSIONS` and a 07-28 client
+  sends **no `initialize`** — it states its version per request in
+  `params._meta["io.modelcontextprotocol/protocolVersion"]` (the canonical, only accepted
+  position). A *stated* version is always enforced, for every method: malformed shape or
+  unsupported value → `400` + `-32600`; a request stating **nothing** stays on the legacy path,
+  a deliberate dual-stack deviation from the 07-28 REQUIRED wording so pre-07-28 clients keep
+  working. `initialize` + `ping` remain for the older line through the 12-month deprecation
+  window, and `initialize` never negotiates `2026-07-28` (the revision that removed it) —
+  ceiling and fallback are `2025-11-25`. New `server/discover` (MUST in 07-28) returns
+  `supportedVersions` / `capabilities` / `serverInfo` / `instructions` / `ttlMs` /
+  `cacheScope`, and being 07-28-only it *requires* a declared `2026-07-28` — a declared version
+  must be compatible with the method called, so `initialize` / `ping` symmetrically reject a
+  declared `2026-07-28` (that revision removed them). L7 header consistency:
+  `Mcp-Method` / `Mcp-Name` disagreeing with the JSON-RPC `method` / `params.name` — including
+  a header sent twice with distinct values, or a name header over a body with no usable
+  `params.name` — → `400` + `-32020 HeaderMismatch` (a proxy routing on the header while the
+  server executes the body is a split-brain surface). `tools/list` gains `ttlMs`/`cacheScope`
+  and a deterministic name sort. An explicit `"id": null` is now `-32600` (invalid RequestId),
+  not a notification. SSE resumability, sessions, MRTR / `input_required` and
+  `subscriptions`/`listen` stay **design-exempt** (SPEC §12.2).
 * **ext-rpc-gen 1.0.2 — agent-native client generator dependency fix (2026-07-19, GEN-NETTY-102).**
   1.0.1 regression on clean consumer classpaths: `Gen.scan` loads `RpcServerBuilder` →
   `NoClassDefFoundError: NettyServerBuilder` (rpc-server keeps grpc-netty `compileOnly` by

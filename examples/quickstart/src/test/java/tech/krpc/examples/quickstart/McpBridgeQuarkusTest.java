@@ -24,7 +24,10 @@ import tech.krpc.util.JsonUtils;
 
 /**
  * Wave 3 Phase B — container-level acceptance guard for the MCP Streamable HTTP bridge
- * ({@code POST /mcp}, JSON-RPC 2.0, MCP spec 2025-06-18; ADR-0004 / AGENT-001 P1).
+ * ({@code POST /mcp}, JSON-RPC 2.0, MCP spec 2026-07-28; ADR-0004 / AGENT-001 P1). Both version
+ * lines are exercised over the wire: the legacy {@code initialize} handshake and a full
+ * 2026-07-28 chain ({@code server/discover} → {@code tools/list} → {@code tools/call}) whose
+ * requests state their version in {@code params._meta} and carry the L7 routing headers.
  *
  * <p>The MCP bridge is <b>default OFF</b> ({@code rpc.server.mcp.enabled}); the flag gates
  * registration in {@code HttpHandlerExpose} so the path is byte-level absent when off. This class
@@ -165,15 +168,113 @@ class McpBridgeQuarkusTest {
                 () -> "unknown tool not -32602: " + res.body());
     }
 
+    // --- MCP 2026-07-28 line, over real HTTP --------------------------------------------
+
+    /** Canonical per-request version claim: {@code params._meta[protocolVersion]}. */
+    private static String meta(String version) {
+        return "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"" + version + "\"}";
+    }
+
+    @Test
+    void newLine_discoverThenListThenCall_withMetaVersionAndMatchingRoutingHeaders() throws Exception {
+        // A full 2026-07-28 client chain over the wire: no initialize, every request states its
+        // version in params._meta and carries the L7 routing headers that must agree with it.
+
+        // 1) server/discover — the stateless replacement for the handshake.
+        HttpResponse<String> discover = post(
+                "{\"jsonrpc\":\"2.0\",\"id\":10,\"method\":\"server/discover\","
+                        + "\"params\":{" + meta("2026-07-28") + "}}",
+                "Mcp-Method", "server/discover");
+        assertEquals(200, discover.statusCode(), () -> "server/discover body: " + discover.body());
+        Map<String, Object> found = resultOf(discover.body());
+        Object versions = found.get("supportedVersions");
+        assertInstanceOf(List.class, versions, () -> "supportedVersions missing: " + discover.body());
+        assertTrue(((List<?>) versions).contains("2026-07-28"),
+                () -> "07-28 not advertised: " + discover.body());
+        assertEquals("quickstart", asMap(found.get("serverInfo"), "serverInfo").get("name"),
+                () -> "serverInfo.name != quickstart: " + discover.body());
+        Object instructions = found.get("instructions");
+        assertInstanceOf(String.class, instructions, () -> "instructions missing: " + discover.body());
+        assertFalse(((String) instructions).isBlank(), () -> "instructions blank: " + discover.body());
+        assertEquals(86400000L, ((Number) found.get("ttlMs")).longValue(),
+                () -> "discover ttlMs: " + discover.body());
+        assertEquals("public", found.get("cacheScope"), () -> "discover cacheScope: " + discover.body());
+
+        // 2) tools/list — cache hints + deterministic order, same version claim.
+        HttpResponse<String> list = post(
+                "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/list\","
+                        + "\"params\":{" + meta("2026-07-28") + "}}",
+                "Mcp-Method", "tools/list");
+        assertEquals(200, list.statusCode(), () -> "tools/list body: " + list.body());
+        Map<String, Object> listed = resultOf(list.body());
+        assertEquals(86400000L, ((Number) listed.get("ttlMs")).longValue(),
+                () -> "tools/list ttlMs: " + list.body());
+        assertEquals("public", listed.get("cacheScope"), () -> "tools/list cacheScope: " + list.body());
+        assertNotNull(findTool(listed, "Hello_hello"), () -> "Hello_hello missing: " + list.body());
+        List<String> names = toolNames(listed);
+        assertEquals(names.stream().sorted().toList(), names,
+                () -> "tools/list is not name-sorted: " + list.body());
+
+        // 3) tools/call — Mcp-Name must agree with params.name, and the tool really runs.
+        HttpResponse<String> call = post(
+                "{\"jsonrpc\":\"2.0\",\"id\":12,\"method\":\"tools/call\",\"params\":{"
+                        + meta("2026-07-28") + ",\"name\":\"Hello_hello\","
+                        + "\"arguments\":{\"name\":\"mcp2026\"}}}",
+                "Mcp-Method", "tools/call", "Mcp-Name", "Hello_hello");
+        assertEquals(200, call.statusCode(), () -> "tools/call body: " + call.body());
+        Map<String, Object> called = resultOf(call.body());
+        assertEquals(Boolean.FALSE, called.get("isError"), () -> "tools/call isError: " + call.body());
+        Object message = asMap(called.get("structuredContent"), "structuredContent").get("message");
+        assertInstanceOf(String.class, message, () -> "structuredContent.message: " + call.body());
+        assertTrue(((String) message).contains("Hello, mcp2026!"),
+                () -> "the real service did not run: " + call.body());
+    }
+
+    @Test
+    void newLine_routingHeaderDisagreeingWithBody_isRealHttp400() throws Exception {
+        // The unit tests assert the status-override header; this proves the netty transport
+        // turns it into an actual 400 on the wire.
+        HttpResponse<String> res = post(
+                "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/list\","
+                        + "\"params\":{" + meta("2026-07-28") + "}}",
+                "Mcp-Method", "tools/call");
+        assertEquals(400, res.statusCode(), () -> "header mismatch not 400: " + res.body());
+        Map<String, Object> err = errorOf(res.body());
+        assertEquals(-32020, ((Number) err.get("code")).intValue(),
+                () -> "header mismatch not -32020: " + res.body());
+        assertEquals("HeaderMismatch", err.get("message"), () -> "error message: " + res.body());
+    }
+
+    @Test
+    void newLine_unsupportedMetaVersion_isRealHttp400() throws Exception {
+        HttpResponse<String> res = post("{\"jsonrpc\":\"2.0\",\"id\":14,\"method\":\"tools/list\","
+                + "\"params\":{" + meta("1999-01-01") + "}}");
+        assertEquals(400, res.statusCode(), () -> "unsupported version not 400: " + res.body());
+        assertEquals(-32600, ((Number) errorOf(res.body()).get("code")).intValue(),
+                () -> "unsupported version not -32600: " + res.body());
+    }
+
+    @Test
+    void serverDiscover_withoutMetaVersion_isRealHttp400() throws Exception {
+        // 07-28-only method: its REQUIRED per-request version is enforced literally.
+        HttpResponse<String> res = post("{\"jsonrpc\":\"2.0\",\"id\":15,\"method\":\"server/discover\"}");
+        assertEquals(400, res.statusCode(), () -> "discover without _meta not 400: " + res.body());
+        assertEquals(-32600, ((Number) errorOf(res.body()).get("code")).intValue(),
+                () -> "discover without _meta not -32600: " + res.body());
+    }
+
     // --- helpers ------------------------------------------------------------------------
 
-    private HttpResponse<String> post(String jsonRpcBody) throws Exception {
-        return send(HttpRequest.newBuilder()
+    /** POST the JSON-RPC body, optionally with extra {@code name, value} request headers. */
+    private HttpResponse<String> post(String jsonRpcBody, String... headerPairs) throws Exception {
+        var builder = HttpRequest.newBuilder()
                 .uri(URI.create(MCP_URL))
                 .header("Accept", "application/json, text/event-stream")
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonRpcBody))
-                .build());
+                .header("Content-Type", "application/json");
+        for (int i = 0; i + 1 < headerPairs.length; i += 2) {
+            builder.header(headerPairs[i], headerPairs[i + 1]);
+        }
+        return send(builder.POST(HttpRequest.BodyPublishers.ofString(jsonRpcBody)).build());
     }
 
     @SuppressWarnings("unchecked")
@@ -192,6 +293,15 @@ class McpBridgeQuarkusTest {
         Object error = env.get("error");
         assertInstanceOf(Map.class, error, () -> "expected error envelope: " + body);
         return (Map<String, Object>) error;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> toolNames(Map<String, Object> result) {
+        Object tools = result.get("tools");
+        assertInstanceOf(List.class, tools, () -> "tools/list result.tools not a list: " + result);
+        return ((List<Object>) tools).stream()
+                .map(t -> (String) ((Map<String, Object>) t).get("name"))
+                .toList();
     }
 
     @SuppressWarnings("unchecked")

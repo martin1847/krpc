@@ -43,7 +43,12 @@ final class McpSchema {
 
     static final String WRAP_KEY = "value";
 
-    /** MCP tool definitions for every method in {@code meta} (empty list if none). */
+    /**
+     * MCP tool definitions for every method in {@code meta} (empty list if none), sorted by
+     * tool name. MCP spec 2026-07-28 SHOULD-orders a listing deterministically: reflection
+     * order is not stable across JVMs/builds, and an unstable list defeats client-side caching
+     * (§ ttlMs/cacheScope) and makes diffing two servers noisy.
+     */
     static List<Map<String, Object>> toolDefs(ApiMeta meta) {
         var tools = new ArrayList<Map<String, Object>>();
         if (null == meta || null == meta.getApis()) {
@@ -57,6 +62,7 @@ final class McpSchema {
                 tools.add(toolDef(api, m));
             }
         }
+        tools.sort(java.util.Comparator.comparing(t -> (String) t.get("name")));
         return tools;
     }
 

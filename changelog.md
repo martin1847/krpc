@@ -13,7 +13,9 @@
   window, and `initialize` never negotiates `2026-07-28` (the revision that removed it) —
   ceiling and fallback are `2025-11-25`. New `server/discover` (MUST in 07-28) returns
   `supportedVersions` / `capabilities` / `serverInfo` / `instructions` / `ttlMs` /
-  `cacheScope`, and being 07-28-only it *requires* a stated version. L7 header consistency:
+  `cacheScope`, and being 07-28-only it *requires* a declared `2026-07-28` — a declared version
+  must be compatible with the method called, so `initialize` / `ping` symmetrically reject a
+  declared `2026-07-28` (that revision removed them). L7 header consistency:
   `Mcp-Method` / `Mcp-Name` disagreeing with the JSON-RPC `method` / `params.name` — including
   a header sent twice with distinct values, or a name header over a body with no usable
   `params.name` — → `400` + `-32020 HeaderMismatch` (a proxy routing on the header while the

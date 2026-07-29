@@ -55,8 +55,11 @@ import lombok.extern.slf4j.Slf4j;
  * so the rule here is: a <em>stated</em> version is always enforced (malformed or unsupported
  * → HTTP 400 + {@code -32600}, for every method including {@code initialize}), while a request
  * carrying <em>neither</em> {@code params._meta} nor the {@code MCP-Protocol-Version} header is
- * accepted as the legacy path. {@code server/discover} is the exception that proves it: the
- * method only exists in 07-28, so it has no legacy callers and its version IS required.
+ * accepted as the legacy path. A version that IS declared must also be compatible with the
+ * method called: {@code server/discover} exists only in 07-28, so it requires a declared
+ * {@code 2026-07-28}; {@code initialize} and {@code ping} were removed by 07-28, so they reject
+ * a declared {@code 2026-07-28}. Legacy clients declare nothing, so this binds only clients
+ * that made a claim.
  *
  * <p>Deliberately <b>not</b> implemented, because the bridge is stateless JSON-mode and
  * krpc tools are unary: SSE and its resumability, sessions, MRTR / {@code input_required}
@@ -211,14 +214,23 @@ public class McpHandler implements PostHandler<String> {
             badRequest(resHeader);
             return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported protocolVersion: " + mv.version()));
         }
-        // server/discover exists ONLY in 2026-07-28, so it has no legacy callers and the
-        // REQUIRED per-request version is enforced literally here (absent = 400). Every other
-        // method accepts "no version stated at all" as the legacy path — see the dual-stack
-        // deviation in the class javadoc.
-        if ("server/discover".equals(method) && !mv.present()) {
+        // Method x declared-version compatibility. A stated version and the method called must
+        // be able to coexist: server/discover did not exist before 07-28, and initialize/ping
+        // were removed IN 07-28. A client asserting one while calling the other is confused
+        // about which wire it is on, and quietly picking a half for it is exactly the ambiguity
+        // a middleware must not resolve on its own. Legacy clients declare no _meta at all, so
+        // none of this touches them — see the dual-stack deviation in the class javadoc.
+        if ("server/discover".equals(method)) {
+            if (!mv.present() || !PROTOCOL_VERSION.equals(mv.version())) {
+                badRequest(resHeader);
+                return bytes(errorResponse(id, INVALID_REQUEST, "server/discover requires _meta "
+                        + META_PROTOCOL_VERSION + " " + PROTOCOL_VERSION));
+            }
+        } else if (mv.present() && PROTOCOL_VERSION.equals(mv.version())
+                && ("initialize".equals(method) || "ping".equals(method))) {
             badRequest(resHeader);
             return bytes(errorResponse(id, INVALID_REQUEST,
-                    "server/discover requires _meta " + META_PROTOCOL_VERSION));
+                    method + " was removed in " + PROTOCOL_VERSION));
         }
         // Transport (spec 2025-06-18): the client MUST send MCP-Protocol-Version on every
         // request after initialize; an invalid/unsupported value MUST be 400. initialize is
@@ -685,17 +697,24 @@ public class McpHandler implements PostHandler<String> {
      * nothing it can be truthfully describing). A header sent twice with two distinct values is
      * itself a mismatch: each hop on the path may read a different one. Header lookup is
      * case-insensitive (netty {@link HttpHeaders}); absent headers are fine (legacy clients).
+     *
+     * <p>{@code Mcp-Name} names a tool, so it is <em>only</em> meaningful on {@code tools/call}:
+     * the method is short-circuited before the header is read at all, and any {@code Mcp-Name}
+     * shape (including duplicates) on another method is ignored rather than half-validated.
      */
     private static boolean headerMismatch(Map<String, Object> msg, String method, HttpHeaders requestHeaders) {
         var hm = distinctValues(requestHeaders, MCP_METHOD_HEADER);
         if (hm.size() > 1 || (1 == hm.size() && !hm.get(0).equals(method))) {
             return true;
         }
+        if (!"tools/call".equals(method)) {
+            return false;
+        }
         var hn = distinctValues(requestHeaders, MCP_NAME_HEADER);
         if (hn.size() > 1) {
             return true;
         }
-        if (hn.isEmpty() || !"tools/call".equals(method)) {
+        if (hn.isEmpty()) {
             return false;
         }
         var name = msg.get("params") instanceof Map<?, ?> p ? p.get("name") : null;

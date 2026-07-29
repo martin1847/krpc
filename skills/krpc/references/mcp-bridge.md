@@ -65,9 +65,16 @@ JSON object per POST, no SSE), so the 07-28 stateless line is an **additive** al
   HTTP `400` + JSON-RPC `-32600` when the `_meta` container is not an object, when the version
   value is not a non-blank string (number / array / object / null / blank), or when the value
   is a well-formed version this server does not support. A `_meta` carrying other keys but not
-  ours makes no claim → absent. `server/discover` is the exception that proves the rule: it
-  exists only in 07-28, has no legacy callers, and therefore **requires** a valid stated
-  version (absent → `400` + `-32600`).
+  ours makes no claim → absent.
+- **Method × declared version compatibility.** A declared version binds the client to a wire,
+  so the method it calls must exist on that wire. `server/discover` **requires** a declared
+  `2026-07-28`: absent → `400` + `-32600`, and so is a legacy version this server otherwise
+  supports (discover did not exist before 07-28). Symmetrically `initialize` and `ping`
+  **reject** a declared `2026-07-28` → `400` + `-32600`, because that revision removed them.
+  `tools/list` / `tools/call` exist on both wires and are unconstrained. Legacy clients declare
+  no `_meta` at all, so this rule binds only clients that made a claim — and the claim is a wire
+  assertion, not a negotiation input: `initialize` still negotiates from
+  `params.protocolVersion`.
 - **`server/discover`** (MUST in 07-28) returns, in one cacheable response:
   `supportedVersions`, `capabilities` (`tools`), `serverInfo` (`name` = the exposed app name
   from `ApiMeta.app`, `version` = the real krpc build version), `instructions` — a short
@@ -83,9 +90,11 @@ JSON object per POST, no SSE), so the 07-28 stateless line is an **additive** al
   Two further shapes count as disagreement: the same routing header sent **twice with
   distinct values** (each hop on the path may read a different one — identical repeats are
   harmless), and an `Mcp-Name` over a `tools/call` whose `params.name` is missing or not a
-  string (there is nothing it can be truthfully describing). A load balancer routing on the
-  header while the server executes the body is a real split-brain attack surface, and krpc is
-  the middleware sitting on that seam.
+  string (there is nothing it can be truthfully describing). `Mcp-Name` names a tool, so it is
+  checked **only** on `tools/call`: the method is short-circuited before the header is read at
+  all, and any `Mcp-Name` shape on another method — duplicates included — is ignored rather
+  than half-validated. A load balancer routing on the header while the server executes the body
+  is a real split-brain attack surface, and krpc is the middleware sitting on that seam.
 - **JSON-RPC id discipline.** A notification is the **absence** of the `id` member (→ HTTP
   `202`, empty body). An explicit `"id": null` is a request carrying an invalid RequestId
   (MCP forbids null) → `-32600`; treating it as a notification would answer `202` to a client

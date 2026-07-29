@@ -499,6 +499,69 @@ class McpHandlerTest {
         assertEquals(-32600, errorCode(env), "unsupported version on discover -> INVALID_REQUEST");
     }
 
+    // --- method x declared-version compatibility -----------------------------------------
+
+    @Test
+    void serverDiscover_declaringALegacyVersion_is400InvalidRequest() {
+        // The version is supported by this server, but server/discover did not exist in it. A
+        // client asserting a legacy wire while calling a 07-28-only method is confused, and
+        // guessing which half it meant is exactly what a middleware must not do.
+        var h = handler(Map.of());
+        for (var legacy : List.of("2025-11-25", "2025-06-18", "2024-11-05")) {
+            var resHeaders = new ArrayList<AsciiHeader>();
+            var env = call(h, withMeta("server/discover", legacy), new DefaultHttpHeaders(), resHeaders);
+
+            assertEquals("400", statusOverride(resHeaders), legacy + " discover -> HTTP 400");
+            assertEquals(-32600, errorCode(env), legacy + " discover -> INVALID_REQUEST");
+        }
+    }
+
+    @Test
+    void initializeAndPing_declaring20260728_are400InvalidRequest() {
+        // 2026-07-28 REMOVED initialize and ping: a client that declares that revision cannot
+        // coherently call them. Legacy clients declare no _meta at all, so nobody breaks.
+        var h = handler(Map.of());
+        for (var removed : List.of("initialize", "ping")) {
+            var resHeaders = new ArrayList<AsciiHeader>();
+            var env = call(h, withMeta(removed, "2026-07-28"), new DefaultHttpHeaders(), resHeaders);
+
+            assertEquals("400", statusOverride(resHeaders), removed + " under 07-28 -> HTTP 400");
+            assertEquals(-32600, errorCode(env), removed + " under 07-28 -> INVALID_REQUEST");
+        }
+    }
+
+    @Test
+    void initializeAndPing_declaringALegacyVersion_stillWork() {
+        // Non-vacuity for the test above: the same methods with a coherent declared version
+        // dispatch normally, so the 400 is the compatibility rule and not a blanket block.
+        var h = handler(Map.of());
+        for (var legacy : List.of("2025-11-25", "2025-06-18")) {
+            var initHeaders = new ArrayList<AsciiHeader>();
+            var initEnv = call(h, withMeta("initialize", legacy), new DefaultHttpHeaders(), initHeaders);
+            assertNull(statusOverride(initHeaders), "initialize under " + legacy + " is not gated");
+            // The declared _meta version is a wire claim, not the negotiation input: the body's
+            // params.protocolVersion decides, and this body carries none -> the legacy ceiling.
+            assertEquals(McpHandler.INITIALIZE_MAX_VERSION, result(initEnv).get("protocolVersion"),
+                    "initialize under " + legacy + " still negotiates normally");
+
+            var pingHeaders = new ArrayList<AsciiHeader>();
+            var pingEnv = call(h, withMeta("ping", legacy), new DefaultHttpHeaders(), pingHeaders);
+            assertNull(statusOverride(pingHeaders), "ping under " + legacy + " is not gated");
+            assertInstanceOf(Map.class, pingEnv.get("result"), "ping under " + legacy + " still answers");
+        }
+    }
+
+    @Test
+    void toolsMethods_declaring20260728_areUnaffectedByTheCompatibilityRule() {
+        // Only the three methods whose existence changed are constrained; tools/* live in both.
+        var h = handler(Map.of("Calc/add", okInv("{\"ok\":true}")));
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, withMeta("tools/list", "2026-07-28"), new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders), "tools/list is valid in 07-28: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"), "tools/list dispatches: " + env);
+    }
+
     // --- 2026-07-28: per-request _meta protocol version ----------------------------------
 
     /** A request whose canonical {@code params._meta} states the protocol version. */
@@ -741,6 +804,20 @@ class McpHandlerTest {
         var env2 = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"), nameHeaders, dupName);
         assertEquals("400", statusOverride(dupName), "duplicate Mcp-Name -> HTTP 400");
         assertEquals(-32020, errorCode(env2), "duplicate Mcp-Name -> HeaderMismatch");
+
+        // Mcp-Name names a tool, so it is only meaningful on tools/call: the method is
+        // short-circuited BEFORE the header is read, and any shape of it elsewhere — duplicates
+        // included — is ignored rather than half-validated.
+        var nameOnList = new ArrayList<AsciiHeader>();
+        var listHeaders = new DefaultHttpHeaders()
+                .add("Mcp-Method", "tools/list")
+                .add("Mcp-Name", "Calc_add")
+                .add("Mcp-Name", "Calc_ping");
+        var envList = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+                listHeaders, nameOnList);
+        assertNull(statusOverride(nameOnList),
+                "Mcp-Name is not checked outside tools/call: " + nameOnList);
+        assertInstanceOf(Map.class, envList.get("result"), "tools/list dispatches: " + envList);
 
         // Non-vacuity: the same header repeated with the SAME value is not a conflict.
         var repeated = new ArrayList<AsciiHeader>();

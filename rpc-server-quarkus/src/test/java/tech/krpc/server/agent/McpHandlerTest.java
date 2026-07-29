@@ -3,6 +3,7 @@ package tech.krpc.server.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -431,6 +432,191 @@ class McpHandlerTest {
                 "no version header adds no status override: " + resHeaders);
         assertInstanceOf(Map.class, env.get("result"),
                 "no version header dispatches to a normal result: " + env);
+    }
+
+    // --- 2026-07-28: server/discover ----------------------------------------------------
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void serverDiscover_announcesVersionsCapabilitiesServerInfoInstructionsAndCacheHints() {
+        // Spec 2026-07-28 MUST: the stateless replacement for initialize. One response must
+        // carry everything a client needs before its first call.
+        var h = handler(Map.of());
+        var res = result(call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\"}"));
+
+        var versions = (List<String>) res.get("supportedVersions");
+        assertTrue(versions.contains("2026-07-28"), "07-28 advertised: " + versions);
+        assertTrue(versions.contains("2025-11-25"), "11-25 advertised: " + versions);
+        // Dual track: the old line stays advertised through the deprecation window.
+        assertTrue(versions.contains("2025-06-18"), "old line still advertised: " + versions);
+        assertEquals("2026-07-28", McpHandler.PROTOCOL_VERSION, "latest implemented version");
+
+        var caps = (Map<String, Object>) res.get("capabilities");
+        assertTrue(caps.containsKey("tools"), "tools capability present: " + caps);
+
+        var info = (Map<String, Object>) res.get("serverInfo");
+        assertEquals("test-app", info.get("name"), "serverInfo.name = app name");
+        assertEquals(McpHandler.krpcVersion(), info.get("version"), "serverInfo.version = build version");
+
+        var instructions = (String) res.get("instructions");
+        assertNotNull(instructions, "instructions present (natural-language usage for the LLM)");
+        assertTrue(instructions.contains("tools/list") && instructions.contains("isError"),
+                "instructions tell the LLM how to list and how failures look: " + instructions);
+
+        assertEquals(86400000L, ((Number) res.get("ttlMs")).longValue(), "discover ttlMs");
+        assertEquals("public", res.get("cacheScope"), "discover cacheScope");
+    }
+
+    // --- 2026-07-28: per-request _meta protocol version ----------------------------------
+
+    private static String withMeta(String method, String version) {
+        return "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"" + method + "\","
+                + "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"" + version + "\"}}";
+    }
+
+    @Test
+    void metaProtocolVersion_newLineWithoutInitialize_dispatchesNormally() {
+        // 07-28 clients never call initialize: they state the version per request in _meta.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, withMeta("tools/list", "2026-07-28"), new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders), "supported _meta version adds no 400: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"), "07-28 request dispatches: " + env);
+    }
+
+    @Test
+    void metaProtocolVersion_inParams_alsoAccepted() {
+        // _meta is defined on the base request and on params; both placements occur in the wild.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":"
+                + "{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2025-11-25\"}}}";
+        var env = call(h, body, new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders), "params._meta version accepted: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"), "request dispatches: " + env);
+    }
+
+    @Test
+    void metaProtocolVersion_unsupported_is400InvalidRequest() {
+        // Mirrors the header gate exactly: present-and-unsupported MUST be 400 + -32600.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, withMeta("tools/list", "1999-01-01"), new DefaultHttpHeaders(), resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders),
+                "unsupported _meta protocolVersion maps to HTTP 400: " + resHeaders);
+        assertEquals(-32600, errorCode(env), "unsupported _meta version -> INVALID_REQUEST");
+    }
+
+    // --- 2026-07-28: L7 header / body consistency ---------------------------------------
+
+    @Test
+    void mcpMethodHeader_mismatchingBody_is400HeaderMismatch() {
+        // The LB routes on the header while the server executes the body: a disagreement is a
+        // split-brain attack surface, so it MUST be rejected rather than silently resolved.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var headers = new DefaultHttpHeaders().set("Mcp-Method", "tools/call");
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", headers, resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders), "header mismatch maps to HTTP 400: " + resHeaders);
+        assertEquals(-32020, errorCode(env), "header mismatch -> -32020");
+        assertEquals("HeaderMismatch", error(env).get("message"), "spec error message");
+    }
+
+    @Test
+    void mcpMethodHeader_matchingBody_dispatchesNormally() {
+        // Non-vacuity for the test above: the same header name, agreeing, must pass the gate.
+        var h = handler(Map.of());
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var headers = new DefaultHttpHeaders().set("Mcp-Method", "tools/list");
+        var env = call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", headers, resHeaders);
+
+        assertNull(statusOverride(resHeaders), "matching header adds no status override: " + resHeaders);
+        assertInstanceOf(Map.class, env.get("result"), "matching header dispatches: " + env);
+    }
+
+    @Test
+    void mcpNameHeader_mismatchingToolName_is400HeaderMismatch() {
+        var h = handler(Map.of("Calc/add", okInv("{}")));
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var headers = new DefaultHttpHeaders()
+                .set("Mcp-Method", "tools/call")
+                .set("Mcp-Name", "Calc_ping");
+        var env = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"), headers, resHeaders);
+
+        assertEquals("400", statusOverride(resHeaders), "name mismatch maps to HTTP 400: " + resHeaders);
+        assertEquals(-32020, errorCode(env), "Mcp-Name vs params.name mismatch -> -32020");
+    }
+
+    @Test
+    void mcpNameHeader_matchingToolName_dispatchesNormally() {
+        var h = handler(Map.of("Calc/add", okInv("{\"ok\":true}")));
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var headers = new DefaultHttpHeaders()
+                .set("Mcp-Method", "tools/call")
+                .set("Mcp-Name", "Calc_add");
+        var env = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"), headers, resHeaders);
+
+        assertNull(statusOverride(resHeaders), "matching headers add no status override: " + resHeaders);
+        assertFalse(isError(env), "matching headers dispatch to a normal tool result: " + env);
+    }
+
+    @Test
+    void noL7Headers_oldClientsUnaffected() {
+        // Absent Mcp-Method/Mcp-Name is fine: pre-07-28 clients never send them.
+        var h = handler(Map.of("Calc/add", okInv("{}")));
+        var resHeaders = new ArrayList<AsciiHeader>();
+        var env = call(h, toolsCall("Calc_add", "{\"name\":\"neo\"}"),
+                new DefaultHttpHeaders(), resHeaders);
+
+        assertNull(statusOverride(resHeaders), "no L7 headers, no 400: " + resHeaders);
+        assertFalse(isError(env), "old-style call still dispatches: " + env);
+    }
+
+    // --- 2026-07-28: tools/list cache hints + deterministic order ------------------------
+
+    @Test
+    void toolsList_carriesCacheHints() {
+        var h = handler(Map.of("Calc/add", okInv("{}"), "Calc/ping", okInv("{}")));
+        var res = result(call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"));
+
+        assertEquals(86400000L, ((Number) res.get("ttlMs")).longValue(),
+                "tool set is static per boot -> long TTL");
+        assertEquals("public", res.get("cacheScope"),
+                "tool set is identical for every caller -> public");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toolsList_isSortedByToolName_regardlessOfDiscoveryOrder() {
+        // Reflection order is not stable across JVMs/builds; the listing must be.
+        var zeta = new Api();
+        zeta.setName("Zeta");
+        zeta.setMethods(List.of(method("zoo"), method("abc")));
+        var alpha = new Api();
+        alpha.setName("Alpha");
+        alpha.setMethods(List.of(method("beta")));
+
+        var registry = new McpToolRegistry();
+        registry.init(Map.of(), new ApiMeta("test-app", List.of(zeta, alpha), List.of()));
+        var h = new McpHandler();
+        h.registry = registry;
+
+        var tools = (List<Map<String, Object>>) result(
+                call(h, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}")).get("tools");
+        var names = tools.stream().map(t -> (String) t.get("name")).toList();
+
+        assertEquals(List.of("Alpha_beta", "Zeta_abc", "Zeta_zoo"), names,
+                "tools sorted by name, not by discovery order: " + names);
+    }
+
+    private static Method method(String name) {
+        var m = new Method();
+        m.setName(name);
+        return m;
     }
 
     @Test

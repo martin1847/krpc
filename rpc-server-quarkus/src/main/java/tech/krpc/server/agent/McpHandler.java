@@ -30,19 +30,30 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * ADR-0004 (AGENT-001 P1): {@code POST /mcp} — a hand-written MCP Streamable HTTP endpoint
- * (JSON-RPC 2.0, MCP spec 2025-06-18), a thin bridge over the P0 agent surface.
+ * (JSON-RPC 2.0, MCP spec {@code 2026-07-28}), a thin bridge over the P0 agent surface.
  *
- * <p>Supports {@code initialize}, {@code notifications/initialized}, {@code tools/list},
- * {@code tools/call}, {@code ping}. Tools are generated from the live agentTool
- * {@link ApiMeta} ({@link McpSchema}); {@code tools/call} dispatches through the exact same
- * {@link WebInvoker#invokeWeb} path as {@code /agent/invoke}, so the credential check is
- * never bypassed. Only {@code @UnsafeWeb(agentTool=true)} methods are reachable
- * ({@link McpToolRegistry}); hidden services are already double-filtered upstream.
+ * <p>Supports {@code server/discover}, {@code initialize},
+ * {@code notifications/initialized}, {@code tools/list}, {@code tools/call}, {@code ping}.
+ * Tools are generated from the live agentTool {@link ApiMeta} ({@link McpSchema});
+ * {@code tools/call} dispatches through the exact same {@link WebInvoker#invokeWeb} path as
+ * {@code /agent/invoke}, so the credential check is never bypassed. Only
+ * {@code @UnsafeWeb(agentTool=true)} methods are reachable ({@link McpToolRegistry}); hidden
+ * services are already double-filtered upstream.
+ *
+ * <p><b>2026-07-28 alignment (stateless).</b> The 07-28 line removed sessions and the
+ * {@code initialize}/{@code ping} handshake: a client states its version per request via
+ * {@code _meta["io.modelcontextprotocol/protocolVersion"]} and discovers the server through
+ * {@code server/discover}. This bridge has always been stateless (no session id, one
+ * self-contained JSON object per POST), so the alignment is additive: both version lines are
+ * served side by side and {@code initialize}/{@code ping} stay for the 12-month deprecation
+ * window. Deliberately <b>not</b> implemented, because the bridge is stateless JSON-mode and
+ * krpc tools are unary: SSE and its resumability, sessions, MRTR / {@code input_required}
+ * (no server-initiated requests), and {@code subscriptions}/{@code listen} (the tool set is
+ * static per boot). These are design exemptions, not gaps — see SPEC §12.2.
  *
  * <p>Transport: JSON-response mode only (a single {@code application/json} object per POST).
- * SSE is spec-optional and not used — krpc tools are unary request/response. Gated by
- * {@code rpc.server.mcp.enabled} (env {@code KRPC_MCP}), default OFF = the path is never
- * registered ({@link #enabled()}), i.e. byte-level zero new surface.
+ * Gated by {@code rpc.server.mcp.enabled} (env {@code KRPC_MCP}), default OFF = the path is
+ * never registered ({@link #enabled()}), i.e. byte-level zero new surface.
  */
 @Unremovable
 @ApplicationScoped
@@ -50,12 +61,30 @@ import lombok.extern.slf4j.Slf4j;
 public class McpHandler implements PostHandler<String> {
 
     /// Latest MCP protocol version this bridge implements.
-    static final String PROTOCOL_VERSION = "2025-06-18";
+    static final String PROTOCOL_VERSION = "2026-07-28";
+    /**
+     * Dual version track. 2026-07-28 / 2025-11-25 clients state their version per request
+     * (see {@link #META_PROTOCOL_VERSION}); the older line keeps {@code initialize} +
+     * {@code ping} + the {@code MCP-Protocol-Version} header. The old line stays served for
+     * the 12-month deprecation window the MCP maintainers give a removed feature — do not
+     * drop {@code initialize}/{@code ping} before it elapses.
+     */
     private static final List<String> SUPPORTED_VERSIONS =
-            List.of("2025-06-18", "2025-03-26", "2024-11-05");
+            List.of("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05");
 
     /// Streamable HTTP protocol-version header (spec 2025-06-18).
     static final String MCP_PROTOCOL_VERSION_HEADER = "mcp-protocol-version";
+
+    /// Per-request protocol version carried in {@code _meta} (spec 2026-07-28, Required).
+    static final String META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
+
+    /// L7 routing headers (spec 2026-07-28): they MUST agree with the JSON-RPC body.
+    static final String MCP_METHOD_HEADER = "mcp-method";
+    static final String MCP_NAME_HEADER = "mcp-name";
+
+    /// Tool set is static per boot, so it is cacheable for a long time by any client.
+    static final long CACHE_TTL_MS = 86400000L;
+    static final String CACHE_SCOPE = "public";
 
     private static final AsciiString STATUS_HEADER =
             AsciiString.cached(AbstractHttpHandler.STATUS_OVERRIDE_HEADER);
@@ -66,6 +95,8 @@ public class McpHandler implements PostHandler<String> {
     private static final int METHOD_NOT_FOUND = -32601;
     private static final int INVALID_PARAMS = -32602;
     private static final int INTERNAL_ERROR = -32603;
+    /// Spec 2026-07-28: L7 header disagrees with the body it claims to describe.
+    private static final int HEADER_MISMATCH = -32020;
 
     static final Metadata.Key<String> AUTHORIZATION =
             Metadata.Key.of(HttpConst.AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
@@ -136,12 +167,30 @@ public class McpHandler implements PostHandler<String> {
         // Transport (spec 2025-06-18): the client MUST send MCP-Protocol-Version on every
         // request after initialize; an invalid/unsupported value MUST be 400. initialize is
         // exempt (it negotiates via the body). Absent header -> assume default, don't fail.
-        if (!"initialize".equals(method)) {
+        // Spec 2026-07-28 states the same version per request in _meta instead; the two are
+        // validated identically. server/discover is exempt from both gates for the same
+        // reason initialize is: it is the call that TELLS a client which versions exist, so
+        // gating it on a version the client does not yet know would deadlock discovery.
+        if (!"initialize".equals(method) && !"server/discover".equals(method)) {
             var pv = requestHeaders.get(MCP_PROTOCOL_VERSION_HEADER);
             if (null != pv && !SUPPORTED_VERSIONS.contains(pv)) {
                 badRequest(resHeader);
                 return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported MCP-Protocol-Version: " + pv));
             }
+            var mv = metaProtocolVersion(msg);
+            if (null != mv && !SUPPORTED_VERSIONS.contains(mv)) {
+                badRequest(resHeader);
+                return bytes(errorResponse(id, INVALID_REQUEST, "Unsupported protocolVersion: " + mv));
+            }
+        }
+
+        // Spec 2026-07-28: the L7 routing headers are REQUIRED on the wire but a middleware
+        // bridge cannot trust them blindly — a load balancer routing on the header while the
+        // server executes the body is a real split-brain attack. Present-and-disagreeing MUST
+        // be 400 + -32020; absent is accepted (older clients never send them).
+        if (headerMismatch(msg, method, requestHeaders)) {
+            badRequest(resHeader);
+            return bytes(errorResponse(id, HEADER_MISMATCH, "HeaderMismatch"));
         }
 
         // Notifications (no id) get 202 Accepted with an empty body, per Streamable HTTP.
@@ -151,6 +200,8 @@ public class McpHandler implements PostHandler<String> {
         }
 
         switch (method) {
+            case "server/discover":
+                return bytes(discover(id));
             case "initialize":
                 return bytes(initialize(id, msg));
             case "tools/list":
@@ -165,6 +216,40 @@ public class McpHandler implements PostHandler<String> {
     }
 
     // --- MCP methods --------------------------------------------------------------------
+
+    /**
+     * Spec 2026-07-28 {@code server/discover} (MUST): the stateless replacement for the
+     * {@code initialize} handshake. Everything a client needs before its first call, in one
+     * cacheable response — the version track we serve, the capability set, who we are, and a
+     * natural-language usage note for the LLM driving the client.
+     */
+    private Map<String, Object> discover(Object id) {
+        var caps = new LinkedHashMap<String, Object>();
+        caps.put("tools", new LinkedHashMap<>()); // listChanged omitted: tool set is static per boot
+        var serverInfo = new LinkedHashMap<String, Object>();
+        serverInfo.put("name", serverName());
+        serverInfo.put("version", krpcVersion());
+
+        var res = new LinkedHashMap<String, Object>();
+        res.put("supportedVersions", SUPPORTED_VERSIONS);
+        res.put("capabilities", caps);
+        res.put("serverInfo", serverInfo);
+        res.put("instructions", INSTRUCTIONS);
+        res.put("ttlMs", CACHE_TTL_MS);
+        res.put("cacheScope", CACHE_SCOPE);
+        return result(id, res);
+    }
+
+    /** Natural-language usage note for the LLM driving an MCP client (server/discover). */
+    private static final String INSTRUCTIONS =
+            "This server exposes krpc service methods annotated @UnsafeWeb(agentTool=true) as MCP "
+            + "tools. Call tools/list first: each tool is named Service_method and carries a JSON "
+            + "Schema inputSchema derived from the method's DTO argument, so tools/call arguments "
+            + "are a plain JSON object of that DTO's fields (a single scalar argument is wrapped as "
+            + "{\"value\": ...}). A successful call returns the krpc RpcResult data as text content, "
+            + "plus structuredContent when that data is an object. A failure returns isError:true "
+            + "with a {code,message} envelope (and typed field violations for invalid input) — read "
+            + "the message, fix the arguments or the credential, then retry; do not retry unchanged.";
 
     private Map<String, Object> initialize(Object id, Map<String, Object> msg) {
         String negotiated = PROTOCOL_VERSION;
@@ -194,6 +279,10 @@ public class McpHandler implements PostHandler<String> {
         var res = new LinkedHashMap<String, Object>();
         var tools = McpSchema.toolDefs(registry.apiMeta());
         res.put("tools", tools);
+        // Spec 2026-07-28: the tool set is static per boot and identical for every caller, so
+        // it is long-lived and shareable across clients (no per-credential variation).
+        res.put("ttlMs", CACHE_TTL_MS);
+        res.put("cacheScope", CACHE_SCOPE);
         // AGENT-002 finding #3b: an empty face is valid but silent — a real MCP client sees
         // "0 tools" and cannot tell "misconfigured" from "nothing exposed". The base MCP
         // Result carries an optional _meta; use it (initialize's `instructions` slot is not on
@@ -501,6 +590,48 @@ public class McpHandler implements PostHandler<String> {
             curr = tmp;
         }
         return prev[m];
+    }
+
+    // --- 2026-07-28 per-request version + L7 header consistency -------------------------
+
+    /**
+     * The 2026-07-28 per-request protocol version, or null when the client did not state one.
+     * Read from the message-level {@code _meta} and, failing that, from {@code params._meta}
+     * (both placements occur in the wild: {@code _meta} is defined on the base request and on
+     * params). Returns null for a non-string value — the version gate only rejects a value it
+     * can compare, mirroring the header gate's "present-and-bad only" rule.
+     */
+    private static String metaProtocolVersion(Map<String, Object> msg) {
+        var v = metaValue(msg.get("_meta"));
+        if (null != v) {
+            return v;
+        }
+        return msg.get("params") instanceof Map<?, ?> p ? metaValue(p.get("_meta")) : null;
+    }
+
+    private static String metaValue(Object meta) {
+        if (meta instanceof Map<?, ?> m && m.get(META_PROTOCOL_VERSION) instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        return null;
+    }
+
+    /**
+     * Whether an L7 routing header contradicts the body it describes: {@code Mcp-Method} vs the
+     * JSON-RPC {@code method}, and {@code Mcp-Name} vs {@code params.name} on {@code tools/call}.
+     * Header lookup is case-insensitive (netty {@link HttpHeaders}). Absent headers are fine.
+     */
+    private static boolean headerMismatch(Map<String, Object> msg, String method, HttpHeaders requestHeaders) {
+        var hm = requestHeaders.get(MCP_METHOD_HEADER);
+        if (null != hm && !hm.equals(method)) {
+            return true;
+        }
+        var hn = requestHeaders.get(MCP_NAME_HEADER);
+        if (null == hn || !"tools/call".equals(method)) {
+            return false;
+        }
+        var name = msg.get("params") instanceof Map<?, ?> p ? p.get("name") : null;
+        return name instanceof String s && !hn.equals(s);
     }
 
     // --- headers / transport ------------------------------------------------------------

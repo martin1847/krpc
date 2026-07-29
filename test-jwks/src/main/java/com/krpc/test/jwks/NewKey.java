@@ -1,5 +1,5 @@
 /**
- * ZLKJ.com Inc.
+ * krpc.tech
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
 package com.krpc.test.jwks;

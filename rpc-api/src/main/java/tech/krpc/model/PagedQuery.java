@@ -1,5 +1,5 @@
 /**
- * Botaoyx.com Inc.
+ * krpc.tech
  * Copyright (c) 2021-2021 All Rights Reserved.
  */
 package tech.krpc.model;

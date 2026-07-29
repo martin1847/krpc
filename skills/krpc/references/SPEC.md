@@ -630,7 +630,7 @@ refs below point into that file). Day-1 checklist for a consumer service:
 published krpc jar ships its native metadata under the standard
 `META-INF/native-image/tech.krpc/<artifactId>/` and native-image picks it up **by location** — krpc
 no longer passes the deprecated `-H:ReflectionConfigurationResources` /
-`-H:DynamicProxyConfigurationResources` options, so those build warnings are gone. Each directory
+`-H:DynamicProxyConfigurationResources` options, so those build warnings drop from 6 lines to 1 residual proxy-config deprecation (removable when the GraalVM/Mandrel 21-23 baseline retires). Each directory
 carries the modern combined `reachability-metadata.json` (GraalVM/Mandrel 24+) **and** the legacy
 `reflect-config.json` / `proxy-config.json`, because GraalVM/Mandrel 21–23 ignore the combined file
 outright — dropping the legacy pair before the JDK 21 native floor is retired would silently

@@ -6,7 +6,7 @@
   instead of passing `-H:ReflectionConfigurationResources` /
   `-H:DynamicProxyConfigurationResources` from `native-image.properties`. Those options are
   deprecated **and** experimental on Mandrel/GraalVM 25, so a consumer building 10 services saw the
-  warnings once per krpc jar per module; they are gone (6 warning lines → 1, see below), and the
+  warnings once per krpc jar per module; they drop from 6 lines to 1 residual proxy deprecation (see below), and the
   stack survives the eventual removal of the legacy options — agent-era native readiness, since an
   agent reading a build log cannot tell a deprecation warning from a real defect. Each directory
   carries the modern combined `reachability-metadata.json` (GraalVM/Mandrel 24+; dynamic proxies now

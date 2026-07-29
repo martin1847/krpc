@@ -93,7 +93,9 @@ subprojects {
     test {
         //        useJUnitPlatform()
 //        systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
-        systemProperty "jdbc.host" , "mysql-junit.infra"
+        // TESTCONTAINERS-001: the `jdbc.host` system property that used to point every test JVM
+        // at a site-local MySQL is gone — no test (and no dependency on the test classpath) ever
+        // read it, and the DB-backed tests now provision their own container (MySqlTestResource).
         systemProperty "quarkus.log.level","DEBUG"
 
         finalizedBy jacocoTestReport

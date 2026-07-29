@@ -99,7 +99,7 @@ Both blocked by missing local infra, orthogonal to the Gradle bump:
 
 - **`:test-server:test`** — `TestBookService` is `@QuarkusTest`; booting the Quarkus runtime
   initializes the Agroal datasource (`quarkus-jdbc-mysql` + `quarkus-agroal` + `ext-mybatis`)
-  against `jdbc.host=mysql-junit.infra` (resolves to `198.18.1.24:3306`; no MySQL here). The
+  against `jdbc.host=db.example.invalid` (a site-local MySQL address, unreachable here). The
   test fork blocks at 0% CPU indefinitely — this is the original hang. The sibling `TestRef`
   (plain `@Test`, DB-free) is trapped in the same task, so the task as a whole is DB-gated.
 - **`:test-server-spring:test`** — `DemoApplicationTests` is `@SpringBootTest`; booting the context

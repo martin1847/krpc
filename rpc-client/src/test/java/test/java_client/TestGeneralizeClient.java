@@ -21,7 +21,7 @@ public class TestGeneralizeClient {
 
     public static void main(String[] args) {
 
-        var addr = "10.17.1.10";
+        var addr = "grpc.example.com";
         addr = "127.0.0.1";
         ManagedChannel channel = ManagedChannelBuilder.forAddress(addr, 50051).usePlaintext().build();
         var proto = GeneralizeClient.call(channel, "-foreign/Image/qrcode", null);
@@ -41,10 +41,10 @@ public class TestGeneralizeClient {
     }
 
     static void testRpc(){
-        ManagedChannel channel =  ManagedChannelBuilder.forAddress("10.17.1.10",20051).usePlaintext().build();
+        ManagedChannel channel =  ManagedChannelBuilder.forAddress("127.0.0.1",20051).usePlaintext().build();
         GeneralizeClient.call(channel,"-common-cdn/Cdn/testHttp","{\"url\":\"https://www.baidu.com\",\"type\":2}");
 
-        channel =  ManagedChannelBuilder.forAddress("iwytest.wangyuedaojia.com",443).useTransportSecurity().build();
+        channel =  ManagedChannelBuilder.forAddress("grpc.example.com",443).useTransportSecurity().build();
         GeneralizeClient.call(channel,"wy/Home/diamond","\"320200\"");
     }
 }

@@ -108,7 +108,7 @@ the root would be an upstream map type, outside `ext-rpc-gen`. Not changed.
   with `org.opentest4j.AssertionFailedError` (JUnit 5 / opentest4j), confirming the test task
   actually executes JUnit 5 via `useJUnitPlatform()`; the probe was then removed and the suite
   re-run green.
-- Did **not** run the full-repo `gradle build`/`test` (other modules need `mysql-junit.infra`).
+- Did **not** run the full-repo `gradle build`/`test` (other modules need `db.example.invalid`, the site-local MySQL of that era).
 - **Not validated**: no real consumer TS bundler / `emitDecoratorMetadata` compile was run
   (out of module scope); the tests assert declaration ordering in the generated `.ts`, which is
   the exact property that prevents the consumer-side TDZ.

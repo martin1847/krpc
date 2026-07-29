@@ -80,7 +80,7 @@ List<T> ...`). Reverted; suite green again. Proves the tests actually execute an
 
 - `gradle :rpc-server:test --tests "tech.krpc.server.MetaArrayContractTest"` → BUILD SUCCESSFUL,
   4 tests pass; Map WARN observed on stdout.
-- `gradle :rpc-server:test` (full module) → BUILD SUCCESSFUL in 5s. `-Djdbc.host=mysql-junit.infra`
+- `gradle :rpc-server:test` (full module) → BUILD SUCCESSFUL in 5s. `-Djdbc.host=db.example.invalid`
   is set on the test JVM but the executed tests (Otel*, ServerContext*, Jws*, MetaArray*, …) did
   NOT stall on it; no DB-backed test blocked locally this round.
 - `gradle :rpc-server:build -x test` → BUILD SUCCESSFUL (compiles).

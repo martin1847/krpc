@@ -9,7 +9,7 @@ include:
 build:
   extends: .gradle
   variables:
-    SONAR_HOST_URL: "http://sonarqube-sonarqube.gitlab:9000"
+    SONAR_HOST_URL: "http://sonarqube.example.invalid:9000"
     LANG: en_US.UTF-8
     LC_ALL: en_US.UTF-8
   rules:

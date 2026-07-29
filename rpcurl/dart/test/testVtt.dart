@@ -6,7 +6,7 @@ import 'dart:io';
 
 void main(List<String> arguments) async {
   // parseSubtitlesFromNetwork(
-  //     "https://v0.zhijisx.net/subtitle/0670C59462E64B008B19D813FC235A3B-3-3.vtt");
+  //     "https://cdn.example.com/subtitle/0670C59462E64B008B19D813FC235A3B-3-3.vtt");
   parseSubtitlesFromFile("/Users/yyc/Downloads/DIDTWN03U01.vtt");
   parseSubtitlesFromFile("/Users/yyc/Downloads/DIDTWN01U09C.vtt");
 }

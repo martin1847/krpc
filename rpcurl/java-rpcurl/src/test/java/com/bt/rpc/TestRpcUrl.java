@@ -21,7 +21,7 @@ public class TestRpcUrl {
             RpcUrl url = new RpcUrl();
             //url.localhost = true;
 
-            url.url = new URL("https://idemo.wangyuedaojia.com/demo-java-server/M/h");
+            url.url = new URL("https://demo.example.com/demo-java-server/M/h");
 
             //url.app = "demo-java-server";
             //url.service = "M";

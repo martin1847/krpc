@@ -1,0 +1,16 @@
+{
+  "reflection": [
+    {
+      "type": "tech.krpc.model.PagedList",
+      "allPublicConstructors": true,
+      "allPublicMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "type": "tech.krpc.model.PagedQuery",
+      "allPublicConstructors": true,
+      "allPublicMethods": true,
+      "allDeclaredFields": true
+    }
+  ]
+}

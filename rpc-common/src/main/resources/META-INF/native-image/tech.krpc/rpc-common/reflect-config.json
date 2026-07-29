@@ -1,0 +1,143 @@
+[
+  {
+    "name": "java.lang.Long",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.lang.Integer",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.lang.String",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.util.HashMap",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.util.Map",
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.util.List",
+    "allPublicMethods": true
+  },
+  {
+    "name": "java.util.Set",
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.RpcMetaService",
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.MService",
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.ApiMeta",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.Api",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.Dto",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.Method",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.Property",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.PropertyType",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.common.meta.Anno",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "tech.krpc.model.RpcResult",
+    "allPublicConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.grpc.netty.NettyChannelProvider",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true,
+    "allPublicFields": true
+  },
+  {
+    "name": "io.grpc.netty.NettyServer$1",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.grpc.netty.WriteBufferingAndExceptionHandler",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.grpc.netty.ProtocolNegotiators$WaitUntilActiveHandler",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.grpc.netty.ProtocolNegotiators$GrpcNegotiationHandler",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.grpc.netty.NettyServerHandler",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.grpc.util.SecretRoundRobinLoadBalancerProvider$Provider",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true,
+    "allPublicFields": true
+  },
+  {
+    "name": "io.grpc.internal.DnsNameResolverProvider",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true,
+    "allPublicFields": true
+  },
+  {
+    "name": "io.grpc.internal.PickFirstLoadBalancerProvider",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true,
+    "allPublicFields": true
+  }
+]

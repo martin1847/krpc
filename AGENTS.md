@@ -111,6 +111,31 @@ Ask:
 
 Default to evolving existing components until there is concrete pressure for a new component.
 
+Adding a boolean flag is the same question. Rules from the workspace-level **umbrella
+ADR-0003 "Defaults encode correct behavior"** (distinct from this repo's ADR-0003) —
+read it before choosing a default:
+
+- The default must be the correct behavior. Do not ship a correctness or strictness
+  fix as an opt-in switch. (Capability surfaces such as MCP are the separate opt-in
+  class, and stay default OFF.)
+- For a hand-written `System.getProperty` / `getenv` read: one accessor per flag,
+  resolved lazily on the first-use path inside `try`/`catch`, logging its effective
+  state once at INFO or above (WARN when it switches off a default-ON behavior;
+  DEBUG is invisible in prod and so proves nothing). Never in a static or field
+  initializer, and never copy an accessor's result into a static field —
+  native-image bakes both in at build time, and a captured copy splits the switch
+  (honoured on one path, ignored on another).
+- Container-injected config (`@ConfigProperty`, `@Value`,
+  `@ConfigurationProperties`) is exempt from the previous bullet **per read site,
+  not per flag**: a flag injected in one place and hand-read in another is still
+  bound for the hand-read part. Before calling a flag exempt, grep every read site
+  of its name — `KRPC_MCP` is injected *and* hand-read in two handlers.
+- The static-initializer half is gated: `FlagResolutionGateTest`
+  (`flagsMustNotResolveInStaticInitializers`) in `arch-test`, ADR-0005
+  freeze-ratchet, baseline only shrinks. It scans only the six `OnlyCoreModules`
+  and does not see duplicate hand-written reads, reflection, or non-`System` config
+  sources — green is not proof, and outside those modules nothing was even asked.
+
 ## Code Traceability
 
 Add a short source reference in code only for durable architectural memory:

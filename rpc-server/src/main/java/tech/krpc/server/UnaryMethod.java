@@ -308,22 +308,66 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     /**
      * Log a dispatch failure at the level its CLASS warrants, not one level for everything.
      *
-     * <p>Everything NOT in {@link #LOG_WITHOUT_STACK} keeps the full throwable — {@code INTERNAL},
-     * {@code UNKNOWN}, {@code DATA_LOSS}, {@code ABORTED}, {@code DEADLINE_EXCEEDED}, and any code
-     * a future gRPC version adds. Default-to-stack is deliberate and it is the half an earlier
-     * version got wrong: it stacked only {@code UNKNOWN}, so a genuine {@code INTERNAL} or
-     * {@code DATA_LOSS} — whose description the client is NOT shown — left one bare line and no
-     * cause chain anywhere. Withholding detail from the client is only defensible while the server
-     * still records it.
+     * <p>The status code alone is too coarse to decide this, because several codes are genuinely
+     * ambiguous: {@code RESOURCE_EXHAUSTED} is a quota refusal or a full disk;
+     * {@code UNAVAILABLE} is a not-yet-loaded JWKS or a dependency that fell over. So the code
+     * picks the floor and <b>the presence of a cause raises it</b>:
+     *
+     * <ul>
+     *   <li><b>A cause means something actually threw.</b> Whoever built that status was reporting
+     *       a failure, not making a decision, so it gets the full stack whatever the code says.</li>
+     *   <li><b>No cause means the status was constructed deliberately</b> —
+     *       {@code Status.RESOURCE_EXHAUSTED.withDescription("daily quota")} is a refusal someone
+     *       decided to return. One bounded line.</li>
+     * </ul>
+     *
+     * <p>This keeps both properties that pull against each other. A flood against a rate limiter
+     * trips the deliberate, cause-less path, so it cannot be used as a log-amplification lever; an
+     * {@code IOException} surfaced as {@code UNAVAILABLE} keeps the cause chain that is the only
+     * way to diagnose it. And unlike a code-only rule it reads a signal that is really in the
+     * data, rather than guessing intent from an enum.
+     *
+     * <p><b>{@code INVALID_ARGUMENT} never upgrades</b>, cause or not. Its cause is not a fault
+     * report: {@code toClientError} attaches the decode failure itself, whose Jackson chain quotes
+     * the rejected scalar and the input around it. The exception IS the refusal there, and its
+     * payload is caller data — the one code where a cause is expected and means the opposite of a
+     * server fault.
      */
     static void logDispatchFailure(String traceId, Throwable mapped, Throwable original) {
-        var code = Status.fromThrowable(mapped).getCode();
-        if (LOG_WITHOUT_STACK.contains(code)) {
-            log.warn("{} dispatch rejected: {} {}", traceId, code,
-                    original.getClass().getSimpleName());
+        var status = Status.fromThrowable(mapped);
+        var code = status.getCode();
+        if (LOG_WITHOUT_STACK.contains(code) && !isFaultReport(status, code)) {
+            log.warn("{} dispatch rejected: {} {}{}", traceId, code,
+                    original.getClass().getSimpleName(), loggableDescription(status, code));
             return;
         }
         log.error("{} dispatch failed: {}", traceId, code, original);
+    }
+
+    /** A cause on anything but {@code INVALID_ARGUMENT} marks this as a real failure. */
+    private static boolean isFaultReport(Status status, Status.Code code) {
+        return Status.Code.INVALID_ARGUMENT != code && null != status.getCause();
+    }
+
+    /**
+     * The description, appended to the bounded line so a refusal is not invisible on BOTH sides.
+     *
+     * <p>For a code whose description the client already sees, logging it discloses nothing new.
+     * For a code whose description is withheld from the client, logging it is the entire reason
+     * withholding is acceptable — this is where "JWKS not reachable at …" and "daily quota
+     * exceeded" survive.
+     *
+     * <p>{@code INVALID_ARGUMENT} is the exception, again for the caller-data reason: the built-in
+     * validation text is safe, but a custom jakarta validator that interpolates the rejected value
+     * into its constraint message would put user input into the log through this line. The code
+     * and the exception class name are enough there.
+     */
+    private static String loggableDescription(Status status, Status.Code code) {
+        if (Status.Code.INVALID_ARGUMENT == code) {
+            return "";
+        }
+        var description = status.getDescription();
+        return (null != description && !description.isBlank()) ? " : " + description : "";
     }
 
     static final int MAX_ERROR_LENGTH = 100;

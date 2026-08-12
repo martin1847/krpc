@@ -342,16 +342,31 @@ away** — answered from the status code alone:
 
 | class | statuses | agent-face `message` | server log |
 | --- | --- | --- | --- |
-| **the caller's request was refused** | `INVALID_ARGUMENT`, `NOT_FOUND`, `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE` | **the description, verbatim** | bounded WARN, no stack |
-| **the caller's request was refused, but the reason is sensitive** | `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNAVAILABLE`, `RESOURCE_EXHAUSTED`, `UNIMPLEMENTED`, `CANCELLED` | one fixed string per code (`unauthenticated`, `permission denied`, …) | bounded WARN, no stack |
+| **the caller's request was refused** | `INVALID_ARGUMENT`, `NOT_FOUND`, `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE` | **the description, verbatim** | bounded WARN — unless it carries a cause† |
+| **the caller's request was refused, but the reason is sensitive** | `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNAVAILABLE`, `RESOURCE_EXHAUSTED`, `UNIMPLEMENTED`, `CANCELLED` | one fixed string per code (`unauthenticated`, `permission denied`, …) | bounded WARN — unless it carries a cause† |
 | **we broke** | `INTERNAL`, `UNKNOWN`, `DATA_LOSS`, `ABORTED`, `DEADLINE_EXCEEDED`, **and anything not listed above** | `internal error`, plus `, trace=<traceparent>` when the caller sent one | **ERROR with the full stack** |
 
-Read the two columns independently — they are separate decisions. `RESOURCE_EXHAUSTED` is a good
-example: its description is withheld (a quota message and an out-of-memory condition arrive on the
-same code and cannot be told apart), but it is logged without a stack, because anyone who can
-reach the port can trigger it at will and a stack per rejected request is a log-amplification
-lever. The same reasoning puts `UNIMPLEMENTED` (endpoint scanning) and `CANCELLED` (client
-hang-ups) on the bounded side of the log column.
+Read the two columns independently — they are separate decisions, and for one whole row they
+disagree. `RESOURCE_EXHAUSTED` is the clearest case: its description is withheld from the client
+(a quota message and an out-of-memory condition arrive on the same code and the framework cannot
+tell them apart), yet it is normally logged without a stack, because anyone who can reach the
+port can trigger it at will and a stack per rejected request is a log-amplification lever. The
+same reasoning covers `UNIMPLEMENTED` (endpoint scanning) and `CANCELLED` (client hang-ups).
+
+**† A cause raises the log floor.** The code alone is too coarse — `RESOURCE_EXHAUSTED` is a
+quota refusal *or* a full disk, `UNAVAILABLE` is an unloaded JWKS *or* a dependency that fell
+over — so the deciding signal is whether anything actually threw:
+
+- `Status.X.withCause(someException)` → something failed → **ERROR with the full stack**,
+  whatever the code.
+- `Status.X.withDescription("daily quota")` with no cause → somebody *decided* to refuse →
+  **bounded WARN**.
+
+A flood against a rate limiter takes the second path, so the amplification lever stays shut; an
+`IOException` surfaced as `UNAVAILABLE` takes the first, so the cause chain survives.
+`INVALID_ARGUMENT` is the one code that never upgrades: its cause is the decode failure itself,
+whose Jackson chain quotes the rejected value and the input around it — there, a cause means
+caller data, not a server fault.
 
 **The default is the bottom row.** A code not named above — including any gRPC adds later — is
 opaque to the client and fully logged. Disclosure is opt-in.
@@ -367,9 +382,23 @@ Two things are withheld, both because they were actively harmful:
   it turns "is my token rejected?" into "which part of my forgery was wrong?". One string per
   code removes the oracle while leaving the code (and therefore retry/re-auth logic) intact.
 
-Nothing is lost operationally. Whatever the client is not shown, the server logs — with the same
-traceparent the client is handed, so the two join. That is why the log column defaults to a full
-stack: withholding detail from the caller is only defensible while somebody still records it.
+**What the server records, exactly** — the earlier claim that "whatever the client is not shown,
+the server logs" was aspirational, so here is the actual behaviour:
+
+- The **status code and the failing exception's class name** are always logged, on every path.
+- The **description** is logged for every code EXCEPT `INVALID_ARGUMENT`. For a pass-through code
+  that adds no exposure (the client already sees it); for a withheld code it is the entire reason
+  withholding is acceptable — this is where `JWKS not reachable at …` and `daily quota exceeded`
+  survive for an operator.
+- The **full cause chain** is logged whenever the status carries a cause, or the code is one of
+  ours (`INTERNAL`/`UNKNOWN`/`DATA_LOSS`/`ABORTED`/`DEADLINE_EXCEEDED`/anything unlisted).
+- **Not logged at all: an `INVALID_ARGUMENT` description or cause.** Deliberate — a custom jakarta
+  validator that interpolates the rejected value into its constraint message would otherwise put
+  user input into the log, and the Jackson chain behind a decode failure quotes the rejected
+  scalar directly. The code plus the exception class name identify what happened without it.
+
+Everything logged is keyed by the same traceparent the client is handed for a server fault, so
+the two join.
 
 > **Service authors: your refusal text reaches the client verbatim.** The message you put in a
 > `NOT_FOUND`, `FAILED_PRECONDITION`, `ALREADY_EXISTS`, `OUT_OF_RANGE` or an
@@ -377,6 +406,15 @@ stack: withholding detail from the caller is only defensible while somebody stil
 > `/agent/invoke` or MCP. Write it for that reader: no internal identifiers or hostnames, no SQL
 > or stack fragments, no file paths, no user data or anything echoed back from the request. Say
 > what the caller should do, not what the server saw.
+>
+> **If you need the caller to see a withheld detail, use the business-code channel.** The
+> framework will not open up a system code's description — it cannot tell your "daily quota
+> reached" from a `RESOURCE_EXHAUSTED` raised by the server running out of memory, so it withholds
+> both. When the caller genuinely needs the specifics, return them as a soft
+> `RpcResult.error(code, msg)` with a business code (§3, ≥ 1000 by the numbering suggestion):
+> that channel is yours, it is delivered verbatim, and it is the one the caller can branch on.
+> Throwing `Status.RESOURCE_EXHAUSTED.withDescription("…")` and expecting the text through is the
+> mistake this note exists to prevent.
 >
 > **The same applies to custom jakarta validators.** A constraint message travels on
 > `INVALID_ARGUMENT` and is passed through, so a validator that interpolates the rejected value

@@ -241,6 +241,101 @@ class UnaryMethodErrorMappingTest {
                 () -> "the rejected value must not reach the log: " + event.getFormattedMessage());
     }
 
+    // ------------------------------------------------------------------------------------------
+    // A CAUSE raises the log floor. The status code alone is ambiguous -- RESOURCE_EXHAUSTED is a
+    // quota refusal or a full disk, UNAVAILABLE is an unloaded JWKS or a dead dependency -- so the
+    // discriminator is whether anything actually threw, which is a signal really present in the
+    // data rather than another guess at intent.
+    // ------------------------------------------------------------------------------------------
+
+    /** Something threw: full stack, whatever the code says. */
+    @ParameterizedTest(name = "{0} WITH a cause is logged at ERROR with the stack")
+    @org.junit.jupiter.params.provider.ValueSource(
+            strings = {"RESOURCE_EXHAUSTED", "UNAVAILABLE", "UNIMPLEMENTED", "NOT_FOUND",
+                    "PERMISSION_DENIED", "CANCELLED"})
+    void aCauseUpgradesEvenABoundedCode(String code) {
+        var cause = new java.io.IOException("No space left on device: /var/lib/krpc/spool");
+        var mapped = Status.fromCode(Status.Code.valueOf(code))
+                .withDescription("could not accept the request").withCause(cause)
+                .asRuntimeException();
+
+        var event = captureLogs(mapped, cause).get(0);
+
+        assertEquals(ch.qos.logback.classic.Level.ERROR, event.getLevel(),
+                () -> code + " carrying a cause is a real failure, not a decision");
+        assertNotNull(event.getThrowableProxy(), () -> code + " must keep the cause chain");
+        assertEquals("No space left on device: /var/lib/krpc/spool",
+                event.getThrowableProxy().getMessage(), "the real cause stays recoverable");
+    }
+
+    /**
+     * A deliberately constructed refusal stays bounded — this is the property that keeps a flood
+     * against a rate limiter from becoming a log-amplification lever.
+     */
+    @ParameterizedTest(name = "{0} with NO cause stays a bounded WARN")
+    @org.junit.jupiter.params.provider.ValueSource(
+            strings = {"RESOURCE_EXHAUSTED", "UNAVAILABLE", "UNIMPLEMENTED", "CANCELLED"})
+    void aDeliberateRefusalWithoutACauseStaysBounded(String code) {
+        var mapped = Status.fromCode(Status.Code.valueOf(code))
+                .withDescription("daily quota reached").asRuntimeException();
+
+        var event = captureLogs(mapped, new IllegalStateException("throttled")).get(0);
+
+        assertEquals(ch.qos.logback.classic.Level.WARN, event.getLevel(),
+                () -> code + " without a cause is a decision, not a fault");
+        assertNull(event.getThrowableProxy(),
+                () -> code + " must not hand an attacker a stack per request");
+    }
+
+    /**
+     * THE INTERACTION THAT WOULD HAVE UNDONE THE PREVIOUS FIX. The real decode path attaches the
+     * JsonDecodeException as the status cause, so a naive "cause upgrades" rule would put the
+     * Jackson chain -- which quotes the rejected scalar and its surrounding input -- back into the
+     * logs. INVALID_ARGUMENT therefore never upgrades.
+     */
+    @Test
+    void realDecodeFailure_staysBounded_despiteCarryingACause() {
+        var jackson = new RuntimeException(
+                "Cannot coerce Integer 4111111111111111 into String, field 'card'");
+        var original = new JsonDecodeException("malformed", jackson);
+        var mapped = UnaryMethod.toClientError(original, TRACE);
+
+        assertNotNull(Status.fromThrowable(mapped).getCause(),
+                "precondition: the real mapping DOES attach a cause here");
+
+        var event = captureLogs(mapped, original).get(0);
+
+        assertEquals(ch.qos.logback.classic.Level.WARN, event.getLevel());
+        assertNull(event.getThrowableProxy(), "the Jackson chain must not reach the log");
+        assertFalse(event.getFormattedMessage().contains("4111111111111111"),
+                () -> "the rejected value must not reach the log: " + event.getFormattedMessage());
+        assertFalse(event.getFormattedMessage().contains("card"),
+                () -> "not even the field name: " + event.getFormattedMessage());
+    }
+
+    /**
+     * A bounded line still records the description, so a refusal is not invisible on BOTH sides —
+     * this is where "JWKS not reachable at …" and "daily quota exceeded" survive for an operator.
+     * INVALID_ARGUMENT is excluded for the same caller-data reason as above.
+     */
+    @Test
+    void boundedLine_carriesTheDescription_exceptForInvalidArgument() {
+        var withheld = Status.UNAVAILABLE
+                .withDescription("JWKS not reachable at https://idp.internal/jwks")
+                .asRuntimeException();
+        var logged = captureLogs(withheld, new IllegalStateException("x")).get(0).getFormattedMessage();
+        assertTrue(logged.contains("JWKS not reachable at https://idp.internal/jwks"),
+                () -> "the client is not shown this, so the server must be: " + logged);
+
+        var callerData = Status.INVALID_ARGUMENT
+                .withDescription("Card : number('4111111111111111' is not a valid PAN)")
+                .asRuntimeException();
+        var suppressed = captureLogs(callerData, new IllegalStateException("x")).get(0)
+                .getFormattedMessage();
+        assertFalse(suppressed.contains("4111111111111111"),
+                () -> "a custom validator's interpolated value must not reach the log: " + suppressed);
+    }
+
     /** An over-long application message is truncated before it reaches the wire. */
     @Test
     void longMessage_isTruncated() {

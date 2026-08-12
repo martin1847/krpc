@@ -1,6 +1,8 @@
 package tech.krpc.server.agent;
 
+import java.util.EnumSet;
 import java.util.Locale;
+import java.util.Set;
 
 import io.grpc.Status;
 
@@ -10,35 +12,43 @@ import io.grpc.Status;
  * <h2>Why this is a separate layer, and not part of the mapping</h2>
  * {@code UnaryMethod.toClientError} classifies — one table, one {@code code} per cause, identical on
  * every face. This class decides how much of the accompanying <em>description</em> that face may
- * show. <b>Those are deliberately different concerns and this is not a re-split of the mapping:
- * the code is uniform across faces; the description's detail level is graded by exposure.</b> The
- * gRPC face is a service-to-service surface where a detailed description is worth its diagnostic
- * value; {@code /agent/invoke} and {@code /mcp} answer arbitrary agent callers, so they get the
- * code plus the least text that still lets a legitimate caller act.
+ * show. <b>The code is uniform across faces; only the description's detail is graded by exposure.</b>
+ * gRPC is a service-to-service surface where a detailed description earns its diagnostic value;
+ * {@code /agent/invoke} and {@code /mcp} answer arbitrary agent callers.
  *
- * <h2>What it withholds, and why</h2>
+ * <h2>The rule: WHOSE FAULT is it, and does saying so give anything away</h2>
+ * An earlier version of this class claimed to distinguish "text a service author wrote for the
+ * caller" from "text nobody wrote for the caller". It could not: a description is a bare string
+ * with no provenance, no marker type and no metadata, so that framing described an intent the code
+ * had no way to implement. What it actually did was check the status code — which is fine, as long
+ * as the rule is stated in terms of the status code and nothing else.
+ *
+ * <p>Descriptions pass through for exactly one class of status: <b>the caller's own request is at
+ * fault, and naming the fault reveals nothing about us</b>. Those are the codes a service uses to
+ * model a rejected request — {@code INVALID_ARGUMENT}, {@code NOT_FOUND}, {@code ALREADY_EXISTS},
+ * {@code FAILED_PRECONDITION}, {@code OUT_OF_RANGE}. Everything else is replaced, including:
+ *
  * <ul>
- *   <li><b>Unexpected failures</b> ({@code UNKNOWN}) carry the thrown class name and its raw
- *       {@code getMessage()} in the description. That is SQL fragments, connection strings, file
- *       paths, internal class names, and whatever an application exception happened to interpolate
- *       — including the caller's own rejected input. None of it crosses this boundary.</li>
- *   <li><b>Authentication and authorization outcomes</b> are collapsed to one string per code. The
- *       underlying descriptions distinguish "JWKS not ready" from "empty token" from "unknown kid"
- *       from "bad signature" from "expired", several of them quoting the {@code kid}, {@code exp}
- *       or client id back. To an unauthenticated caller that is a credential-state oracle: it turns
- *       "is this token rejected?" into "which part of my forgery was wrong?".</li>
+ *   <li><b>Our fault</b> — {@code INTERNAL}, {@code UNKNOWN}, {@code DATA_LOSS}, {@code ABORTED},
+ *       {@code DEADLINE_EXCEEDED}. These descriptions carry the thrown class and its raw message:
+ *       SQL fragments, connection strings, hostnames, file paths, and whatever an application
+ *       exception interpolated — including the caller's own input echoed back.</li>
+ *   <li><b>The caller's fault, but sensitive</b> — {@code UNAUTHENTICATED},
+ *       {@code PERMISSION_DENIED}, {@code UNAVAILABLE}. The auth engine distinguishes "JWKS not
+ *       ready" from "empty token" from "unknown kid" from "bad signature" from "expired", several
+ *       quoting the {@code kid}, {@code exp} or client id back. To an unauthenticated caller that
+ *       is a credential-state oracle: it turns "is my token rejected?" into "which part of my
+ *       forgery was wrong?".</li>
  * </ul>
  *
- * <h2>What it keeps</h2>
- * Every AUTHORED description survives intact: {@code INVALID_ARGUMENT} describing the caller's own
- * request ({@code name(must not be blank)}, {@code malformed JSON request body}), and business
- * statuses such as {@code NOT_FOUND} / {@code ALREADY_EXISTS} / {@code FAILED_PRECONDITION} whose
- * message the service author wrote deliberately for the caller (AGENT-002 F2/F3). Withholding those
- * would not close a leak — it would delete the error model. Only UNAUTHORED text is withheld: an
- * exception's raw message, and the auth engine's internal reason.
+ * <p><b>The default is to replace.</b> A code that is not in the pass-through set — including any
+ * code a future gRPC version adds — is generic. Disclosure has to be opted into explicitly; that
+ * is the same default-deny posture as the rest of this wave, and it is what makes the leak this
+ * class was written to stop unrepeatable.
  *
- * <p>The withheld detail is not lost: {@code UnaryMethod} logs it server-side with the same
- * traceparent the client is handed back for {@code UNKNOWN}, so an operator can join the two.
+ * <p>Nothing is lost operationally: the withheld detail is logged server-side (see
+ * {@code UnaryMethod.logDispatchFailure}) against the same traceparent the client is handed for a
+ * failure that is ours.
  */
 final class AgentErrorMessage {
 
@@ -48,42 +58,60 @@ final class AgentErrorMessage {
     static final String INTERNAL = "internal error";
 
     /**
+     * The ONLY statuses whose description reaches an agent caller: the request itself is wrong, and
+     * saying how discloses nothing about the server. These are also precisely the codes a service
+     * author uses to model a rejected request, so this is where the business error model lives
+     * (AGENT-002 F2/F3) — {@code NOT_FOUND "city 999 does not exist"} still reaches the caller.
+     */
+    private static final Set<Status.Code> DESCRIPTION_IS_SAFE = EnumSet.of(
+            Status.Code.INVALID_ARGUMENT,
+            Status.Code.NOT_FOUND,
+            Status.Code.ALREADY_EXISTS,
+            Status.Code.FAILED_PRECONDITION,
+            Status.Code.OUT_OF_RANGE);
+
+    /**
      * The client-visible message for a dispatch failure.
      *
      * @param status      the classified status from {@code UnaryMethod.toClientError}
      * @param traceparent the inbound W3C traceparent, or null/blank when the caller sent none;
-     *                    echoed ONLY for {@code UNKNOWN}, as the correlation id to quote to support
+     *                    echoed only when the failure is ours, as the id to quote to support
      */
     static String forClient(Status status, String traceparent) {
         var code = status.getCode();
-        if (Status.Code.UNKNOWN == code) {
+        if (DESCRIPTION_IS_SAFE.contains(code)) {
+            var description = status.getDescription();
+            return (null != description && !description.isBlank()) ? description : generic(code);
+        }
+        if (isOurFault(code)) {
             return (null == traceparent || traceparent.isBlank())
                     ? INTERNAL
                     : INTERNAL + ", trace=" + traceparent;
         }
-        if (isCredentialOutcome(code)) {
-            return generic(code);
-        }
-        // Everything else keeps its description. These are AUTHORED statuses -- a validation
-        // failure describing the caller's own fields, or a business NOT_FOUND / ALREADY_EXISTS /
-        // FAILED_PRECONDITION whose message application code wrote deliberately for the caller
-        // (AGENT-002 F2/F3). Collapsing those would not close a leak, it would delete the error
-        // model. Only unauthored text -- an exception's raw message, or an auth engine's internal
-        // reason -- is withheld.
-        var description = status.getDescription();
-        return (null != description && !description.isBlank()) ? description : generic(code);
+        return generic(code);
     }
 
     /**
-     * The credential family, whose descriptions are written by the auth engine rather than by the
-     * service author, and whose variety is exactly what makes them an oracle. {@code UNAVAILABLE}
-     * is here because that is how a not-yet-ready JWKS surfaces: "the trust root is not loaded" is
-     * infrastructure state an unauthenticated caller should not be able to probe.
+     * Whether the caller should read this as "the server broke" rather than "your request was
+     * refused". Default-deny: anything not recognised as a caller-side refusal counts as ours, so
+     * an unmapped or newly-added code gets the opaque answer rather than an accidental disclosure.
      */
-    private static boolean isCredentialOutcome(Status.Code code) {
+    private static boolean isOurFault(Status.Code code) {
+        return !DESCRIPTION_IS_SAFE.contains(code) && !isCallerRefusal(code);
+    }
+
+    /**
+     * Caller-side refusals whose reason is nonetheless withheld. Kept distinct from "our fault" so
+     * the client is not told the server broke when it did not — the code (16/7/14) already tells a
+     * caller whether to re-authenticate, stop, or retry, which is all it needs.
+     */
+    private static boolean isCallerRefusal(Status.Code code) {
         return Status.Code.UNAUTHENTICATED == code
                 || Status.Code.PERMISSION_DENIED == code
-                || Status.Code.UNAVAILABLE == code;
+                || Status.Code.UNAVAILABLE == code
+                || Status.Code.RESOURCE_EXHAUSTED == code
+                || Status.Code.UNIMPLEMENTED == code
+                || Status.Code.CANCELLED == code;
     }
 
     /** {@code PERMISSION_DENIED} -> {@code "permission denied"}: the code's name, nothing more. */

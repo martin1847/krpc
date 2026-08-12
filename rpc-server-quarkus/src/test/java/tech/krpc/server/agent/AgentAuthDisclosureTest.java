@@ -306,6 +306,44 @@ class AgentAuthDisclosureTest {
         assertFalse(body.contains("secrets.yml"), body);
     }
 
+    /**
+     * The leak the previous rule missed, driven through BOTH real handlers: an explicit
+     * {@code Status.INTERNAL} whose description is a database error. It used to be echoed verbatim.
+     */
+    @Test
+    void explicitInternalStatus_isOpaqueOnBothFaces() {
+        var leaky = Status.INTERNAL.withDescription(
+                        "SQLException: Table 'orders.payment' doesn't exist;"
+                                + " jdbc:mysql://db-prod-3.internal:3306 /etc/krpc/app.yml")
+                .asRuntimeException();
+
+        var http = invokeThrowing(leaky);
+        assertEquals("{\"code\":13,\"message\":\"internal error\"}", http);
+
+        var mcp = mcpRawThrowing(leaky);
+        assertEquals("internal error", parseEnvelope(mcp).get("message"));
+
+        for (var body : List.of(http, mcp)) {
+            for (var secret : new String[]{"SQLException", "orders.payment", "jdbc:mysql",
+                    "db-prod-3", "app.yml", "3306"}) {
+                assertFalse(body.contains(secret), () -> secret + " leaked: " + body);
+            }
+        }
+    }
+
+    private String mcpRawThrowing(Throwable toThrow) {
+        WebInvoker web = (in, md) -> {
+            throw toThrow;
+        };
+        var registry = new McpToolRegistry();
+        registry.init(Map.of("Secure/op", web), mcpApiMeta());
+        var handler = new McpHandler();
+        handler.registry = registry;
+        var request = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\","
+                + "\"params\":{\"name\":\"Secure_op\",\"arguments\":{\"name\":\"x\"}}}";
+        return new String(handler.handle(request, new ArrayList<>(), new DefaultHttpHeaders()), UTF_8);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     /**

@@ -101,15 +101,36 @@ public RpcResult<Integer> testLogicError(Integer i) {
     return RpcResult.error(666, "业务逻辑失败");   // DemoServiceImpl.java:43-46
 }
 ```
-`RpcResult.java:22-24` is explicit: **do not use Java exceptions to convey
+`RpcResult.java:22-25` is explicit: **do not use Java exceptions to convey
 business errors — define an error code instead.**
+
+**Numbering (a suggestion, not a rule): start business codes at 1000.** gRPC status occupies
+0–16 and 17–999 is reserved for system codes krpc may add later, so a business code at 1000 or
+above cannot collide with either, and a four-digit code is recognisable on sight as business
+semantics rather than a transport or framework failure. Band widths are unchanged: hundreds per
+business area (1000–1099, 1100–1199, …), thousands for a large one (1000–1999, 2000–2999, …).
+
+**The framework does not act on this.** Nothing validates the range, nothing reserves it, and
+nothing routes on it; a business code below 1000 works exactly as before. It is a numbering
+convention — do not write code that depends on it.
 
 ### Hard (system/security/validation) → throw
 System errors, auth failures, validation failures, and unexpected
 `RuntimeException`s are thrown. The server catches everything
-(`UnaryMethod.java:212-231`): a `StatusException`/`StatusRuntimeException` passes
+(`UnaryMethod.toClientError`): a `StatusException`/`StatusRuntimeException` passes
 through as-is; anything else is wrapped in `Status.UNKNOWN` with the message
-**truncated to 100 chars** and an error log keyed by `traceId`.
+**truncated to 100 chars**.
+
+**Two caveats before you reach for `Status.X.withDescription(...)`:**
+
+- **The description does not always reach the client.** On gRPC it does. On the agent faces it
+  reaches the caller only for the request-refusal codes (`INVALID_ARGUMENT`, `NOT_FOUND`,
+  `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE`); every other code, including
+  `INTERNAL`, is replaced with a generic string — see §4. If you want the caller to read your
+  text, model the failure as a refusal code, or return a soft `RpcResult.error`.
+- **Not every throw is logged with a stack.** Only failures classified as the server's are
+  (`INTERNAL`/`UNKNOWN`/`DATA_LOSS`/`ABORTED`/`DEADLINE_EXCEEDED` and anything unrecognised).
+  A refused request is a bounded one-line WARN — see §4.
 
 | | Soft | Hard |
 | --- | --- | --- |
@@ -117,7 +138,7 @@ through as-is; anything else is wrapped in `Status.UNKNOWN` with the message
 | express | `return RpcResult.error(code,msg)` | `throw` (prefer `Status.X.withDescription(..).asRuntimeException()`) |
 | code | business code (hundreds/thousands) | gRPC Status code |
 | client sees | normal `RpcResult`, `!isOk()` | gRPC `onError` / `StatusRuntimeException` |
-| logged | no | `log.error(traceId, ex)` |
+| logged | no | server fault: `log.error` + stack; refusal: bounded WARN (§4) |
 
 - **DON'T:** throw for business errors; rely on exception messages reaching the
   client intact (they're truncated to 100 chars).
@@ -305,50 +326,64 @@ on the gRPC face, and the HTTP faces agree with it rather than inventing a diffe
 >
 > MCP codes for validation and auth failures are unchanged — those already carried a `Status`
 > that `Status.fromThrowable` could read. **If you branch on `13` from `/agent/invoke` to mean
-> "bad request", that stops working**: 13 no longer appears on this face at all. Branch on `3`
-> for "fix your input" and `2` for "retryable/server-side".
+> "bad request", that stops working**: a dispatched request never answers 13 any more. Branch on
+> `3` for "fix your input" and `2` for "retryable/server-side". (13 is not extinct on this face:
+> a failure OUTSIDE dispatch — building the request context, or serializing the response — still
+> answers `{"code":13,"message":"internal error"}`. It means the same thing it now means
+> everywhere: the server broke, and it was not your request's shape.)
 
-**How much the `message` says depends on the face.** The *code* is uniform; the *description*
-is graded by exposure. That is not a re-split of the mapping — one classification, two
-disclosure levels — and the split exists because an agent-facing endpoint answers arbitrary
-callers while gRPC is a service-to-service surface.
+**How much the `message` says depends on the face.** The *code* is uniform everywhere; the
+*description* is graded. That is not a re-split of the mapping — one classification, two
+disclosure levels — and it exists because an agent-facing endpoint answers arbitrary callers
+while gRPC is a service-to-service surface.
 
-| status | gRPC description | `/agent/invoke` and MCP `message` |
-| --- | --- | --- |
-| `INVALID_ARGUMENT` (validation) | `Dto : field(constraint)` | **same** — it describes the caller's own request |
-| `INVALID_ARGUMENT` (JSON decode) | `malformed JSON request body` | **same** — already neutral |
-| business statuses (`NOT_FOUND`, `ALREADY_EXISTS`, `FAILED_PRECONDITION`, …) | the author's message | **same** — the service author wrote it for the caller |
-| `UNAUTHENTICATED` / `PERMISSION_DENIED` / `UNAVAILABLE` | the precise reason | one fixed string per code: `unauthenticated`, `permission denied`, `unavailable` |
-| `UNKNOWN` | `Class,message` of the thrown exception | `internal error`, plus `, trace=<traceparent>` when the caller sent one |
+The rule is a single question — **whose fault is it, and does naming the fault give anything
+away** — answered from the status code alone:
 
-The dividing line is authorship, not severity: text a service author wrote for the caller is
-kept; text nobody wrote for the caller — an exception's raw message, the auth engine's internal
-reason — is withheld.
+| class | statuses | agent-face `message` | server log |
+| --- | --- | --- | --- |
+| **the caller's request was refused** | `INVALID_ARGUMENT`, `NOT_FOUND`, `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE` | **the description, verbatim** | bounded WARN, no stack |
+| **the caller's request was refused, but the reason is sensitive** | `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNAVAILABLE`, `RESOURCE_EXHAUSTED`, `UNIMPLEMENTED`, `CANCELLED` | one fixed string per code (`unauthenticated`, `permission denied`, …) | bounded WARN, no stack |
+| **we broke** | `INTERNAL`, `UNKNOWN`, `DATA_LOSS`, `ABORTED`, `DEADLINE_EXCEEDED`, **and anything not listed above** | `internal error`, plus `, trace=<traceparent>` when the caller sent one | **ERROR with the full stack** |
 
-> **Service authors: your business error text reaches the client verbatim.** Because krpc cannot
-> tell a deliberate message from an accidental one, the message you put in a `NOT_FOUND`,
-> `FAILED_PRECONDITION`, `ALREADY_EXISTS` or an `RpcResult.error(...)` is delivered unedited to
-> whoever called you — including an agent over `/agent/invoke` or MCP. Write it for that reader:
-> no internal identifiers or hostnames, no SQL or stack fragments, no file paths, no user data or
-> anything echoed back from the request. Say what the caller should do, not what the server saw.
+Read the two columns independently — they are separate decisions. `RESOURCE_EXHAUSTED` is a good
+example: its description is withheld (a quota message and an out-of-memory condition arrive on the
+same code and cannot be told apart), but it is logged without a stack, because anyone who can
+reach the port can trigger it at will and a stack per rejected request is a log-amplification
+lever. The same reasoning puts `UNIMPLEMENTED` (endpoint scanning) and `CANCELLED` (client
+hang-ups) on the bounded side of the log column.
 
-Two things are withheld on the agent faces, both because they were actively harmful:
+**The default is the bottom row.** A code not named above — including any gRPC adds later — is
+opaque to the client and fully logged. Disclosure is opt-in.
 
-- **Unexpected-failure detail.** An `UNKNOWN` description carries the thrown class and its raw
-  message — SQL fragments, connection strings, file paths, and whatever an application exception
-  interpolated, including the caller's own rejected input. None of it crosses the boundary.
+Two things are withheld, both because they were actively harmful:
+
+- **Server-fault detail.** These descriptions carry the thrown class and its raw message — SQL
+  fragments, connection strings, hostnames, file paths, and whatever an application exception
+  interpolated, including the caller's own input echoed back.
 - **Auth reasons.** The underlying descriptions distinguish "JWKS not ready" from "empty token"
   from "unknown kid" from "bad signature" from "expired", several quoting the `kid`, `exp`,
   audience or client id back. To an unauthenticated caller that is a credential-state oracle —
   it turns "is my token rejected?" into "which part of my forgery was wrong?". One string per
   code removes the oracle while leaving the code (and therefore retry/re-auth logic) intact.
 
-Nothing is lost operationally: the withheld detail is logged server-side against the same
-traceparent the client is handed for `UNKNOWN` (`AgentErrorMessage`,
-`rpc-server-quarkus/.../agent/AgentErrorMessage.java`). Server logs are also graded — an
-expected client error (3/7/16) is one bounded line with no stack, because a `JsonDecodeException`
-stack quotes the rejected input and auth failures are attacker-triggerable log amplification;
-only `UNKNOWN` keeps the full cause chain.
+Nothing is lost operationally. Whatever the client is not shown, the server logs — with the same
+traceparent the client is handed, so the two join. That is why the log column defaults to a full
+stack: withholding detail from the caller is only defensible while somebody still records it.
+
+> **Service authors: your refusal text reaches the client verbatim.** The message you put in a
+> `NOT_FOUND`, `FAILED_PRECONDITION`, `ALREADY_EXISTS`, `OUT_OF_RANGE` or an
+> `RpcResult.error(...)` is delivered unedited to whoever called you — including an agent over
+> `/agent/invoke` or MCP. Write it for that reader: no internal identifiers or hostnames, no SQL
+> or stack fragments, no file paths, no user data or anything echoed back from the request. Say
+> what the caller should do, not what the server saw.
+>
+> **The same applies to custom jakarta validators.** A constraint message travels on
+> `INVALID_ARGUMENT` and is passed through, so a validator that interpolates the rejected value
+> into its message (`"'" + value + "' is not a valid IBAN"`) will echo that value back to the
+> caller — and into the `violations[]` on the MCP face. The built-in constraints are safe:
+> krpc reads only `ConstraintViolation.getMessage()` and never `getInvalidValue()`, so nothing
+> leaks unless your own message puts it there.
 
 The switch is evaluated on the decode path — during the first `parse` call(s), not in the
 class initializer — and the result is then cached for the life of the process. The

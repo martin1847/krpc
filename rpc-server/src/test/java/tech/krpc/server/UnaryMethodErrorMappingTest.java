@@ -3,6 +3,7 @@ package tech.krpc.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,6 +14,7 @@ import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import tech.krpc.server.invoke.ValidationException;
 import tech.krpc.util.JsonDecodeException;
@@ -169,6 +171,74 @@ class UnaryMethodErrorMappingTest {
             assertFalse(description.contains("null"), () -> "no :null artefact: " + description);
             assertFalse(description.startsWith(":"), () -> "no empty prefix: " + description);
         }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // The logging axis. Withholding detail from the client is only defensible while the server
+    // still records it -- an earlier version stacked ONLY UnknOWN, so a genuine INTERNAL (whose
+    // description the client is NOT shown) left one bare line and no cause chain anywhere.
+    // Asserted against a real logback appender, not by reading the code.
+    // ------------------------------------------------------------------------------------------
+
+    private static java.util.List<ch.qos.logback.classic.spi.ILoggingEvent> captureLogs(
+            Throwable mapped, Throwable original) {
+        var logger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(UnaryMethod.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            UnaryMethod.logDispatchFailure(TRACE, mapped, original);
+            return java.util.List.copyOf(appender.list);
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
+
+    /** A genuine system fault keeps ERROR + the full throwable, so the cause chain survives. */
+    @ParameterizedTest(name = "{0} is logged at ERROR with the full stack")
+    @org.junit.jupiter.params.provider.ValueSource(
+            strings = {"INTERNAL", "UNKNOWN", "DATA_LOSS", "ABORTED", "DEADLINE_EXCEEDED"})
+    void serverFaults_keepTheFullStack(String code) {
+        var original = new IllegalStateException("Table 'orders.payment' doesn't exist");
+        var mapped = Status.fromCode(Status.Code.valueOf(code)).withCause(original)
+                .asRuntimeException();
+
+        var events = captureLogs(mapped, original);
+
+        assertEquals(1, events.size(), () -> "expected exactly one log event: " + events);
+        var event = events.get(0);
+        assertEquals(ch.qos.logback.classic.Level.ERROR, event.getLevel(),
+                () -> code + " must log at ERROR");
+        assertNotNull(event.getThrowableProxy(),
+                () -> code + " must carry the throwable -- the client is shown nothing, so this "
+                        + "log is the ONLY record of the cause");
+        assertEquals("Table 'orders.payment' doesn't exist",
+                event.getThrowableProxy().getMessage(), "the real cause is recoverable");
+    }
+
+    /** A refused request gets one bounded line: no stack, and no echo of the rejected input. */
+    @ParameterizedTest(name = "{0} is logged as a bounded WARN with no stack")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "INVALID_ARGUMENT", "NOT_FOUND", "ALREADY_EXISTS", "FAILED_PRECONDITION",
+            "OUT_OF_RANGE", "UNAUTHENTICATED", "PERMISSION_DENIED", "UNAVAILABLE",
+            "RESOURCE_EXHAUSTED", "UNIMPLEMENTED", "CANCELLED"})
+    void refusedRequests_areBoundedAndStackless(String code) {
+        var original = new IllegalArgumentException("rejected value 4111-1111-1111-1111");
+        var mapped = Status.fromCode(Status.Code.valueOf(code)).asRuntimeException();
+
+        var events = captureLogs(mapped, original);
+
+        assertEquals(1, events.size());
+        var event = events.get(0);
+        assertEquals(ch.qos.logback.classic.Level.WARN, event.getLevel(),
+                () -> code + " is a refusal, not a fault -- ERROR here trains operators to ignore it");
+        assertNull(event.getThrowableProxy(),
+                () -> code + " must not carry a stack: it is caller-triggerable at will, and a "
+                        + "decode stack quotes the rejected input");
+        assertFalse(event.getFormattedMessage().contains("4111-1111-1111-1111"),
+                () -> "the rejected value must not reach the log: " + event.getFormattedMessage());
     }
 
     /** An over-long application message is truncated before it reaches the wire. */

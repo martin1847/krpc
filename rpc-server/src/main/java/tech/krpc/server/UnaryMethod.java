@@ -272,28 +272,58 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     }
 
     /**
-     * Log a dispatch failure at the level its CLASS warrants, not at one level for everything.
+     * Statuses that do NOT get a stack trace: the request was refused, not the server broken.
      *
-     * <p>An expected client error — a malformed body, a failed validation, a rejected credential —
-     * gets one bounded line and no stack. Three reasons, all of which bit us:
+     * <p>Two independent reasons, and a code qualifies on either:
      * <ul>
-     *   <li>a stack trace of a {@code JsonDecodeException} contains the Jackson cause, which quotes
-     *       the rejected scalar and surrounding input;</li>
-     *   <li>auth failures are attacker-triggerable, so a full stack per rejected request is a log
-     *       amplification lever;</li>
-     *   <li>they are not faults. ERROR on a caller's typo trains operators to ignore ERROR.</li>
+     *   <li><b>It is the caller's fault.</b> A malformed body, a failed validation, a rejected
+     *       credential, a request for something that does not exist. These are not faults, and
+     *       ERROR-with-stack on a caller's typo trains operators to ignore ERROR. Worse, a
+     *       {@code JsonDecodeException} stack contains the Jackson cause, which quotes the rejected
+     *       scalar and its surrounding input straight into the log.</li>
+     *   <li><b>An attacker can trigger it at will.</b> Rejected credentials, rate limiting, probing
+     *       for unimplemented methods, and client disconnects are all reachable by anyone who can
+     *       reach the port. A stack trace each is a log-amplification lever.</li>
      * </ul>
      *
-     * <p>Only a genuinely unknown failure keeps the full throwable — that one IS a fault, nobody
-     * else records it, and its cause chain is the whole point.
+     * <p>{@code RESOURCE_EXHAUSTED}, {@code UNIMPLEMENTED} and {@code CANCELLED} are here on the
+     * SECOND reason even though their message is withheld from the client as if they were ours:
+     * disclosure and logging are independent axes, and the answer differs. Quota rejection,
+     * endpoint scanning and client hang-ups are routine, unbounded in volume, and their stack says
+     * nothing a bounded line does not.
      */
-    private static void logDispatchFailure(String traceId, Throwable mapped, Throwable original) {
+    private static final java.util.Set<Status.Code> LOG_WITHOUT_STACK = java.util.EnumSet.of(
+            Status.Code.INVALID_ARGUMENT,
+            Status.Code.NOT_FOUND,
+            Status.Code.ALREADY_EXISTS,
+            Status.Code.FAILED_PRECONDITION,
+            Status.Code.OUT_OF_RANGE,
+            Status.Code.UNAUTHENTICATED,
+            Status.Code.PERMISSION_DENIED,
+            Status.Code.UNAVAILABLE,
+            Status.Code.RESOURCE_EXHAUSTED,
+            Status.Code.UNIMPLEMENTED,
+            Status.Code.CANCELLED);
+
+    /**
+     * Log a dispatch failure at the level its CLASS warrants, not one level for everything.
+     *
+     * <p>Everything NOT in {@link #LOG_WITHOUT_STACK} keeps the full throwable — {@code INTERNAL},
+     * {@code UNKNOWN}, {@code DATA_LOSS}, {@code ABORTED}, {@code DEADLINE_EXCEEDED}, and any code
+     * a future gRPC version adds. Default-to-stack is deliberate and it is the half an earlier
+     * version got wrong: it stacked only {@code UNKNOWN}, so a genuine {@code INTERNAL} or
+     * {@code DATA_LOSS} — whose description the client is NOT shown — left one bare line and no
+     * cause chain anywhere. Withholding detail from the client is only defensible while the server
+     * still records it.
+     */
+    static void logDispatchFailure(String traceId, Throwable mapped, Throwable original) {
         var code = Status.fromThrowable(mapped).getCode();
-        if (Status.Code.UNKNOWN == code) {
-            log.error(traceId, original);
+        if (LOG_WITHOUT_STACK.contains(code)) {
+            log.warn("{} dispatch rejected: {} {}", traceId, code,
+                    original.getClass().getSimpleName());
             return;
         }
-        log.warn("{} dispatch rejected: {} {}", traceId, code, original.getClass().getSimpleName());
+        log.error("{} dispatch failed: {}", traceId, code, original);
     }
 
     static final int MAX_ERROR_LENGTH = 100;

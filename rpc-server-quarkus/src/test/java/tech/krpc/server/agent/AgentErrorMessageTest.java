@@ -43,16 +43,21 @@ class AgentErrorMessageTest {
 
     /**
      * Business statuses keep their message. The regression that caught this: an over-broad
-     * "collapse everything that is not INVALID_ARGUMENT" rule silently deleted the authored error
+     * "collapse everything that is not INVALID_ARGUMENT" rule silently deleted the business error
      * model (AGENT-002 F2/F3) — a service returning {@code NOT_FOUND "city 999 does not exist"}
-     * started answering a bare {@code "not found"}. Only UNAUTHORED text is withheld.
+     * started answering a bare {@code "not found"}. These five codes model a REFUSED REQUEST, so
+     * their description is about the caller's own call and discloses nothing about the server.
+     *
+     * <p>{@code RESOURCE_EXHAUSTED} deliberately is NOT in this set — see
+     * {@link #callerRefusals_useTheirOwnNameNotInternalError}: quota text and an out-of-memory
+     * condition arrive on the same code and cannot be told apart, so default-deny applies.
      */
     @ParameterizedTest(name = "{0} keeps its authored description")
     @CsvSource({
             "NOT_FOUND,          city 999 does not exist",
             "ALREADY_EXISTS,     order 42 already submitted",
             "FAILED_PRECONDITION, cart must not be empty",
-            "RESOURCE_EXHAUSTED, daily quota reached",
+            "OUT_OF_RANGE,       page 9999 is past the last page",
     })
     void businessStatuses_keepTheirAuthoredMessage(String code, String authored) {
         var status = Status.fromCode(Status.Code.valueOf(code)).withDescription(authored);
@@ -81,6 +86,47 @@ class AgentErrorMessageTest {
             assertFalse(message.contains(secret),
                     () -> "server internals must not reach the client: " + secret + " in " + message);
         }
+    }
+
+    /**
+     * THE ONE THAT SLIPPED THROUGH. An explicit {@code Status.INTERNAL} carrying a stack-shaped
+     * description reached both agent faces verbatim, because the previous rule only replaced
+     * {@code UNKNOWN} and the credential codes and let everything else pass. The rule is now
+     * default-deny, so this and every other unlisted code are opaque.
+     */
+    @ParameterizedTest(name = "{0} surrenders nothing")
+    @CsvSource({"INTERNAL", "DATA_LOSS", "ABORTED", "DEADLINE_EXCEEDED"})
+    void serverFaultStatuses_surrenderNothing(String code) {
+        var leaky = Status.fromCode(Status.Code.valueOf(code)).withDescription(
+                "SQLException: Table 'orders.payment' doesn't exist; jdbc:mysql://db-prod-3.internal:3306"
+                        + " at com.acme.OrderDao.load(OrderDao.java:88) /etc/krpc/app.yml");
+
+        var message = AgentErrorMessage.forClient(leaky, null);
+
+        assertEquals(AgentErrorMessage.INTERNAL, message);
+        for (var secret : new String[]{"SQLException", "orders.payment", "jdbc:mysql",
+                "db-prod-3", "OrderDao", "app.yml", "3306"}) {
+            assertFalse(message.contains(secret),
+                    () -> code + " leaked " + secret + ": " + message);
+        }
+    }
+
+    /**
+     * Codes that are the caller's fault but whose reason is withheld answer with their own name,
+     * NOT "internal error" — the server did not break and must not claim it did.
+     */
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "RESOURCE_EXHAUSTED, resource exhausted",
+            "UNIMPLEMENTED,      unimplemented",
+            "CANCELLED,          cancelled",
+    })
+    void callerRefusals_useTheirOwnNameNotInternalError(String code, String expected) {
+        var status = Status.fromCode(Status.Code.valueOf(code)).withDescription("quota=500/min for tenant-77");
+        var message = AgentErrorMessage.forClient(status, TRACE);
+
+        assertEquals(expected, message);
+        assertFalse(message.contains("tenant-77"), message);
     }
 
     /** With an inbound trace the client gets a correlation id — and still nothing else. */

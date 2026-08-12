@@ -205,10 +205,9 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             // hardcoded INTERNAL(13) and MCP got Status.fromThrowable's UNKNOWN(2) default -- both
             // labelling a client input error as a server fault. One mapping, one answer per face.
             var traceId = ctx.logTrace();
-            // Same log.error as the gRPC path: the client-visible description is deliberately
-            // sanitized, on the promise that the full cause is recoverable server-side.
-            log.error(traceId, ex);
-            throw toClientError(ex, traceId);
+            var mapped = toClientError(ex, traceId);
+            logDispatchFailure(traceId, mapped, ex);
+            throw mapped;
         } finally {
             gctx.detach(prev);
             MDC.clear();
@@ -272,6 +271,31 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         return traceId.isEmpty() ? detail : traceId + "," + detail;
     }
 
+    /**
+     * Log a dispatch failure at the level its CLASS warrants, not at one level for everything.
+     *
+     * <p>An expected client error — a malformed body, a failed validation, a rejected credential —
+     * gets one bounded line and no stack. Three reasons, all of which bit us:
+     * <ul>
+     *   <li>a stack trace of a {@code JsonDecodeException} contains the Jackson cause, which quotes
+     *       the rejected scalar and surrounding input;</li>
+     *   <li>auth failures are attacker-triggerable, so a full stack per rejected request is a log
+     *       amplification lever;</li>
+     *   <li>they are not faults. ERROR on a caller's typo trains operators to ignore ERROR.</li>
+     * </ul>
+     *
+     * <p>Only a genuinely unknown failure keeps the full throwable — that one IS a fault, nobody
+     * else records it, and its cause chain is the whole point.
+     */
+    private static void logDispatchFailure(String traceId, Throwable mapped, Throwable original) {
+        var code = Status.fromThrowable(mapped).getCode();
+        if (Status.Code.UNKNOWN == code) {
+            log.error(traceId, original);
+            return;
+        }
+        log.warn("{} dispatch rejected: {} {}", traceId, code, original.getClass().getSimpleName());
+    }
+
     static final int MAX_ERROR_LENGTH = 100;
     // https://github.com/openzipkin/brave
     // https://quarkus.io/guides/logging
@@ -301,8 +325,9 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
             responseObserver.onCompleted();
         } catch (Throwable ex) {
             var traceId = ctx.logTrace();
-            log.error(traceId , ex);
-            responseObserver.onError(toClientError(ex, traceId));
+            var mapped = toClientError(ex, traceId);
+            logDispatchFailure(traceId, mapped, ex);
+            responseObserver.onError(mapped);
         } finally {
             gctx.detach(prev);
             MDC.clear();

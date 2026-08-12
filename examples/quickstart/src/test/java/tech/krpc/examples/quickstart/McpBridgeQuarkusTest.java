@@ -157,6 +157,44 @@ class McpBridgeQuarkusTest {
                 () -> "structuredContent.message missing greeting: " + res.body());
     }
 
+    /**
+     * AGENT-ERRCODE / AGENT-ERRCODE-SEC on the MCP face, through the REAL dispatch: a JSON number
+     * into a {@code String} field raises a real {@code JsonDecodeException} inside
+     * {@code UnaryMethod.invokeWeb}. It must arrive as INVALID_ARGUMENT(3) — this face used to
+     * report UNKNOWN(2), because the unmapped exception fell through to
+     * {@code Status.fromThrowable}'s default — and it must not carry Jackson internals.
+     */
+    @Test
+    void toolsCall_numberIntoStringField_isInvalidArgumentCode3() throws Exception {
+        HttpResponse<String> res = post("{\"jsonrpc\":\"2.0\",\"id\":91,\"method\":\"tools/call\","
+                + "\"params\":{\"name\":\"Hello_hello\",\"arguments\":{\"name\":12345}}}");
+        assertEquals(200, res.statusCode(), () -> "body: " + res.body());
+
+        Map<String, Object> result = resultOf(res.body());
+        assertEquals(Boolean.TRUE, result.get("isError"),
+                () -> "a rejected scalar is a tool error: " + res.body());
+
+        String body = res.body();
+        assertTrue(body.contains("\\\"code\\\":3"),
+                () -> "strict-rejected scalar must be code 3, was not: " + body);
+        assertFalse(body.contains("\\\"code\\\":2"),
+                () -> "must no longer be UNKNOWN(2): " + body);
+        assertFalse(body.contains("coerce"), () -> "Jackson internals leaked: " + body);
+        assertFalse(body.contains("JsonDecodeException"), () -> "class name leaked: " + body);
+    }
+
+    /** Validation on the MCP face keeps its typed violations — detail about the caller's own call. */
+    @Test
+    void toolsCall_blankRequiredField_isCode3WithTypedViolations() throws Exception {
+        HttpResponse<String> res = post("{\"jsonrpc\":\"2.0\",\"id\":92,\"method\":\"tools/call\","
+                + "\"params\":{\"name\":\"Hello_hello\",\"arguments\":{\"name\":\"\"}}}");
+
+        String body = res.body();
+        assertTrue(body.contains("\\\"code\\\":3"), () -> "validation must be code 3: " + body);
+        assertTrue(body.contains("must not be blank"),
+                () -> "typed violations are kept on purpose: " + body);
+    }
+
     @Test
     void toolsCall_unknownToolIsInvalidParams() throws Exception {
         // A tool that is not an agentTool method (or plain unknown) is opaque -> JSON-RPC -32602.

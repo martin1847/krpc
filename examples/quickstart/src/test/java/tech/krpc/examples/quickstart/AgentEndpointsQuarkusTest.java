@@ -1,6 +1,7 @@
 package tech.krpc.examples.quickstart;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -91,6 +92,67 @@ class AgentEndpointsQuarkusTest {
         assertEquals(200, res.statusCode(), () -> "unknown-service body: " + res.body());
         assertTrue(res.body().contains("\"code\":5"),
                 () -> "unknown service not code:5: " + res.body());
+    }
+
+    // ----------------------------------------------------------------------------------------
+    // AGENT-ERRCODE / AGENT-ERRCODE-SEC, end to end through the REAL dispatch. These drive a real
+    // JsonDecodeException out of the real UnaryMethod.invokeWeb -- a fake WebInvoker throwing an
+    // already-mapped Status would pass against the old code too, and prove nothing.
+    // ----------------------------------------------------------------------------------------
+
+    /**
+     * A JSON number into a {@code String} field. Strict decoding (1.2.0) rejects it, and the face
+     * must report INVALID_ARGUMENT(3) — it used to report a blanket 13/INTERNAL.
+     */
+    @Test
+    void invoke_numberIntoStringField_isInvalidArgumentCode3() throws Exception {
+        HttpResponse<String> res = send(HttpRequest.newBuilder()
+                .uri(URI.create(AGENT_BASE + "/agent/invoke"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"service\":\"Hello\",\"method\":\"hello\",\"input\":{\"name\":12345}}"))
+                .build());
+
+        assertEquals(200, res.statusCode(), () -> "body: " + res.body());
+        String body = res.body();
+        assertTrue(body.contains("\"code\":3"), () -> "strict-rejected scalar must be code 3: " + body);
+        assertFalse(body.contains("\"code\":13"), () -> "must not be INTERNAL any more: " + body);
+        assertTrue(body.contains("malformed JSON request body"), () -> "sanitized text: " + body);
+        // The Jackson detail behind it must not ride along.
+        assertFalse(body.contains("coerce"), () -> "Jackson internals leaked: " + body);
+        assertFalse(body.contains("JsonDecodeException"), () -> "class name leaked: " + body);
+    }
+
+    /** A blank required field: validation, also 3, and the field detail is deliberately kept. */
+    @Test
+    void invoke_blankRequiredField_isCode3WithFieldDetail() throws Exception {
+        HttpResponse<String> res = send(HttpRequest.newBuilder()
+                .uri(URI.create(AGENT_BASE + "/agent/invoke"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"service\":\"Hello\",\"method\":\"hello\",\"input\":{\"name\":\"\"}}"))
+                .build());
+
+        String body = res.body();
+        assertTrue(body.contains("\"code\":3"), () -> "validation failure must be code 3: " + body);
+        assertTrue(body.contains("must not be blank"),
+                () -> "field-level detail is kept on purpose: " + body);
+    }
+
+    /** No inbound traceparent must not produce a ":null" prefix in a client-visible message. */
+    @Test
+    void invoke_withoutTraceparent_messageHasNoNullPrefix() throws Exception {
+        HttpResponse<String> res = send(HttpRequest.newBuilder()
+                .uri(URI.create(AGENT_BASE + "/agent/invoke"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"service\":\"Hello\",\"method\":\"hello\",\"input\":{\"name\":12345}}"))
+                .build());
+
+        String body = res.body();
+        assertFalse(body.contains(":null"), () -> "no :null artefact: " + body);
+        assertTrue(body.contains("\"message\":\"malformed JSON request body\""),
+                () -> "message is exactly the sanitized text with no prefix: " + body);
     }
 
     /**

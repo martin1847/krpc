@@ -172,7 +172,11 @@ class AgentInvokeHandlerTest {
         var out = invokeExpectingError(new IllegalStateException("bypassed the mapping somehow"));
 
         assertTrue(out.contains("\"code\":" + AgentInvokeHandler.CODE_INTERNAL), out);
-        assertTrue(out.contains("IllegalStateException"), out);
+        // AGENT-ERRCODE-SEC: the class name used to be the message. It is server-internal, so the
+        // client now gets only the generic text; the full throwable goes to the ERROR log instead.
+        assertFalse(out.contains("IllegalStateException"),
+                () -> "the thrown class must not reach the client: " + out);
+        assertTrue(out.contains("internal error"), out);
     }
 
     @Test

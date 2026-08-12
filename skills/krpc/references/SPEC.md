@@ -261,8 +261,12 @@ no type constraint on JWK members, so `keys` is now `List<Map<String,Object>>`
 (`Jwks.java:31`) and `JwsVerify` reads only the members it consumes, skipping an individual
 unusable JWK instead of rejecting the document (`JwsVerify.java:244-267`).
 
-**Every face now reports the same code for the same cause.** All numbers below are gRPC
-status codes:
+**Every face that goes through the dispatcher reports the same code for the same cause.**
+gRPC, `/agent/invoke` and MCP all read one table. Plain HTTP's *outer body* parse is the
+exception, and deliberately so: it happens in the netty handler before dispatch, never reaches
+`toClientError`, and answers on the HTTP status line (400/500) because that is what an HTTP
+client branches on. Once a request is dispatched, its code comes from the table below whatever
+face it arrived on:
 
 | face | rejected value / invalid input | unexpected server failure |
 | --- | --- | --- |
@@ -297,19 +301,47 @@ on the gRPC face, and the HTTP faces agree with it rather than inventing a diffe
 > | `/agent/invoke` | malformed JSON, or a scalar strict decoding rejects | `13` | **`3`** |
 > | `/agent/invoke` | auth failure | `13` | **`16`** `UNAUTHENTICATED` / **`7`** `PERMISSION_DENIED` |
 > | `/agent/invoke` | unexpected server exception | `13` | **`2`** |
-> | `/agent/invoke` | error `message` field | exception class name | the sanitized status description |
->
-> The `message` is the gRPC status description, which carries `field(constraint)` detail for a
-> validation failure and a neutral string otherwise — never a rejected value or Jackson
-> internals. When the caller supplied a `traceparent` it is prefixed as
-> `:<traceparent>,<detail>`; with no inbound trace there is no prefix and the message is just
-> `<detail>`. Parse it as opaque text: branch on `code`, not on `message`.
-> | MCP `tools/call` | malformed JSON, or a scalar strict decoding rejects | `2` | **`3`** |
+> | `/agent/invoke` | error `message` field | exception class name | graded — see below |
 >
 > MCP codes for validation and auth failures are unchanged — those already carried a `Status`
 > that `Status.fromThrowable` could read. **If you branch on `13` from `/agent/invoke` to mean
 > "bad request", that stops working**: 13 no longer appears on this face at all. Branch on `3`
 > for "fix your input" and `2` for "retryable/server-side".
+
+**How much the `message` says depends on the face.** The *code* is uniform; the *description*
+is graded by exposure. That is not a re-split of the mapping — one classification, two
+disclosure levels — and the split exists because an agent-facing endpoint answers arbitrary
+callers while gRPC is a service-to-service surface.
+
+| status | gRPC description | `/agent/invoke` and MCP `message` |
+| --- | --- | --- |
+| `INVALID_ARGUMENT` (validation) | `Dto : field(constraint)` | **same** — it describes the caller's own request |
+| `INVALID_ARGUMENT` (JSON decode) | `malformed JSON request body` | **same** — already neutral |
+| business statuses (`NOT_FOUND`, `ALREADY_EXISTS`, `FAILED_PRECONDITION`, …) | the author's message | **same** — the service author wrote it for the caller |
+| `UNAUTHENTICATED` / `PERMISSION_DENIED` / `UNAVAILABLE` | the precise reason | one fixed string per code: `unauthenticated`, `permission denied`, `unavailable` |
+| `UNKNOWN` | `Class,message` of the thrown exception | `internal error`, plus `, trace=<traceparent>` when the caller sent one |
+
+The dividing line is authorship, not severity: text a service author wrote for the caller is
+kept; text nobody wrote for the caller — an exception's raw message, the auth engine's internal
+reason — is withheld.
+
+Two things are withheld on the agent faces, both because they were actively harmful:
+
+- **Unexpected-failure detail.** An `UNKNOWN` description carries the thrown class and its raw
+  message — SQL fragments, connection strings, file paths, and whatever an application exception
+  interpolated, including the caller's own rejected input. None of it crosses the boundary.
+- **Auth reasons.** The underlying descriptions distinguish "JWKS not ready" from "empty token"
+  from "unknown kid" from "bad signature" from "expired", several quoting the `kid`, `exp`,
+  audience or client id back. To an unauthenticated caller that is a credential-state oracle —
+  it turns "is my token rejected?" into "which part of my forgery was wrong?". One string per
+  code removes the oracle while leaving the code (and therefore retry/re-auth logic) intact.
+
+Nothing is lost operationally: the withheld detail is logged server-side against the same
+traceparent the client is handed for `UNKNOWN` (`AgentErrorMessage`,
+`rpc-server-quarkus/.../agent/AgentErrorMessage.java`). Server logs are also graded — an
+expected client error (3/7/16) is one bounded line with no stack, because a `JsonDecodeException`
+stack quotes the rejected input and auth failures are attacker-triggerable log amplification;
+only `UNKNOWN` keeps the full cause chain.
 
 The switch is evaluated on the decode path — during the first `parse` call(s), not in the
 class initializer — and the result is then cached for the life of the process. The
@@ -319,7 +351,7 @@ under GraalVM, which runs class initializers at image build time.
 
 **Verified on a real native image** (quickstart, GraalVM 25.0.3 / Quarkus 3.33.2, macOS
 aarch64): one binary, two runs. With no variable set, `{"name":12345}` into a `String` field
-→ `{"code":13,"message":"JsonDecodeException"}`; with `KRPC_JSON_STRICT=false` in the runtime
+→ `{"code":3,"message":"malformed JSON request body"}`; with `KRPC_JSON_STRICT=false` in the runtime
 environment the same request → `{"code":0,"data":{"message":"Hello, 12345!"}}`. The kill
 switch therefore works on a deployed native binary without a rebuild. Caveat: a consumer
 whose own class initializer calls `JsonUtils.parse` *and* is initialized at build time would

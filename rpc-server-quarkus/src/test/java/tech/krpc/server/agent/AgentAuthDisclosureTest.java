@@ -16,6 +16,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 import com.sun.net.httpserver.HttpServer;
@@ -26,11 +27,18 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import tech.krpc.common.meta.Api;
+import tech.krpc.common.meta.ApiMeta;
+import tech.krpc.common.meta.Dto;
+import tech.krpc.common.meta.Method;
+import tech.krpc.common.meta.Property;
+import tech.krpc.common.meta.PropertyType;
 import tech.krpc.internal.OutputProto;
 import tech.krpc.server.ServerResult;
 import tech.krpc.server.WebInvoker;
 import tech.krpc.server.jws.Es256Jws;
 import tech.krpc.server.jws.JwsVerify;
+import tech.krpc.util.JsonUtils;
 
 /**
  * AGENT-ERRCODE-SEC, integration level: proves the agent face actually CALLS the sanitizer on a
@@ -41,7 +49,11 @@ import tech.krpc.server.jws.JwsVerify;
  * seam between "the function is correct" and "the function is called" is exactly where a
  * regression hides. So nothing here is a hand-written {@code Status}: a REAL {@link JwsVerify},
  * loaded from a REAL loopback JWKS endpoint, rejects REAL tokens, and the resulting exception is
- * handed to the REAL {@link AgentInvokeHandler}.
+ * handed to the REAL {@link AgentInvokeHandler} and the REAL {@link McpHandler}.
+ *
+ * <p>MCP is covered as well as {@code /agent/invoke} because it is the MORE exposed of the two:
+ * an agent connects to it directly. The two faces share {@link AgentErrorMessage}, but sharing a
+ * helper is not evidence that both call it.
  *
  * <p><b>What is and is not exercised.</b> The handler is invoked at {@code handle(...)} — the same
  * entry point the netty pipeline calls — rather than over a socket. The transport cannot change
@@ -171,6 +183,100 @@ class AgentAuthDisclosureTest {
         assertFalse(byCode.isEmpty(), "the fixture must actually produce rejections");
         byCode.forEach((code, bodies) -> assertEquals(1, bodies.size(),
                 () -> "code " + code + " has distinguishable bodies — that is the oracle: " + bodies));
+    }
+
+    // ---------------------------------------------------------------- the same, on the MCP face
+
+    /**
+     * MCP, unknown kid. Same real rejection, different handler: the envelope's {@code message} must
+     * be exactly the generic string, the code must survive, and {@code isError} must be true.
+     */
+    @Test
+    void mcp_unknownKid_envelopeCarriesOnlyTheGenericString() {
+        assertMcpSanitized(jwt(untrusted, +3600), "unknown kid");
+    }
+
+    /** MCP, expired token — a different verifier branch, the same disclosure. */
+    @Test
+    void mcp_expiredToken_envelopeCarriesOnlyTheGenericString() {
+        assertMcpSanitized(jwt(trusted, -3600), "expired token");
+    }
+
+    /** Both MCP rejections must be byte-identical when they share a code, for the same reason. */
+    @Test
+    void mcp_rejectionsSharingACode_areByteIdentical() {
+        var byCode = new java.util.LinkedHashMap<Integer, java.util.Set<String>>();
+        for (var token : new String[]{jwt(untrusted, +3600), jwt(trusted, -3600), "not.a.jwt", ""}) {
+            var envelope = mcpEnvelope(token);
+            byCode.computeIfAbsent(((Number) envelope.get("code")).intValue(),
+                    k -> new java.util.LinkedHashSet<>()).add(String.valueOf(envelope));
+        }
+        byCode.forEach((code, envelopes) -> assertEquals(1, envelopes.size(),
+                () -> "MCP code " + code + " has distinguishable envelopes: " + envelopes));
+    }
+
+    private void assertMcpSanitized(String token, String label) {
+        var raw = mcpRaw(token);
+        var envelope = parseEnvelope(raw);
+
+        var code = ((Number) envelope.get("code")).intValue();
+        assertTrue(16 == code || 7 == code,
+                () -> label + ": must stay UNAUTHENTICATED(16) or PERMISSION_DENIED(7): " + raw);
+        assertEquals(16 == code ? "unauthenticated" : "permission denied", envelope.get("message"),
+                () -> label + ": envelope message must be EXACTLY the generic string: " + raw);
+        assertFalse(envelope.containsKey("violations"),
+                () -> label + ": an auth failure is not a validation failure: " + raw);
+
+        for (var forbidden : FORBIDDEN) {
+            assertFalse(raw.toLowerCase().contains(forbidden.toLowerCase()),
+                    () -> label + ": '" + forbidden + "' must not reach a rejected agent: " + raw);
+        }
+    }
+
+    private Map<String, Object> mcpEnvelope(String token) {
+        return parseEnvelope(mcpRaw(token));
+    }
+
+    /** The whole JSON-RPC response, so the forbidden-string sweep covers the envelope AND its wrapper. */
+    private String mcpRaw(String token) {
+        WebInvoker web = (in, md) -> {
+            verify.verify(token, CID, false);
+            return new ServerResult(OutputProto.newBuilder().setC(0).build());
+        };
+        var registry = new McpToolRegistry();
+        registry.init(Map.of("Secure/op", web), mcpApiMeta());
+        var handler = new McpHandler();
+        handler.registry = registry;
+
+        var request = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\","
+                + "\"params\":{\"name\":\"Secure_op\",\"arguments\":{\"name\":\"x\"}}}";
+        return new String(handler.handle(request, new ArrayList<>(), new DefaultHttpHeaders()), UTF_8);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> parseEnvelope(String raw) {
+        var response = (Map<String, Object>) JsonUtils.parse(raw, Object.class);
+        var result = (Map<String, Object>) response.get("result");
+        assertEquals(Boolean.TRUE, result.get("isError"),
+                () -> "an auth rejection must be a tool error: " + raw);
+        var content = (List<Map<String, Object>>) result.get("content");
+        var parsed = JsonUtils.parse((String) content.get(0).get("text"), Object.class);
+        assertTrue(parsed instanceof Map, () -> "error content must be a JSON envelope: " + raw);
+        return (Map<String, Object>) parsed;
+    }
+
+    /** One agentTool method "Secure/op" taking a DTO with a single String field. */
+    private static ApiMeta mcpApiMeta() {
+        var req = new Dto("OpReq", 0, true, null);
+        req.setFields(List.of(new Property("name",
+                new PropertyType(new Dto("String", 0, false, null)), List.of())));
+        var op = new Method();
+        op.setName("op");
+        op.setArg(new PropertyType(req));
+        var api = new Api();
+        api.setName("Secure");
+        api.setMethods(List.of(op));
+        return new ApiMeta("test-app", List.of(api), List.of());
     }
 
     // ---------------------------------------------------------------- unexpected failures

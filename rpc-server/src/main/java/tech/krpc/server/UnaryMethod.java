@@ -199,10 +199,77 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
                 ctx.checkCredential();
             }
             return filterChain.invoke(ctx);
+        } catch (Throwable ex) {
+            // AGENT-ERRCODE: the HTTP faces get the SAME exception -> Status mapping as gRPC.
+            // Before this, invokeWeb let the raw exception escape, so /agent/invoke reported a
+            // hardcoded INTERNAL(13) and MCP got Status.fromThrowable's UNKNOWN(2) default -- both
+            // labelling a client input error as a server fault. One mapping, one answer per face.
+            var traceId = ctx.logTrace();
+            // Same log.error as the gRPC path: the client-visible description is deliberately
+            // sanitized, on the promise that the full cause is recoverable server-side.
+            log.error(traceId, ex);
+            throw toClientError(ex, traceId);
         } finally {
             gctx.detach(prev);
             MDC.clear();
         }
+    }
+
+    /**
+     * AGENT-ERRCODE: the SINGLE exception -> gRPC {@link Status} mapping, shared by the gRPC
+     * {@link #invoke} path and the HTTP {@link #invokeWeb} path (which both agent faces dispatch
+     * through). Keeping one table is the point: three call sites each inventing their own code was
+     * how {@code /agent/invoke} ended up answering INTERNAL(13) for a malformed request body.
+     *
+     * <table>
+     *   <tr><th>input</th><th>result</th></tr>
+     *   <tr><td>{@code InvocationTargetException}</td><td>unwrapped, then classified as below</td></tr>
+     *   <tr><td>{@link tech.krpc.util.JsonDecodeException}</td><td>{@code INVALID_ARGUMENT}(3), sanitized description</td></tr>
+     *   <tr><td>{@code StatusException} / {@code StatusRuntimeException}</td><td>passed through unchanged
+     *       — this is the branch {@code ValidationException} (an {@code INVALID_ARGUMENT}
+     *       {@code StatusRuntimeException}) and every auth failure travel on</td></tr>
+     *   <tr><td>anything else</td><td>{@code UNKNOWN}(2), {@code traceId,Class,message} truncated</td></tr>
+     * </table>
+     *
+     * <p>Note there is no {@code INTERNAL}(13) row: an unexpected server-side exception has always
+     * been {@code UNKNOWN} on the gRPC face, and the HTTP faces now agree with it rather than
+     * inventing a different code.
+     */
+    static Throwable toClientError(Throwable ex, String traceId) {
+        Throwable wrapToClient = ex;
+        if (ex instanceof InvocationTargetException) {
+            wrapToClient = ex.getCause();
+        }
+        if (wrapToClient instanceof tech.krpc.util.JsonDecodeException) {
+            // AUD-omp-31: a malformed request body is the CLIENT's fault -> INVALID_ARGUMENT, not
+            // UNKNOWN/500. Description is sanitized (no Jackson field/class names); the full cause
+            // is already in the caller's log.error for server-side diagnosis.
+            return Status.INVALID_ARGUMENT
+                    .withDescription(describe(traceId, "malformed JSON request body"))
+                    .withCause(wrapToClient).asRuntimeException();
+        }
+        if (wrapToClient instanceof StatusException || wrapToClient instanceof StatusRuntimeException) {
+            return wrapToClient;
+        }
+        //Server side application throws an exception (or does something other than returning a Status code to terminate an RPC)
+        //https://grpc.github.io/grpc/core/md_doc_statuscodes.html
+        var errMsg = wrapToClient.getMessage();
+        if (null != errMsg && errMsg.length() > MAX_ERROR_LENGTH) {
+            errMsg = errMsg.substring(0, MAX_ERROR_LENGTH) + "...";
+        }
+        return Status.UNKNOWN.withDescription(
+                        describe(traceId, wrapToClient.getClass().getSimpleName() + "," + errMsg))
+                .withCause(wrapToClient).asRuntimeException();
+    }
+
+    /**
+     * Join the correlation prefix onto a client-visible description, omitting it entirely when
+     * there is no trace to correlate with. {@code ServerContext.logTrace()} returns "" in that
+     * case, so a naive concatenation would emit a bare leading comma -- and before that returned
+     * "", a literal {@code ":null,"}.
+     */
+    private static String describe(String traceId, String detail) {
+        return traceId.isEmpty() ? detail : traceId + "," + detail;
     }
 
     static final int MAX_ERROR_LENGTH = 100;
@@ -235,30 +302,7 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
         } catch (Throwable ex) {
             var traceId = ctx.logTrace();
             log.error(traceId , ex);
-
-            Throwable wrapToClient = ex;
-            if (ex instanceof InvocationTargetException) {
-                wrapToClient = ex.getCause();
-            }
-            if (wrapToClient instanceof tech.krpc.util.JsonDecodeException) {
-                // AUD-omp-31: a malformed request body is the CLIENT's fault → INVALID_ARGUMENT, not
-                // UNKNOWN/500. Description is sanitized (no Jackson field/class names); the full cause
-                // is already in the log.error above for server-side diagnosis.
-                wrapToClient = Status.INVALID_ARGUMENT
-                        .withDescription(traceId + ",malformed JSON request body")
-                        .withCause(wrapToClient).asRuntimeException();
-            } else if (!(wrapToClient instanceof StatusException) && !(wrapToClient instanceof StatusRuntimeException)) {
-                //Server side application throws an exception (or does something other than returning a Status code to terminate an RPC)
-                //https://grpc.github.io/grpc/core/md_doc_statuscodes.html
-                var errMsg = wrapToClient.getMessage();
-                if(null != errMsg && errMsg.length() > MAX_ERROR_LENGTH){
-                    errMsg = errMsg.substring(0,MAX_ERROR_LENGTH)+"...";
-                }
-                wrapToClient = Status.UNKNOWN.withDescription(
-                                traceId + "," + wrapToClient.getClass().getSimpleName() + "," + errMsg)
-                        .withCause(wrapToClient).asRuntimeException();
-            }
-            responseObserver.onError(wrapToClient);
+            responseObserver.onError(toClientError(ex, traceId));
         } finally {
             gctx.detach(prev);
             MDC.clear();

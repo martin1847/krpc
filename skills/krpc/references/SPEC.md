@@ -178,6 +178,10 @@ boolean** sent into a `String` target is a **decode failure**. It is not stringi
 > silently coerced (`12345` → `"12345"`, `true` → `"true"`), so a wrongly-typed request
 > passed field validation and reached your method body carrying a stringified value.
 >
+> **A second breaking change ships in the same release**, in the same area: the
+> `/agent/invoke` and MCP faces now report accurate gRPC error codes instead of a blanket
+> `13`/`2`. Details and the old→new table are further down this section.
+>
 > **Why this ships as a minor and not a patch.** §14.1 reserves patch for compatible
 > changes — old clients keep working, front and back may deploy staggered. This one can
 > reject a request that 1.1.1 accepted, so it fails that test and takes the minor bump,
@@ -257,32 +261,55 @@ no type constraint on JWK members, so `keys` is now `List<Map<String,Object>>`
 (`Jwks.java:31`) and `JwsVerify` reads only the members it consumes, skipping an individual
 unusable JWK instead of rejecting the document (`JwsVerify.java:244-267`).
 
-**Resulting error codes are today's behaviour, not a frozen contract.** The four faces do not
-agree, this change does not alter that, and two of them are actively misleading — read the
-table before you branch on a code:
+**Every face now reports the same code for the same cause.** All numbers below are gRPC
+status codes:
 
-| face | a rejected value surfaces as | correct? |
+| face | rejected value / invalid input | unexpected server failure |
 | --- | --- | --- |
-| gRPC | `INVALID_ARGUMENT` = **3** (`UnaryMethod.java:243-249`) | yes |
-| plain HTTP POST (outer body) | **HTTP 400** (`AbstractHttpHandler.java:147-154`) | yes |
-| `/agent/invoke` (target method's decode) | HTTP 200, `{"code":13,"message":"JsonDecodeException"}` | **no — 13 is `INTERNAL`** |
-| MCP `tools/call` | `isError:true`, `{"code":2,"message":"UNKNOWN"}` | **no — 2 is `UNKNOWN`** |
+| gRPC | `INVALID_ARGUMENT` = **3** | `UNKNOWN` = **2** |
+| plain HTTP POST (outer body) | **HTTP 400** | HTTP 500 |
+| `/agent/invoke` | HTTP 200, `{"code":3,"message":"…"}` | `{"code":2,…}` |
+| MCP `tools/call` | `isError:true`, `{"code":3,…}` | `{"code":2,…}` |
 
-All four numbers are gRPC status codes, so `13` and `2` mean **INTERNAL** and **UNKNOWN** —
-"the server broke", not "your input was invalid". That is wrong, and it is a **pre-existing
-defect this change did not introduce and does not fix** (recorded here, not repaired):
+One table produces all of them: `UnaryMethod.toClientError` (`UnaryMethod.java:238-262`) is the
+single exception→`Status` mapping, applied by both the gRPC path (`invoke`) and the HTTP path
+(`invokeWeb`) that `/agent/invoke` and MCP dispatch through.
 
-- `UnaryMethod.invoke` — the gRPC entry point — maps `JsonDecodeException` to
-  `INVALID_ARGUMENT` (`:243-249`). `UnaryMethod.invokeWeb` (`:193-206`), which both HTTP faces
-  dispatch through, has **no** such mapping, so the raw exception escapes to the caller.
-- `AgentInvokeHandler` then catches every `Throwable` and reports a hardcoded
-  `CODE_INTERNAL = 13` (`AgentInvokeHandler.java:50,112`).
-- `McpHandler` calls `Status.fromThrowable(ex).getCode().value()`
-  (`McpHandler.java:498-501`); a non-`Status` exception yields `UNKNOWN` = 2.
+| exception | code |
+| --- | --- |
+| `InvocationTargetException` | unwrapped, then classified by its cause |
+| `JsonDecodeException` (malformed body, or a value strict decoding rejects) | `INVALID_ARGUMENT` (3), sanitized description |
+| `ValidationException` and any other `Status` carrier (all auth failures) | passed through unchanged — validation is `INVALID_ARGUMENT` (3) with `field(constraint)` detail |
+| anything else | `UNKNOWN` (2), description `traceId,Class,message` |
 
-**For agent/MCP clients:** a `13` or a `2` from these two faces does **not** reliably mean a
-server fault — a malformed request lands there too. Do not use it to decide whether to retry.
-The gRPC face is the one whose code you can trust.
+There is no `INTERNAL` (13) row: an unexpected server-side exception has always been `UNKNOWN`
+on the gRPC face, and the HTTP faces agree with it rather than inventing a different code.
+
+> **BREAKING in 1.2.0 — `/agent/invoke` and MCP error codes changed.** Until 1.1.1 neither HTTP
+> face applied the mapping: `invokeWeb` let the raw exception escape, so `AgentInvokeHandler`
+> reported a hardcoded `CODE_INTERNAL = 13` for *everything* and MCP fell to
+> `Status.fromThrowable`'s `UNKNOWN` = 2. A malformed body, a failed field validation and a
+> genuine crash were indistinguishable, and all three claimed the server was at fault.
+>
+> | face | input | 1.1.1 | 1.2.0 |
+> | --- | --- | --- | --- |
+> | `/agent/invoke` | missing / null / empty / blank required field | `13` | **`3`** |
+> | `/agent/invoke` | malformed JSON, or a scalar strict decoding rejects | `13` | **`3`** |
+> | `/agent/invoke` | auth failure | `13` | **`16`** `UNAUTHENTICATED` / **`7`** `PERMISSION_DENIED` |
+> | `/agent/invoke` | unexpected server exception | `13` | **`2`** |
+> | `/agent/invoke` | error `message` field | exception class name | the sanitized status description |
+>
+> The `message` is the gRPC status description, which carries `field(constraint)` detail for a
+> validation failure and a neutral string otherwise — never a rejected value or Jackson
+> internals. When the caller supplied a `traceparent` it is prefixed as
+> `:<traceparent>,<detail>`; with no inbound trace there is no prefix and the message is just
+> `<detail>`. Parse it as opaque text: branch on `code`, not on `message`.
+> | MCP `tools/call` | malformed JSON, or a scalar strict decoding rejects | `2` | **`3`** |
+>
+> MCP codes for validation and auth failures are unchanged — those already carried a `Status`
+> that `Status.fromThrowable` could read. **If you branch on `13` from `/agent/invoke` to mean
+> "bad request", that stops working**: 13 no longer appears on this face at all. Branch on `3`
+> for "fix your input" and `2` for "retryable/server-side".
 
 The switch is evaluated on the decode path — during the first `parse` call(s), not in the
 class initializer — and the result is then cached for the life of the process. The

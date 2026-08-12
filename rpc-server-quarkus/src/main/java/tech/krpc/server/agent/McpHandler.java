@@ -396,7 +396,9 @@ public class McpHandler implements PostHandler<String> {
             // protocol error. AGENT-002 F1/F2/F3: surface the structured envelope (gRPC status
             // code + safe message + typed jakarta violations, no rejected value) instead of the
             // bare exception class name. Full detail is already logged server-side by the dispatch.
-            log.warn("mcp tools/call {} failed: {}", toolName, ex.toString());
+            // One line, no stack: UnaryMethod.invokeWeb already logged the exception at ERROR
+            // with its cause chain; this adds only the tool identity.
+            log.warn("mcp tools/call {} failed: {}", toolName, ex.getClass().getSimpleName());
             return toolError(id, envelopeFromThrowable(ex));
         }
     }

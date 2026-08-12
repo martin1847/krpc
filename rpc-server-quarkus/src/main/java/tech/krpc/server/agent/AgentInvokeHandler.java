@@ -4,6 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import io.grpc.Metadata;
+import io.grpc.StatusRuntimeException;
+import io.grpc.StatusException;
+import io.grpc.Status;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.quarkus.arc.Unremovable;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -108,7 +111,23 @@ public class AgentInvokeHandler implements PostHandler<AgentInvokeRequest> {
         } catch (Throwable ex) {
             // Credential failure (StatusException) and method errors land here. Keep the
             // client message generic; the dispatch path already logged detail server-side.
-            log.warn("agent invoke {}/{} failed: {}", req.getService(), req.getMethod(), ex.toString());
+            // One line, no stack: UnaryMethod.invokeWeb already logged this exception at ERROR
+            // with its full cause chain. What that log cannot say is WHICH service/method was
+            // called, so this adds only the routing context and the exception's identity.
+            log.warn("agent invoke {}/{} failed: {}", req.getService(), req.getMethod(),
+                    ex.getClass().getSimpleName());
+            // AGENT-ERRCODE: derive the code from the Status that UnaryMethod.toClientError already
+            // attached, instead of reporting a blanket INTERNAL. This face used to answer 13 for a
+            // malformed body and 13 for a validation failure -- both client errors dressed as
+            // server faults, and both indistinguishable from a real crash. CODE_INTERNAL stays as
+            // the last resort for a throwable that carries no Status at all, which invokeWeb's
+            // mapping should make unreachable.
+            if (ex instanceof StatusException || ex instanceof StatusRuntimeException) {
+                var status = Status.fromThrowable(ex);
+                var description = status.getDescription();
+                return error(status.getCode().value(),
+                        null != description ? description : ex.getClass().getSimpleName());
+            }
             return error(CODE_INTERNAL, ex.getClass().getSimpleName());
         }
     }

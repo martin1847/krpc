@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import tech.krpc.util.JsonUtils;
+import tech.krpc.util.StringUtils;
 import tech.krpc.server.ServerContext;
 import io.grpc.Status;
 import io.grpc.StatusException;
@@ -244,12 +245,41 @@ public class JwsVerify implements CredentialVerify {
             var jwks = JsonUtils.parse(json, Jwks.class);
 
             // O3/O-sec-47 (HARDEN-B1): build the fresh keyset from the fetched document.
+            //
+            // SECURITY BOUNDARY -- tolerance is per-JWK, never per-document. A keyset routinely
+            // mixes key types this verifier does not implement, and RFC 7517 lets a JWK carry
+            // members of any JSON type, so ONE unusable entry must skip rather than abort the
+            // refresh. Aborting is the dangerous outcome, not the safe one: the throw is swallowed
+            // by maybeRefetch(), so the previous cache stays live -- an IdP that withdraws a
+            // compromised key, publishes its replacement, and happens to also serve one malformed
+            // entry would leave the REVOKED key verifying signatures indefinitely. Everything that
+            // can fail for a single JWK is therefore inside the try: member reads, blank checks,
+            // base64 decoding, curve lookup and EC point construction.
             var rebuilt = new ConcurrentHashMap<String, ECPublicKey>();
             if (jwks != null && jwks.keys != null) {
                 for (var jwk : jwks.keys) {
-                    if (Es256Jwk.ELLIPTIC_CURVE.equals(jwk.get(Jwks.KEY_TYPE))) {
-                        var ecKey = new Es256Jwk(jwk);
-                        rebuilt.put(ecKey.kid, ecKey.toECPublicKey());
+                    if (!Es256Jwk.ELLIPTIC_CURVE.equals(stringMember(jwk, Jwks.KEY_TYPE))) {
+                        continue;
+                    }
+                    var kid = stringMember(jwk, PublicClaims.KEY_ID);
+                    var x = stringMember(jwk, "x");
+                    var y = stringMember(jwk, "y");
+                    var crv = stringMember(jwk, "crv");
+                    // A blank kid is unusable: verify() rejects a blank kid outright, so caching
+                    // one would inflate the keyset and flip ready=true without contributing a key
+                    // that can ever authenticate anything -- hiding a real zero-key revocation.
+                    if (StringUtils.isBlank(kid) || null == x || null == y || null == crv) {
+                        log.warn("skipping unusable EC JWK (kid blank, or kid/x/y/crv missing or"
+                                + " not a string) from {}", url);
+                        continue;
+                    }
+                    try {
+                        rebuilt.put(kid, new Es256Jwk(kid, x, y, crv).toECPublicKey());
+                    } catch (Exception keyEx) {
+                        // Well-formed strings, unusable key material: bad base64, empty/oversized
+                        // coordinates, an unsupported curve, a point off the curve.
+                        log.warn("skipping EC JWK kid={} from {}: cannot build public key ({})",
+                                kid, url, keyEx.toString());
                     }
                 }
             }
@@ -290,6 +320,16 @@ public class JwsVerify implements CredentialVerify {
             log.error("error fetch jwks : {} : {}", url, e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Read one JWK member as a string, or {@code null} if it is absent or carries a non-string
+     * JSON value. RFC 7517 §4 permits any JSON type for a member, so this verifier reads only what
+     * it consumes and treats anything else as "this JWK is not usable by ES256" rather than as a
+     * malformed document.
+     */
+    private static String stringMember(Map<String, Object> jwk, String name) {
+        return jwk.get(name) instanceof String s ? s : null;
     }
 
     /**

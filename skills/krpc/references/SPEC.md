@@ -128,7 +128,7 @@ through as-is; anything else is wrapped in `Status.UNKNOWN` with the message
 ## 4. DTO rules
 
 ### Use boxed types, never primitives
-JSON serialization is `NON_NULL` (`rpc-common/.../util/JsonUtils.java:24-26`):
+JSON serialization is `NON_NULL` (`rpc-common/.../util/JsonUtils.java:68`):
 null fields are **omitted**. Primitives can't be null and serialize as `0`/`false`,
 destroying the "absent vs zero" distinction.
 
@@ -161,9 +161,142 @@ public class Book {            // Book.java:10-17
 - **`Map<K,V>` is NOT RECOMMENDED** — generated client code loses readability; model the shape
   as an explicit DTO class. Not an error: the scan logs a WARN (deduped per DTO field).
 
-### Deserialization is lenient
+### Unknown fields are tolerated; scalar types are not
 `FAIL_ON_UNKNOWN_PROPERTIES=false` — extra fields from clients are tolerated
 (forward compatibility). `JavaTimeModule` auto-registers if jsr310 is present.
+
+**Scalar decoding is strict, and this is the default since 1.2.0.** A JSON **number or
+boolean** sent into a `String` target is a **decode failure**. It is not stringified:
+
+```
+{"phone": 13800138000}   → rejected   (send {"phone": "13800138000"})
+{"flag":  true}          → rejected   (into a String field)
+{"phone": []} / {}       → rejected   (unchanged; these always failed)
+```
+
+> **BREAKING in 1.2.0 — read this before upgrading.** Through 1.1.1 those first two were
+> silently coerced (`12345` → `"12345"`, `true` → `"true"`), so a wrongly-typed request
+> passed field validation and reached your method body carrying a stringified value.
+>
+> **Why this ships as a minor and not a patch.** §14.1 reserves patch for compatible
+> changes — old clients keep working, front and back may deploy staggered. This one can
+> reject a request that 1.1.1 accepted, so it fails that test and takes the minor bump,
+> which is the line that carries "consumers must move" and a same-window deploy (§14.3).
+> The version number is the warning; treat it as one.
+>
+> **Who is affected.** Any caller that sends a JSON number or boolean where the DTO declares
+> a `String` — it starts being rejected on deploy, with no code change on its side. Whether
+> that describes your callers is a question to answer per service, not to assume in either
+> direction: enumerate the `String` fields on your request DTOs and check what actually
+> reaches them (one downstream audit of ~70 such fields found zero). Client-side response
+> decoding is in scope too, so a caller on 1.2.0 also reads replies strictly.
+>
+> **Migration.** Fix the callers: send JSON strings for `String` fields. If the audit cannot
+> finish on the deploy timeline, set `KRPC_JSON_STRICT=false`, ship, then fix and remove the
+> variable. The kill switch is a bridge, not a setting — it restores the exact pre-1.2.0
+> decoding, including the failure mode this change exists to remove.
+
+**The kill switch** — one environment variable, no system-property equivalent (a kill
+switch must be settable from a deployment manifest without touching the JVM command line):
+
+| `KRPC_JSON_STRICT` | decoding |
+| --- | --- |
+| unset | **strict** (the default) |
+| blank / whitespace (Java `isBlank()`) | **strict** — blank is treated as unset |
+| `true` / `1` (case-insensitive, trimmed) | **strict** — explicitly, a valid affirmation |
+| `false` / `0` (case-insensitive, trimmed) | lenient — the documented escape |
+| anything else (`fasle`, `yes`, …) | lenient |
+| environment unreadable (restricted JVM) | lenient |
+
+Two boundaries are deliberate and worth knowing:
+
+- **Blank keeps strict.** An empty value is far more often an unsubstituted template
+  variable (`KRPC_JSON_STRICT="${FLAG}"` collapsing to `""`) than a decision to disable the
+  guard, and an accident must not silently widen what a service accepts. Same
+  blank-means-unset rule as `APP_ENV` and `KRPC_OTEL`.
+- **"Blank" and "trimmed" mean exactly what Java means by them** — `String.isBlank()` and
+  `String.trim()`, which recognise ASCII whitespace but **not** NBSP (`U+00A0`), figure space
+  (`U+2007`) or narrow NBSP (`U+202F`). A value carrying one of those is neither blank nor a
+  recognised token, so it lands in the row below: **lenient**. Concretely, `"true\u00A0"` —
+  which is what you get pasting an affirmative out of a rendered document or a chat client —
+  turns strict decoding **off**, silently. Type the value rather than pasting it, and if a
+  deployment's behaviour disagrees with its manifest, suspect an invisible character first.
+- **An unrecognised value falls to lenient**, the opposite of what a feature flag would do.
+  Whoever sets this is mid-incident, and an escape hatch that only opens when spelled
+  perfectly fails exactly when it is needed. A typo lands somewhere recoverable.
+  `true`/`1` are still honoured as "keep strict", so the intuitive spelling of *enabling*
+  the guard cannot silently disable it.
+
+Resolution is `JsonUtils.strictTextualCoercion` (`JsonUtils.java:160`); the variable name is
+`JsonUtils.STRICT_TEXTUAL_COERCION_ENV` (`:50`).
+
+**What strict covers.** Every decode that goes through `JsonUtils.parse` into a *typed*
+target — not just request DTOs, and not just the server:
+
+- gRPC server request decode (`JsonSerial.readInput`);
+- **client-side response decode** (`JsonSerial.readOutput` → `ClientResult`) — a caller on
+  1.2.0 also reads the callee's reply strictly;
+- `/agent/invoke` — twice: the outer envelope, then the target method's own typed decode;
+- MCP `tools/call` — the tool arguments are re-serialized and decoded through the same path.
+
+The target does not have to be a DTO *field*: a top-level `String`, `List<String>` or
+`Map<String,String>` value is a textual target too, so members of those collections are
+covered as well.
+
+**What strict does not cover.** Serialization (no coercion semantics — `stringify` always
+uses the lenient mapper); and untyped `Map`/`Object` decoding, which has no textual target,
+so nothing coerces. That second exemption is why `JwsCredential`'s JWT header/payload reads
+and `McpHandler`'s envelope reads are unaffected.
+
+**There is no lenient back door.** krpc has one decode entry point and it honours the
+switch; no internal call site opts itself out. JWKS used to look like a counter-example —
+`Jwks.keys` was typed `List<Map<String,String>>`, which depended on stringifying whatever a
+provider put in a JWK member, so one vendor extension carrying a number would have failed
+the whole keyset. That was a wrong DTO, not a reason for an escape hatch: RFC 7517 §4 places
+no type constraint on JWK members, so `keys` is now `List<Map<String,Object>>`
+(`Jwks.java:31`) and `JwsVerify` reads only the members it consumes, skipping an individual
+unusable JWK instead of rejecting the document (`JwsVerify.java:244-267`).
+
+**Resulting error codes are today's behaviour, not a frozen contract.** The four faces do not
+agree, this change does not alter that, and two of them are actively misleading — read the
+table before you branch on a code:
+
+| face | a rejected value surfaces as | correct? |
+| --- | --- | --- |
+| gRPC | `INVALID_ARGUMENT` = **3** (`UnaryMethod.java:243-249`) | yes |
+| plain HTTP POST (outer body) | **HTTP 400** (`AbstractHttpHandler.java:147-154`) | yes |
+| `/agent/invoke` (target method's decode) | HTTP 200, `{"code":13,"message":"JsonDecodeException"}` | **no — 13 is `INTERNAL`** |
+| MCP `tools/call` | `isError:true`, `{"code":2,"message":"UNKNOWN"}` | **no — 2 is `UNKNOWN`** |
+
+All four numbers are gRPC status codes, so `13` and `2` mean **INTERNAL** and **UNKNOWN** —
+"the server broke", not "your input was invalid". That is wrong, and it is a **pre-existing
+defect this change did not introduce and does not fix** (recorded here, not repaired):
+
+- `UnaryMethod.invoke` — the gRPC entry point — maps `JsonDecodeException` to
+  `INVALID_ARGUMENT` (`:243-249`). `UnaryMethod.invokeWeb` (`:193-206`), which both HTTP faces
+  dispatch through, has **no** such mapping, so the raw exception escapes to the caller.
+- `AgentInvokeHandler` then catches every `Throwable` and reports a hardcoded
+  `CODE_INTERNAL = 13` (`AgentInvokeHandler.java:50,112`).
+- `McpHandler` calls `Status.fromThrowable(ex).getCode().value()`
+  (`McpHandler.java:498-501`); a non-`Status` exception yields `UNKNOWN` = 2.
+
+**For agent/MCP clients:** a `13` or a `2` from these two faces does **not** reliably mean a
+server fault — a malformed request lands there too. Do not use it to decide whether to retry.
+The gRPC face is the one whose code you can trust.
+
+The switch is evaluated on the decode path — during the first `parse` call(s), not in the
+class initializer — and the result is then cached for the life of the process. The
+resolution is racy-but-deterministic, so a few concurrent first callers may each evaluate it;
+they cannot disagree. Reading it there rather than in a static block is what keeps it live
+under GraalVM, which runs class initializers at image build time.
+
+**Verified on a real native image** (quickstart, GraalVM 25.0.3 / Quarkus 3.33.2, macOS
+aarch64): one binary, two runs. With no variable set, `{"name":12345}` into a `String` field
+→ `{"code":13,"message":"JsonDecodeException"}`; with `KRPC_JSON_STRICT=false` in the runtime
+environment the same request → `{"code":0,"data":{"message":"Hello, 12345!"}}`. The kill
+switch therefore works on a deployed native binary without a rebuild. Caveat: a consumer
+whose own class initializer calls `JsonUtils.parse` *and* is initialized at build time would
+resolve the cache at build time. No such path exists in this repo.
 
 ---
 
@@ -753,12 +886,14 @@ key (`WebMethodRegistry.java:36-40`) — hidden/unknown → `null` → `code:5` 
 ### 15.3 Field-format conventions (quick table)
 
 **DTO-authoring conventions** — how to *type* a field for clean polyglot round-trips, **not**
-serializer behaviour (`JsonUtils.java` only guarantees `NON_NULL` output (`:28`) + lenient
-input `FAIL_ON_UNKNOWN_PROPERTIES=false` (`:29`)). Combine with §4 (boxed scalars, `NON_NULL`).
+serializer behaviour (`JsonUtils.java` guarantees `NON_NULL` output (`:76`), tolerates unknown
+input fields `FAIL_ON_UNKNOWN_PROPERTIES=false` (`:77`), and since 1.2.0 REJECTS a
+number/boolean sent into a `String` target unless the `KRPC_JSON_STRICT` kill switch is
+pulled, §4). Combine with §4 (boxed scalars, `NON_NULL`).
 
 | logical type | represent as | why (convention, not serializer-enforced) |
 | --- | --- | --- |
-| date | `String`, `YYYY-MM-DD` | `java.time` is NOT ISO-configured — `JsonUtils` adds `JavaTimeModule` only if on classpath (`JsonUtils.java:31-38`), never disables `WRITE_DATES_AS_TIMESTAMPS`, so a raw `LocalDate`/`OffsetDateTime` serializes numeric (test DTOs keep it off the wire, `test-api/.../dto/TimeResult.java:23-25` commented) |
+| date | `String`, `YYYY-MM-DD` | `java.time` is NOT ISO-configured — `JsonUtils` adds `JavaTimeModule` only if on classpath (`JsonUtils.java:79-88`), never disables `WRITE_DATES_AS_TIMESTAMPS`, so a raw `LocalDate`/`OffsetDateTime` serializes numeric (test DTOs keep it off the wire, `test-api/.../dto/TimeResult.java:23-25` commented) |
 | datetime | `String`, ISO-8601 with zone | same as date |
 | money | `Long`, integer **cents** (`1999`=19.99) | avoids float rounding — never `Float`/`Double` (contrast tolerant geo `Float`, `Book.java:10-17`) |
 | large id | `String` (`"7300000000000000001"`) | avoids the JSON/JS `2^53` cliff for 64-bit ids (`test-api/.../dto/Img.java:26` `String id`); a boxed `Long` risks silent precision loss in JS/TS/Dart |

@@ -40,6 +40,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import tech.krpc.server.ServerContext;
+import tech.krpc.util.JsonUtils;
 
 class JwsVerifyHardenTest {
 
@@ -324,6 +325,155 @@ class JwsVerifyHardenTest {
 
         assertVerifyCode(verify, jwt(genKey("K1"), validClaims("u")), Status.Code.UNAVAILABLE,
                 "after empty/null-keys failures the verifier stays fail-closed (UNAVAILABLE)");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 13b. Per-JWK tolerance (1.2.0): one unusable entry SKIPS, it never fails the whole keyset.
+    //
+    // RFC 7517 §4 puts no type constraint on JWK members, and a real keyset mixes key types this
+    // verifier does not implement. Before 1.2.0 `Jwks.keys` was List<Map<String,String>>, so a
+    // member carrying a non-string leaned on Jackson silently stringifying it; under the strict
+    // decoding that is now the default that would have failed the ENTIRE document. Failing the
+    // document is the expensive outcome: a thrown load is swallowed by maybeRefetch(), stranding
+    // the last-known-good keyset at refresh time or blocking bootstrap outright. These two tests
+    // pin the tolerance at the JWK level, and — just as important — that a GOOD key sharing the
+    // document still loads and still verifies.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void jwkMissingCoordinates_isSkipped_goodKeyInSameDocumentStillLoads() throws Exception {
+        Kp good = genKey("GOOD");
+        // An EC entry with no x/y. Pre-1.2.0 this reached Es256Jwk with nulls and blew up inside
+        // Base64.decode(null), failing the whole fetch and taking the good key down with it.
+        String broken = "{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"BROKEN\"}";
+        String doc = "{\"keys\":[" + broken + "," + jwkEntry(good) + "]}";
+
+        JwsVerify verify = readyVerifier(doc);
+
+        assertTrue(verify.isReady(), "one unusable JWK must not fail the fetch");
+        assertEquals(java.util.Set.of("GOOD"), verify.jwksCache.keySet(),
+                "the unusable JWK is skipped; the good one is loaded");
+        assertVerifyOk(verify, jwt(good, validClaims("u")),
+                "a token signed by the good key in a partially-broken document still verifies");
+    }
+
+    @Test
+    void jwkWithNonStringMember_isSkipped_goodKeyInSameDocumentStillLoads() throws Exception {
+        Kp good = genKey("GOOD");
+        // A numeric kid — the shape of a vendor that emits integer key ids. Legal JSON, legal JWK
+        // per RFC 7517, unusable here (this verifier keys the cache by a String kid).
+        String numericKid = "{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":42,"
+                + "\"x\":\"RhdqCsq1MooCjBiOrliZInAii8fdf4-3jOT0pRpohus\","
+                + "\"y\":\"6s9ECrJurlHCkSx8CTnqhS5HN7h9-dblFgLfpRPcPeg\"}";
+        String doc = "{\"keys\":[" + numericKid + "," + jwkEntry(good) + "]}";
+
+        JwsVerify verify = readyVerifier(doc);
+
+        assertTrue(verify.isReady(), "a non-string JWK member must not fail the fetch");
+        assertEquals(java.util.Set.of("GOOD"), verify.jwksCache.keySet(),
+                "the JWK with a numeric kid is skipped; the good one is loaded");
+        assertVerifyOk(verify, jwt(good, validClaims("u")),
+                "a token signed by the good key still verifies alongside a skipped vendor entry");
+    }
+
+    /**
+     * THE ONE THAT MATTERS: a JWK whose members are all well-formed STRINGS but whose key material
+     * is garbage. Member-type checks do not catch this — only building the key does — so before the
+     * fix {@code toECPublicKey()} threw straight out of the loop and killed the whole refresh.
+     *
+     * <p>Why that is a security bug and not a robustness nit: the throw is swallowed by
+     * {@code maybeRefetch()}, leaving the PREVIOUS cache live. An IdP that revokes a compromised
+     * key, publishes its replacement, and also happens to serve one malformed entry would keep the
+     * revoked key verifying signatures for as long as the bad entry stays in the document.
+     */
+    @Test
+    void jwkWithUnusableKeyMaterial_isSkipped_goodKeyStillLoads_andRotationStillTakesEffect() throws Exception {
+        Kp good = genKey("NEW");
+        // Well-formed strings; the coordinates are not valid base64url key material.
+        String badMaterial = "{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"BAD\","
+                + "\"x\":\"!!!not-base64!!!\",\"y\":\"@@@also-not-base64@@@\"}";
+        String doc = "{\"keys\":[" + badMaterial + "," + jwkEntry(good) + "]}";
+
+        JwsVerify verify = readyVerifier(doc);
+
+        assertTrue(verify.isReady(), "unusable key MATERIAL must not fail the fetch");
+        assertEquals(java.util.Set.of("NEW"), verify.jwksCache.keySet(),
+                "the JWK with bad key material is skipped; the good one is loaded");
+        assertVerifyOk(verify, jwt(good, validClaims("u")),
+                "a token signed by the good key verifies despite a sibling with bad key material");
+    }
+
+    /**
+     * The rotation scenario end to end: a REVOKED key must stop verifying even when the replacement
+     * document also carries an unbuildable entry. Pre-fix the refresh threw, the old cache survived,
+     * and the revoked key kept working — this is the regression that test guards.
+     */
+    @Test
+    void revokedKeyStopsVerifying_evenWhenTheNewDocumentCarriesABadEntry() throws Exception {
+        Kp revoked = genKey("OLD");
+        Kp replacement = genKey("NEW");
+        String revokedToken = jwt(revoked, validClaims("u"));
+
+        JwsVerify verify = readyVerifier(jwksDoc(revoked));
+        assertVerifyOk(verify, revokedToken, "precondition: the old key verifies before rotation");
+
+        // Rotation: OLD withdrawn, NEW published, plus one entry that cannot be built.
+        String badMaterial = "{\"kty\":\"EC\",\"crv\":\"P-256\",\"kid\":\"BAD\","
+                + "\"x\":\"!!!\",\"y\":\"!!!\"}";
+        currentJwks = "{\"keys\":[" + badMaterial + "," + jwkEntry(replacement) + "]}";
+        verify.loadJwks();
+
+        assertEquals(java.util.Set.of("NEW"), verify.jwksCache.keySet(),
+                "rotation must take effect despite the unbuildable entry");
+        assertVerifyCode(verify, revokedToken, Status.Code.PERMISSION_DENIED,
+                "the REVOKED key must no longer verify — a swallowed refresh here is the security bug");
+        assertVerifyOk(verify, jwt(replacement, validClaims("u")), "the replacement key verifies");
+    }
+
+    /** A blank kid cannot ever authenticate anything, so it must not inflate the keyset. */
+    @Test
+    void jwkWithBlankKid_isSkipped_notCachedAsAUsableKey() throws Exception {
+        Kp good = genKey("GOOD");
+        var w = genKey("ignored").pub().getW();
+        String blankKid = "{\"kty\":\"EC\",\"crv\":\"P-256\",\"kid\":\"   \",\"x\":\""
+                + coord(w.getAffineX()) + "\",\"y\":\"" + coord(w.getAffineY()) + "\"}";
+
+        JwsVerify verify = readyVerifier("{\"keys\":[" + blankKid + "," + jwkEntry(good) + "]}");
+
+        assertEquals(java.util.Set.of("GOOD"), verify.jwksCache.keySet(),
+                "a blank kid is unusable (verify() rejects blank kids) and must not be cached");
+    }
+
+    @Test
+    void keysetOfOnlyUnusableJwks_isTreatedAsZeroKeys_notAsAParseFailure() throws Exception {
+        // All entries skipped -> the same "no usable keys" path as an empty array: at bootstrap that
+        // is fail-closed + not ready. The point is that it gets there by SKIPPING, so the assertions
+        // below have to separate that from a decode failure or a construction failure, which would
+        // ALSO throw and ALSO leave ready=false.
+        String doc = "{\"keys\":["
+                + "{\"kty\":\"EC\",\"kid\":\"NO_COORDS\"},"                       // missing members
+                + "{\"kty\":\"EC\",\"kid\":42,\"x\":\"A\",\"y\":\"B\",\"crv\":\"P-256\"},"  // non-string member
+                + "{\"kty\":\"EC\",\"crv\":\"P-256\",\"kid\":\"BAD\",\"x\":\"!!\",\"y\":\"!!\"},"  // bad material
+                + "{\"kty\":\"RSA\",\"kid\":\"R1\",\"n\":1}"                     // unimplemented type
+                + "]}";
+        startJwks(doc);
+        JwsVerify verify = new JwsVerify(jwksUrl());
+
+        // (a) The document itself DECODES — this is the half the previous version of this test
+        //     could not distinguish. If strict decoding or a skip regression broke parsing, this
+        //     line fails with JsonDecodeException instead of reaching the zero-key path.
+        assertDoesNotThrow(() -> JsonUtils.parse(currentJwks, Jwks.class),
+                "every entry above is legal JSON: the document must parse, then skip entry by entry");
+
+        // (b) Having skipped all four, we land on the zero-key revocation signal — the SAME
+        //     exception the empty-array case produces, with the same message.
+        RuntimeException ex = assertThrows(RuntimeException.class, verify::loadJwks,
+                "a keyset with no USABLE keys is the zero-key revocation path (fail-closed)");
+        assertEquals("jwks has no usable keys", ex.getMessage(),
+                "must be the zero-key signal, NOT a decode/construction failure leaking out");
+
+        // (c) Fail-closed, and nothing was cached along the way.
+        assertFalse(verify.isReady(), "no usable keys must not flip ready=true");
+        assertTrue(verify.jwksCache.isEmpty(), "no partial key may survive an all-unusable document");
     }
 
     // ------------------------------------------------------------------------------------------

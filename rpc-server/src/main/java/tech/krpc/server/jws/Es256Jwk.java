@@ -54,6 +54,17 @@ public class Es256Jwk {
      *       "y": "6s9ECrJurlHCkSx8CTnqhS5HN7h9-dblFgLfpRPcPeg"
      *     }
      */
+    /**
+     * @deprecated the {@code Map<String,String>} shape it models does not match RFC 7517 §4, which
+     *     places no type constraint on JWK members — a vendor extension may legitimately be a
+     *     number, boolean, array or object. {@code Jwks.keys} is therefore
+     *     {@code List<Map<String,Object>>} since 1.2.0, and {@code JwsVerify} reads the four
+     *     members it consumes as strings and calls {@link #Es256Jwk(String, String, String, String)}
+     *     directly, skipping a JWK whose members are unusable rather than failing the keyset.
+     *     Unused in krpc; kept because removing a published public constructor would stack a second
+     *     binary break onto an already-breaking release. Slated for removal in the next major.
+     */
+    @Deprecated
     public Es256Jwk(Map<String,String> key) {
         this(
                 key.get(PublicClaims.KEY_ID),

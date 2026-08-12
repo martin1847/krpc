@@ -325,6 +325,13 @@ The dividing line is authorship, not severity: text a service author wrote for t
 kept; text nobody wrote for the caller — an exception's raw message, the auth engine's internal
 reason — is withheld.
 
+> **Service authors: your business error text reaches the client verbatim.** Because krpc cannot
+> tell a deliberate message from an accidental one, the message you put in a `NOT_FOUND`,
+> `FAILED_PRECONDITION`, `ALREADY_EXISTS` or an `RpcResult.error(...)` is delivered unedited to
+> whoever called you — including an agent over `/agent/invoke` or MCP. Write it for that reader:
+> no internal identifiers or hostnames, no SQL or stack fragments, no file paths, no user data or
+> anything echoed back from the request. Say what the caller should do, not what the server saw.
+
 Two things are withheld on the agent faces, both because they were actively harmful:
 
 - **Unexpected-failure detail.** An `UNKNOWN` description carries the thrown class and its raw

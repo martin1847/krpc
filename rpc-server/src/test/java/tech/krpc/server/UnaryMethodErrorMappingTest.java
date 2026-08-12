@@ -336,6 +336,72 @@ class UnaryMethodErrorMappingTest {
                 () -> "a custom validator's interpolated value must not reach the log: " + suppressed);
     }
 
+    // ------------------------------------------------------------------------------------------
+    // The logged description is partly ATTACKER-CONTROLLED: JwsVerify interpolates the request's
+    // kid, the rejected exp/nbf, and the client id. "Bounded" therefore has to mean sanitized and
+    // capped, not merely stackless.
+    // ------------------------------------------------------------------------------------------
+
+    /** A newline in the kid must not become a second log line. */
+    @Test
+    void attackerNewlineInDescription_cannotForgeALogLine() {
+        var forged = Status.PERMISSION_DENIED
+                .withDescription("kid not found or expired : \n[FAKE] admin login ok\r\nWARN done")
+                .asRuntimeException();
+
+        var message = captureLogs(forged, new IllegalStateException("x")).get(0).getFormattedMessage();
+
+        assertFalse(message.contains("\n"), () -> "no bare newline may survive: " + message);
+        assertFalse(message.contains("\r"), () -> "no bare carriage return may survive: " + message);
+        assertEquals(1, message.split("\n", -1).length, () -> "must stay ONE line: " + message);
+        // The text is still there, just defanged — evidence of the attempt is not destroyed.
+        assertTrue(message.contains("[FAKE] admin login ok"), message);
+    }
+
+    /** Tabs and other control characters go the same way. */
+    @Test
+    void controlCharacters_areStripped() {
+        assertFalse(UnaryMethod.sanitizeForLog("a\tb\u0000c\u0007d").matches(".*[\\p{Cntrl}].*"),
+                "no control character may survive sanitizing");
+        assertEquals("a b c", UnaryMethod.sanitizeForLog("a\t\t\tb   c"),
+                "runs of control/space collapse to a single space");
+    }
+
+    /** A padded description cannot be used to inflate log volume. */
+    @Test
+    void oversizedDescription_isTruncatedWithAMarker() {
+        var padded = "kid not found or expired : " + "A".repeat(50_000);
+        var oversized = Status.PERMISSION_DENIED.withDescription(padded).asRuntimeException();
+
+        var message = captureLogs(oversized, new IllegalStateException("x")).get(0)
+                .getFormattedMessage();
+
+        assertTrue(message.length() < UnaryMethod.MAX_LOGGED_DESCRIPTION + 120,
+                () -> "a 50k description must not reach the log, length was " + message.length());
+        assertTrue(message.endsWith("..."), () -> "truncation must be marked: " + message);
+    }
+
+    /** Sanitizing must not damage the descriptions that made logging worth doing. */
+    @Test
+    void normalDescription_survivesIntact() {
+        var real = Status.UNAVAILABLE
+                .withDescription("JWKS not reachable at https://idp.internal/jwks")
+                .asRuntimeException();
+
+        var message = captureLogs(real, new IllegalStateException("x")).get(0).getFormattedMessage();
+
+        assertTrue(message.contains("JWKS not reachable at https://idp.internal/jwks"),
+                () -> "an operator still needs this verbatim: " + message);
+        assertFalse(message.endsWith("..."), () -> "a short description is not truncated: " + message);
+    }
+
+    /** Exactly-at-the-cap input is not marked as truncated. */
+    @Test
+    void descriptionAtTheCap_isNotMarkedTruncated() {
+        var exact = "B".repeat(UnaryMethod.MAX_LOGGED_DESCRIPTION);
+        assertEquals(exact, UnaryMethod.sanitizeForLog(exact));
+    }
+
     /** An over-long application message is truncated before it reaches the wire. */
     @Test
     void longMessage_isTruncated() {

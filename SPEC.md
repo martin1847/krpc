@@ -386,10 +386,19 @@ Two things are withheld, both because they were actively harmful:
 the server logs" was aspirational, so here is the actual behaviour:
 
 - The **status code and the failing exception's class name** are always logged, on every path.
-- The **description** is logged for every code EXCEPT `INVALID_ARGUMENT`. For a pass-through code
-  that adds no exposure (the client already sees it); for a withheld code it is the entire reason
+- The **description** is logged for every code EXCEPT `INVALID_ARGUMENT`, after being
+  **stripped of control characters and capped at 200 characters**. For a pass-through code that
+  adds no exposure (the client already sees it); for a withheld code it is the entire reason
   withholding is acceptable — this is where `JWKS not reachable at …` and `daily quota exceeded`
   survive for an operator.
+
+  The cleaning is not cosmetic. Auth descriptions interpolate request-supplied values — the
+  `kid` from the token header, the rejected `exp`/`nbf`, the client id — all chosen by an
+  **unauthenticated** caller. Logged raw, they would let anyone who can reach the port forge a
+  log line with an embedded newline, inflate log volume with padding, or park arbitrary text in
+  retention. None of those values is secret (a `kid` is a public identifier, `exp`/`nbf` are
+  numbers), and they are diagnostically useful, so they are cleaned rather than dropped. Audited:
+  no token body, signature bytes or JWKS key material reaches any description.
 - The **full cause chain** is logged whenever the status carries a cause, or the code is one of
   ours (`INTERNAL`/`UNKNOWN`/`DATA_LOSS`/`ABORTED`/`DEADLINE_EXCEEDED`/anything unlisted).
 - **Not logged at all: an `INVALID_ARGUMENT` description or cause.** Deliberate — a custom jakarta

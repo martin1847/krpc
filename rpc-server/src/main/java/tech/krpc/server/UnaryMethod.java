@@ -350,24 +350,77 @@ public class UnaryMethod implements io.grpc.stub.ServerCalls.UnaryMethod<InputPr
     }
 
     /**
-     * The description, appended to the bounded line so a refusal is not invisible on BOTH sides.
+     * Upper bound on a logged description. Larger than {@link #MAX_ERROR_LENGTH} (which bounds what
+     * reaches a CLIENT) because a log line can afford more context, but still a hard cap: part of
+     * this string is attacker-controlled.
+     */
+    static final int MAX_LOGGED_DESCRIPTION = 200;
+
+    /**
+     * The description, appended to the bounded line so a refusal is not invisible on BOTH sides —
+     * sanitized first, because part of it comes from the request.
      *
      * <p>For a code whose description the client already sees, logging it discloses nothing new.
-     * For a code whose description is withheld from the client, logging it is the entire reason
-     * withholding is acceptable — this is where "JWKS not reachable at …" and "daily quota
-     * exceeded" survive.
+     * For a code whose description is withheld, logging it is the entire reason withholding is
+     * acceptable — this is where {@code JWKS not reachable at …} and {@code daily quota exceeded}
+     * survive for an operator.
      *
-     * <p>{@code INVALID_ARGUMENT} is the exception, again for the caller-data reason: the built-in
-     * validation text is safe, but a custom jakarta validator that interpolates the rejected value
-     * into its constraint message would put user input into the log through this line. The code
-     * and the exception class name are enough there.
+     * <p><b>Why sanitizing is not optional here.</b> The auth path interpolates request-supplied
+     * values into its descriptions: the {@code kid} from the token header, the rejected
+     * {@code exp}/{@code nbf}, the client id. All of that is chosen by an UNAUTHENTICATED caller.
+     * Written through verbatim it would let anyone who can reach the port forge log lines with an
+     * embedded newline, inflate log volume with a megabyte of padding, or park arbitrary text in
+     * our retention. "Bounded" has to mean bounded, not merely stackless — so control characters
+     * go (no line forging) and the result is capped (no amplification).
+     *
+     * <p>None of those interpolated values is secret — a {@code kid} is a public key identifier,
+     * {@code exp}/{@code nbf} are numbers, the client id is a header — and they carry real
+     * diagnostic value, which is why they are cleaned rather than dropped. Audited against every
+     * {@code withDescription} in {@code JwsVerify}: no token body, no signature bytes and no JWKS
+     * key material reaches a description, so there is nothing here that must be suppressed
+     * outright. {@code JwsVerify.malformed} already applies the same instinct, keeping raw token
+     * bytes to a DEBUG line "so a flood of junk tokens cannot fill logs".
      */
     private static String loggableDescription(Status status, Status.Code code) {
         if (Status.Code.INVALID_ARGUMENT == code) {
             return "";
         }
         var description = status.getDescription();
-        return (null != description && !description.isBlank()) ? " : " + description : "";
+        if (null == description || description.isBlank()) {
+            return "";
+        }
+        return " : " + sanitizeForLog(description);
+    }
+
+    /**
+     * Collapse every control character to a space and cap the length. Package-private for tests.
+     *
+     * <p>Control characters are removed rather than escaped: an escaped {@code \n} still lets a
+     * reader's eye parse a forged "line", and nothing downstream needs the original bytes — the
+     * point is that one log event stays one log line.
+     */
+    static String sanitizeForLog(String raw) {
+        var cleaned = new StringBuilder(Math.min(raw.length(), MAX_LOGGED_DESCRIPTION));
+        var lastWasSpace = false;
+        for (var i = 0; i < raw.length() && cleaned.length() < MAX_LOGGED_DESCRIPTION; i++) {
+            var c = raw.charAt(i);
+            var isSpace = Character.isISOControl(c) || ' ' == c;
+            if (isSpace) {
+                if (!lastWasSpace && cleaned.length() > 0) {
+                    cleaned.append(' ');
+                }
+                lastWasSpace = true;
+                continue;
+            }
+            cleaned.append(c);
+            lastWasSpace = false;
+        }
+        while (cleaned.length() > 0 && ' ' == cleaned.charAt(cleaned.length() - 1)) {
+            cleaned.setLength(cleaned.length() - 1);
+        }
+        // Only mark truncation when input actually ran past the cap, so a description that merely
+        // collapsed whitespace is not misreported as cut short.
+        return raw.length() > MAX_LOGGED_DESCRIPTION ? cleaned + "..." : cleaned.toString();
     }
 
     static final int MAX_ERROR_LENGTH = 100;

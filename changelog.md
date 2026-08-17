@@ -1,4 +1,6 @@
-# Unreleased
+# 1.2.0, 2026-08-17
+
+Strict JSON scalar decoding and honest error codes on the agent HTTP faces — two breaking changes, each with an env-var rollback — plus the error-disclosure hardening they exposed, and the native metadata / MCP 07-28 work that had been sitting unreleased. Merged to `dev` via PRs #54, #55, #56.
 
 * **BREAKING — JSON scalar decoding is strict by default (#56).** A JSON number or boolean sent
   into a `String` target is now a decode failure instead of being silently stringified (`12345` →
@@ -64,10 +66,19 @@
   unchanged (hundreds per area, thousands for a large one). **The framework does not act on this** —
   nothing validates, reserves or routes on the range, and a code below `1000` works exactly as
   before. Do not write code that depends on it. `RpcResult` javadoc + SPEC §3.
-* **Flag governance — kill switches are lazily resolved at a single point and log one line
-  (#54, #55).** Enforced by an ArchUnit gate so the pattern cannot drift; a lazily-resolved flag is
-  also what lets `KRPC_JSON_STRICT` flip on a native binary, where class initializers run at image
-  build time and a static-block read would be baked in.
+* **Flag governance — an ArchUnit gate against flags resolving in static initializers
+  (#54, #55).** `R5: flags must not resolve in static initializers` (`FlagResolutionGateTest`)
+  fails the build when a `<clinit>` reads `System.getenv`/`getProperty` directly, calls a flag
+  accessor, or reads another class's already-resolved flag field. The motivation is native images:
+  Quarkus initializes classes at build time, so whatever a static initializer reads is baked into
+  the binary and no runtime environment variable can flip it — which is why `KRPC_JSON_STRICT`
+  resolves lazily on the first decode. **What the gate does not cover**, deliberately: it scans the
+  six core modules only (`rpc-api`, `rpc-common`, `rpc-client`, `rpc-server`, `rpc-server-quarkus`,
+  `http-server`); it is a freeze-ratchet rule, so pre-existing violations are baselined rather than
+  fixed; and it says nothing about the rest of the convention — that a flag is resolved at a
+  *single* point and logs one line when it changes behaviour. Those two remain conventions with no
+  machine enforcement. `KRPC_MCP` is read in two places today (`McpHandler:173`,
+  `McpGetHandler:53`), a known debt this rule cannot see.
 * **GraalVM/Mandrel 25 native metadata — migrated to `reachability-metadata.json`, deprecated
   `-H:` options removed (NATIVE-META-001).** Every published krpc jar now ships its native-image
   metadata at the standard auto-detected location `META-INF/native-image/tech.krpc/<artifactId>/`

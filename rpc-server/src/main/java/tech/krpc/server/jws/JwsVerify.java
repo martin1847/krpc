@@ -49,13 +49,31 @@ public class JwsVerify implements CredentialVerify {
     public static final String WELL_KNOWN_JWKS_PATH = ".well-known/jwks.json";
     public static final String DEFAULT_COOKIE_NAME = "access-token";
 
-    // O3/O4 (HARDEN-B1): periodic freshness window. A cache HIT older than this triggers a
-    // background rebuild so a revoked/rotated-out kid stops verifying within one window.
+    // O3/O4 (HARDEN-B1) + anti-amplification (owner decision): ONE throttle window shared by BOTH
+    // the periodic HIT-path freshness refresh and the unknown-kid/post-failure MISS-path refetch —
+    // there used to be two independent constants here (this one at 5 min, and a separate 30s
+    // MIN_FETCH_GAP_MILL for the MISS path so rotation was picked up fast). That second, SHORTER
+    // window was the bug: the MISS path is ATTACKER-CONTROLLED (anyone can mint a JWT header
+    // carrying a random kid, no valid credential required), so a 30s window let a kid-spray turn
+    // every server instance into a source hammering the JWKS origin (a downstream h5 CDN) at 10x
+    // the rate legitimate traffic would ever produce.
+    //
+    // THE INVARIANT this single constant now guarantees: an unknown-kid refetch can never happen
+    // more often than the refetch legitimate steady-state traffic already causes on its own (at
+    // most once per instance per window) — a random-kid spray cannot push the origin fetch rate
+    // above that baseline, because both paths spend from the same clock (lastTryFetch). Do not
+    // reintroduce a second, shorter constant for the MISS path — that reopens the amplification gap
+    // this unification closes.
+    //
+    // Rotation-latency tradeoff, accepted by owner: a freshly-rotated-in kid's worst-case pickup
+    // latency moves from 30s to this window (5 min), because MISS-path pickup now waits on the same
+    // clock as the HIT path. Under normal (non-attack) traffic this is usually invisible — the
+    // HIT-path refresh already rebuilds the whole keyset on every fetch, so any request against an
+    // existing still-valid kid pulls a newly-published key in as a side effect within this window,
+    // and the FIRST request carrying the new kid gets an IMMEDIATE fetch if it lands outside the
+    // window. Only a request landing on a kid-spray-pinned window has to wait the full period —
+    // the accepted cost of a single constant that cannot be gamed into an amplifier.
     static final long GAP_MILL = 5 * 60 * 1000L;
-
-    // O4 (HARDEN-B1): unknown-kid / post-failure refetch runs on this SHORTER independent
-    // backoff so a rotation is picked up fast and a failed fetch never burns the 5-min window.
-    static final long MIN_FETCH_GAP_MILL = 30 * 1000L;
 
     // C4 (HARDEN-B1): bound the JWKS fetch so a slow/hostile IdP can neither hang a request
     // thread forever nor OOM us with an unbounded body.
@@ -82,8 +100,9 @@ public class JwsVerify implements CredentialVerify {
     // keys disappear. volatile → readers see the new keyset atomically without locking.
     volatile Map<String, ECPublicKey> jwksCache = new ConcurrentHashMap<>();
 
-    // O4 (HARDEN-B1): two independent windows. lastOkFetch advances ONLY on success (drives the
-    // 5-min periodic refresh); lastTryFetch advances on EVERY attempt (drives the short backoff).
+    // O4 (HARDEN-B1): lastOkFetch advances ONLY on success (tests/observability read it to prove a
+    // failed attempt didn't move it); lastTryFetch advances on EVERY attempt and is the sole clock
+    // maybeRefetch() gates against — see GAP_MILL for why HIT and MISS now share this one clock.
     volatile long lastOkFetch;
     volatile long lastTryFetch;
 
@@ -159,29 +178,34 @@ public class JwsVerify implements CredentialVerify {
         var key = cache.get(kid);
         if (null != key) {
             // O3 (HARDEN-B1): on a HIT still refresh periodically so revocations take effect.
-            maybeRefetch(GAP_MILL);
+            maybeRefetch();
             return jwksCache.get(kid);
         }
-        // O4 (HARDEN-B1): a MISS may be a fresh rotation — refetch on the short backoff window.
-        maybeRefetch(MIN_FETCH_GAP_MILL);
+        // O4 (HARDEN-B1) + anti-amplification: a MISS may be a fresh rotation — refetch, but on the
+        // SAME GAP_MILL window as the HIT path above (see GAP_MILL javadoc for why: a MISS is
+        // attacker-controlled and must not get a shorter, gameable window).
+        maybeRefetch();
         return jwksCache.get(kid);
     }
 
     /**
-     * O4 (HARDEN-B1): throttled, best-effort refetch used on the request path. Gated by
-     * {@code minGapMill} against {@link #lastTryFetch}. Non-blocking: if another thread already
-     * holds the fetch lock we skip (single-flight); a failed fetch is swallowed (last-known-good
-     * keyset keeps serving) and does NOT advance {@link #lastOkFetch}, so the 5-min window survives.
+     * O4 (HARDEN-B1) + anti-amplification: throttled, best-effort refetch used on BOTH the HIT and
+     * MISS request paths (see {@link #useKey}). Gated by {@link #GAP_MILL} against
+     * {@link #lastTryFetch} — ONE window for both callers on purpose (no {@code minGapMill}
+     * parameter): a caller-selectable shorter window on the MISS path is exactly the amplification
+     * surface this was unified to close. Non-blocking: if another thread already holds the fetch
+     * lock we skip (single-flight); a failed fetch is swallowed (last-known-good keyset keeps
+     * serving) and does NOT advance {@link #lastOkFetch}, so the window survives.
      */
-    void maybeRefetch(long minGapMill) {
-        if (System.currentTimeMillis() - lastTryFetch < minGapMill) {
+    void maybeRefetch() {
+        if (System.currentTimeMillis() - lastTryFetch < GAP_MILL) {
             return;
         }
         if (!fetchLock.tryLock()) {
             return; // another thread is already fetching
         }
         try {
-            if (System.currentTimeMillis() - lastTryFetch < minGapMill) {
+            if (System.currentTimeMillis() - lastTryFetch < GAP_MILL) {
                 return; // lost the race, someone just fetched
             }
             try {
@@ -556,6 +580,15 @@ public class JwsVerify implements CredentialVerify {
             extVerify.afterSignCheck(jws, isCookie);
         } catch (RuntimeException e) {
             throw malformed("malformed claim", e);
+        }
+
+        // DEBUG (not INFO): success is the hot-path steady state — logging it at INFO would flood
+        // production logs on every authenticated call. DEBUG keeps the line available for forensics
+        // (turn it on temporarily to positively confirm a kid was accepted) without a standing cost,
+        // consistent with this repo's log-level discipline (see observability-standard). No token,
+        // signature, or principal bytes — kid only.
+        if (log.isDebugEnabled()) {
+            log.debug("jws verify ok : kid={}", kid);
         }
 
         return jws;

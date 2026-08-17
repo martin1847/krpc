@@ -32,6 +32,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.net.httpserver.HttpServer;
 import io.grpc.Status;
@@ -489,9 +490,9 @@ class JwsVerifyHardenTest {
 
         long okBefore = verify.lastOkFetch;
         jwksStatus = 500;               // IdP now blips
-        verify.lastTryFetch = 1000L;    // age the try-window so maybeRefetch(0) definitely attempts
+        verify.lastTryFetch = 1000L;    // age the try-window so maybeRefetch() definitely attempts
 
-        verify.maybeRefetch(0);         // force one best-effort attempt; must swallow the 500
+        verify.maybeRefetch();          // force one best-effort attempt; must swallow the 500
 
         assertEquals(okBefore, verify.lastOkFetch,
                 () -> "lastOkFetch changed on a FAILED fetch (5-min window burned): " + verify.lastOkFetch);
@@ -798,6 +799,59 @@ class JwsVerifyHardenTest {
                 "array alg ⇒ UNAUTHENTICATED (non-string alg: CCE caught as malformed, not UNKNOWN)");
     }
 
+    // ------------------------------------------------------------------------------------------
+    // 23. anti-amplification (owner decision): unknown-kid MISS path no longer has its own 30s
+    //     window -- it now shares GAP_MILL (5min) with the HIT path, via ONE maybeRefetch() with
+    //     no minGapMill parameter. A kid-spray (any caller can mint a JWT header carrying a random
+    //     kid, no valid credential needed) can therefore never push the JWKS origin fetch rate
+    //     above what legitimate steady-state traffic already produces on its own.
+    //
+    //     DISCRIMINATING assertion: at 60s elapsed since the last fetch attempt -- outside the OLD
+    //     separate 30s window, well inside the shared 5min GAP_MILL window -- a burst of DISTINCT
+    //     unknown kids must produce ONLY the bootstrap fetch, no more. This is not just "the
+    //     throttle exists" (that would also pass trivially at 30s); it specifically pins the window
+    //     at >60s, so reintroducing a separate 30s constant for the MISS path makes the first
+    //     assertion below fail (verified manually by temporarily reverting the code to the old
+    //     two-constant shape and re-running this test; see task report).
+    //     A second block then crosses the real GAP_MILL boundary and confirms a MISS still
+    //     refetches, so rotation pickup for a legitimate new kid is not permanently starved.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void unknownKidThrottle_multipleDistinctUnknownKids_singleFetchWithinWindow_thenRefetchOutsideWindow()
+            throws Exception {
+        Kp k1 = genKey("K1");
+        AtomicInteger fetchCount = new AtomicInteger();
+        startJwks(jwksDoc(k1), fetchCount);
+        JwsVerify verify = new JwsVerify(jwksUrl());
+        verify.loadJwks();
+        assertEquals(1, fetchCount.get(), "bootstrap load must be exactly one fetch");
+
+        // 60s elapsed since the last attempt: outside the OLD separate 30s window, still well
+        // inside the shared 5min GAP_MILL window.
+        verify.lastTryFetch = System.currentTimeMillis() - 60_000L;
+
+        // Burst of DISTINCT unknown kids -- each is a MISS, each calls maybeRefetch() (gated by
+        // GAP_MILL, the SAME window the HIT path uses).
+        for (String kid : List.of("rand-1", "rand-2", "rand-3", "rand-4", "rand-5")) {
+            String forged = jwt(kid, k1.priB64, validClaims("attacker"));
+            assertVerifyCode(verify, forged, Status.Code.PERMISSION_DENIED,
+                    "unknown kid " + kid + " -> PERMISSION_DENIED (kid absent from keyset)");
+        }
+        assertEquals(1, fetchCount.get(),
+                "60s elapsed is OUTSIDE the old separate 30s window but INSIDE the shared 5min "
+                        + "GAP_MILL window -- a kid-spray at this cadence must NOT trigger a second "
+                        + "fetch (the anti-amplification property; reintroducing a separate 30s MISS "
+                        + "window makes this assertion fail)");
+
+        // Cross the real GAP_MILL boundary and confirm a MISS still refetches (rotation not starved).
+        verify.lastTryFetch = System.currentTimeMillis() - (JwsVerify.GAP_MILL + 1_000L);
+        String forged = jwt("rand-6", k1.priB64, validClaims("attacker"));
+        assertVerifyCode(verify, forged, Status.Code.PERMISSION_DENIED,
+                "unknown kid outside the GAP_MILL window -> still PERMISSION_DENIED (kid absent)");
+        assertEquals(2, fetchCount.get(),
+                "once GAP_MILL has elapsed, the next unknown-kid MISS must trigger a refetch");
+    }
+
     // ==========================================================================================
     // Harness (inlined from GrpcContextAuthIT — do NOT import it).
     // ==========================================================================================
@@ -905,6 +959,23 @@ class JwsVerifyHardenTest {
         jwksStatus = 200;
         jwksServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         jwksServer.createContext(JWKS_PATH, ex -> {
+            byte[] out = currentJwks.getBytes(UTF_8);
+            ex.getResponseHeaders().add("Content-Type", "application/json");
+            ex.sendResponseHeaders(jwksStatus, out.length);
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(out);
+            }
+        });
+        jwksServer.start();
+    }
+
+    /** Same as {@link #startJwks(String)} but also counts every request hitting the endpoint. */
+    private void startJwks(String body, AtomicInteger fetchCount) throws Exception {
+        currentJwks = body;
+        jwksStatus = 200;
+        jwksServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        jwksServer.createContext(JWKS_PATH, ex -> {
+            fetchCount.incrementAndGet();
             byte[] out = currentJwks.getBytes(UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.sendResponseHeaders(jwksStatus, out.length);

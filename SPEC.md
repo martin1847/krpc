@@ -1002,8 +1002,8 @@ A JWT rides one of **two lanes**, both feeding the same verifier (§8.4):
 
 | lane | wire | rpcurl | when |
 | --- | --- | --- | --- |
-| **Business** | `Cookie: access-token=<jwt>` | `-c "access-token=$TOK"` — value verbatim on `cookie`, use the `name=value` equals form (`rpcurl/.../RpcUrl.java:53-54,63-64`) | browser/frontend caller whose login set the cookie |
-| **Framework** | `authorization: Bearer <jwt>` | `-t "$TOK"` — prepends `Bearer ` (`rpcurl/.../RpcUrl.java:56-57,67-68`) | s2s / tooling with the raw JWT |
+| **Business** | `Cookie: access-token=<jwt>` | `-c "access-token=$TOK"` — value verbatim on `cookie`, use the `name=value` equals form (rpcurl CLI, `krpc-crates/rpcurl`) | browser/frontend caller whose login set the cookie |
+| **Framework** | `authorization: Bearer <jwt>` | `-t "$TOK"` — prepends `Bearer ` (rpcurl CLI, `krpc-crates/rpcurl`) | s2s / tooling with the raw JWT |
 
 - **No `KRPC_TOKEN` env var** — the framework lane is the `-t`/`--token` flag only.
 - The agent HTTP surface (`/agent/invoke`, `/mcp`) forwards only `Authorization`, not `Cookie`
@@ -1020,13 +1020,15 @@ strip a leading `I`-before-uppercase and a trailing `Service`/`Rpc`, **no dots**
 | `@UnsafeWeb IDemoService` | `Demo` (`I` stripped) | `{gateway}/{app}/Demo/{method}` | frontend + s2s |
 | `@UnsafeWeb DemoService` | `Demo` (`Service` stripped) | `{gateway}/{app}/Demo/{method}` | frontend + s2s |
 | `@UnsafeWeb FooRpc` | `Foo` (`Rpc` stripped) | `{gateway}/{app}/Foo/{method}` | frontend + s2s |
-| `DemoService` (no `@UnsafeWeb`) | `-{app}/Demo` | *not web-served*; gRPC path `-{app}/Demo/{method}` (`rpcurl --no-web`) | **s2s only** |
+| `DemoService` (no `@UnsafeWeb`) | `-{app}/Demo` | *not web-served*; gRPC path `-{app}/Demo/{method}` (prepend `-` in the rpcurl URL) | **s2s only** |
 
 For a non-`@UnsafeWeb` service `RefUtils` prepends `HIDDEN_SERVICE` (`-`) to the **whole**
 `{app}/{Service}` → name `-{app}/{Service}`, gRPC method `-{app}/{Service}/{method}`
 (`RefUtils.java:192-196`); `@UnsafeWeb` stays prefixless (the `-` keeps a hidden service off
-the web gateway). CLI mirror: `rpcurl --no-web` prepends `-` to the app segment
-(`rpcurl/.../RpcUrl.java:97-99`). On the plain-HTTP agent surface the name is used
+the web gateway). CLI mirror: the rpcurl CLI (`krpc-crates/rpcurl`, Rust) takes the
+full URL directly — prepend `-` to the app segment in the URL yourself; the
+retired Java rpcurl's `--no-web` flag did this automatically, the Rust CLI has no
+equivalent flag. On the plain-HTTP agent surface the name is used
 **app-relative** (`{"service":"Demo","method":"..."}`), lookup = literal `"Service/method"`
 key (`WebMethodRegistry.java:36-40`) — hidden/unknown → `null` → `code:5` NOT_FOUND
 (`docs/agent-guide.md`).

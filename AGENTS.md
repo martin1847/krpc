@@ -10,7 +10,7 @@ Key boundaries read from the repository:
 
 - Services are defined as Java interfaces and DTOs, without hand-written proto files for normal service authors.
 - Service discovery, load balancing, and telemetry are delegated to Kubernetes, Istio, or deployment infrastructure.
-- The repository contains API contracts, common runtime code, Java client/server runtime modules, framework/native-image integrations, HTTP gateway support, code generation, tests, demos, and rpcurl tooling.
+- The repository contains API contracts, common runtime code, Java client/server runtime modules, framework/native-image integrations, HTTP gateway support, code generation, tests, and demos. The `rpcurl` CLI client is maintained externally in `krpc-crates` (Rust); this repo does not host an rpcurl implementation.
 
 ## Repo Facts (branches, releases, mirrors)
 

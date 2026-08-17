@@ -1,5 +1,73 @@
 # Unreleased
 
+* **BREAKING — JSON scalar decoding is strict by default (#56).** A JSON number or boolean sent
+  into a `String` target is now a decode failure instead of being silently stringified (`12345` →
+  `"12345"`, `true` → `"true"`). Through 1.1.1 such a request passed field validation and reached
+  the method body carrying a coerced value; only `[]` / `{}` failed. **A caller that sends a bare
+  number where the DTO declares a `String` starts being rejected the moment you deploy, with no
+  change on its side.** Scope is every typed decode through `JsonUtils.parse`: the gRPC request
+  path, both `/agent/invoke` decodes, MCP tool arguments, and **client-side response decoding** —
+  so a caller on 1.2.0 also reads its callee's replies strictly. Untyped `Map`/`Object` targets are
+  unaffected (no textual slot, nothing to coerce). **Rollback needs no code change:
+  `KRPC_JSON_STRICT=false`** — environment variable only, no system-property equivalent, resolved
+  lazily on the first decode so it flips a deployed native binary without a rebuild. Unset or blank
+  keeps strict; any unrecognised value (`fasle`, `yes`) falls to lenient, deliberately, because an
+  escape hatch that only opens when spelled perfectly fails exactly when it is needed. Before
+  upgrading, audit the `String` fields on your request DTOs and what actually reaches them — one
+  downstream audit of ~70 such fields found zero exposure, which is a data point, not a promise.
+  SPEC §4.
+* **BREAKING — `/agent/invoke` and MCP report real gRPC error codes (#56).** Both HTTP agent faces
+  flattened every dispatch failure: `/agent/invoke` answered a hardcoded `13` for everything, and
+  MCP fell through to `Status.fromThrowable`'s `UNKNOWN` = `2`. A malformed body, a failed field
+  validation and a genuine crash were indistinguishable, and all three claimed the server was at
+  fault. `UnaryMethod.invokeWeb` now applies the same exception→`Status` table the gRPC path always
+  used, and both handlers derive the code from it.
+
+  | face | input | 1.1.1 | 1.2.0 |
+  | --- | --- | --- | --- |
+  | `/agent/invoke` | missing / null / empty / blank required field | `13` | **`3`** |
+  | `/agent/invoke` | malformed JSON, or a scalar strict decoding rejects | `13` | **`3`** |
+  | `/agent/invoke` | auth failure | `13` | **`16`** / **`7`** |
+  | `/agent/invoke` | unexpected server exception | `13` | **`2`** |
+  | MCP `tools/call` | malformed JSON, or a scalar strict decoding rejects | `2` | **`3`** |
+
+  A *dispatched* `/agent/invoke` request never answers `13` again — a failure outside dispatch
+  (building the request context, serializing the response) still does, and now means what it says.
+  MCP validation and auth codes were already correct and do not move. **Branch on `code`, never on
+  `message`:** the message text is graded per face (below) and is not a contract. SPEC §4.
+* **Security — agent-face error messages are default-deny (#56).** Reporting the real status also
+  meant echoing its description, which leaked two ways: an `INTERNAL`/`UNKNOWN` description carries
+  the thrown class and its raw message (SQL fragments, connection strings, hostnames, file paths,
+  and any input an exception interpolated), and auth descriptions distinguish "JWKS not ready" from
+  "empty token" from "unknown kid" from "bad signature" from "expired", several quoting the `kid`,
+  `exp` or client id back — a credential-state oracle for an unauthenticated caller. On
+  `/agent/invoke` and `/mcp` only request-refusal codes (`INVALID_ARGUMENT`, `NOT_FOUND`,
+  `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE`) now pass their description through, so
+  parameter-validation still returns `field(constraint)` detail and business errors still reach the
+  caller verbatim; everything else — including any code added later — collapses to a fixed string
+  per code. gRPC is unchanged (service-to-service). Server-side logging is graded to match: a
+  refused request is one bounded WARN with the description sanitized of control characters and
+  capped, while a genuine fault keeps the full cause chain. If your service needs the caller to see
+  detail on a withheld code, return it as a soft `RpcResult.error(code, msg)` instead. SPEC §4.
+* **`Jwks.keys` is `List<Map<String,Object>>` (#56).** RFC 7517 §4 places no type constraint on JWK
+  members, so a vendor extension carrying a number, boolean or array is a legal keyset — under
+  strict decoding the old `Map<String,String>` would have failed the *entire* document over one
+  such member, stranding the last-known-good keys at refresh or blocking bootstrap. `JwsVerify` now
+  reads only the members it consumes and skips an individual unusable JWK (missing, non-string, or
+  unbuildable key material) instead of rejecting the document. **`Jwks.getKeys()`'s signature change
+  is source-incompatible and binary-compatible** (both erase to `List`): already-compiled consumers
+  keep running, but code assigning to `List<Map<String,String>>` fails to compile until updated.
+  `rpc-server` is outside the japicmp-covered set, so no gate catches this for you.
+* **Business error codes: start at 1000 (suggestion, #56).** gRPC status occupies `0`–`16` and
+  `17`–`999` is reserved for system codes krpc may add later, so a business code at `1000`+ cannot
+  collide with either and is recognisable on sight as business semantics. Existing band widths are
+  unchanged (hundreds per area, thousands for a large one). **The framework does not act on this** —
+  nothing validates, reserves or routes on the range, and a code below `1000` works exactly as
+  before. Do not write code that depends on it. `RpcResult` javadoc + SPEC §3.
+* **Flag governance — kill switches are lazily resolved at a single point and log one line
+  (#54, #55).** Enforced by an ArchUnit gate so the pattern cannot drift; a lazily-resolved flag is
+  also what lets `KRPC_JSON_STRICT` flip on a native binary, where class initializers run at image
+  build time and a static-block read would be baked in.
 * **GraalVM/Mandrel 25 native metadata — migrated to `reachability-metadata.json`, deprecated
   `-H:` options removed (NATIVE-META-001).** Every published krpc jar now ships its native-image
   metadata at the standard auto-detected location `META-INF/native-image/tech.krpc/<artifactId>/`

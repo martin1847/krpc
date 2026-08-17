@@ -13,16 +13,14 @@ dependencies {
 
 
     api project(':rpc-server')
-    // CLIENTDEP-ALIGN (OTEL-003 root-cause class): declare rpc-client DIRECTLY at the project
-    // version so dependency resolution always aligns the client with the server. Without this,
-    // rpc-client reaches the published POM ONLY transitively via ext-rpc, whose POM pins an OLD
-    // rpc-client (1.0.3) — consumers of rpc-server-quarkus:X would silently resolve rpc-client:OLD.
-    // A direct declaration at the project version wins in both engines: Maven mediates by
-    // NEAREST-wins (this depth-1 dep beats ext-rpc's depth-2 transitive), Gradle selects the
-    // HIGHEST version by default (project version > 1.0.3). `implementation` would already reach
-    // the runtime graph and fix resolution; `api` is the intentional stronger compile+runtime
-    // exposure, mirroring how rpc-server declares rpc-api/rpc-common (chosen for consistency and
-    // compile visibility, not because it is the only propagation path).
+    // CLIENTDEP-ALIGN: since ext-rpc 1.1.0 its published POM carries zero tech.krpc
+    // dependencies (the old cross-repo ring — rpc-server-quarkus -> ext-rpc:1.0.3 ->
+    // rpc-client:1.0.3 — was cut at the source), so rpc-client is no longer reachable
+    // transitively through ext-rpc at all. `api project(':rpc-client')` stays for a
+    // straightforward reason: this module IS the Quarkus form of core, and core's job is to
+    // hand the client to its consumers — they now have to get rpc-client from here, not from
+    // ext-rpc. `api` (not `implementation`) is the intentional compile+runtime exposure,
+    // mirroring how rpc-server declares rpc-api/rpc-common.
     api project(':rpc-client')
     // ADR-0004 (AGENT-001 P0): agent HTTP discover/invoke handlers ride the existing
     // http-server netty transport (GetHandler/PostHandler beans auto-registered by HttpHandlerExpose).

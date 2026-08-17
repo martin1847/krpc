@@ -4,6 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import io.grpc.Metadata;
+import io.grpc.StatusRuntimeException;
+import io.grpc.StatusException;
+import io.grpc.Status;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.quarkus.arc.Unremovable;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -108,8 +111,29 @@ public class AgentInvokeHandler implements PostHandler<AgentInvokeRequest> {
         } catch (Throwable ex) {
             // Credential failure (StatusException) and method errors land here. Keep the
             // client message generic; the dispatch path already logged detail server-side.
-            log.warn("agent invoke {}/{} failed: {}", req.getService(), req.getMethod(), ex.toString());
-            return error(CODE_INTERNAL, ex.getClass().getSimpleName());
+            // AGENT-ERRCODE: derive the code from the Status that UnaryMethod.toClientError already
+            // attached, instead of reporting a blanket INTERNAL. This face used to answer 13 for a
+            // malformed body and 13 for a validation failure -- both client errors dressed as
+            // server faults, and both indistinguishable from a real crash.
+            if (ex instanceof StatusException || ex instanceof StatusRuntimeException) {
+                // One line, no stack: UnaryMethod.invokeWeb logged this with the detail its level
+                // warrants. What that log cannot say is WHICH service/method was called.
+                log.warn("agent invoke {}/{} failed: {} {}", req.getService(), req.getMethod(),
+                        Status.fromThrowable(ex).getCode(), ex.getClass().getSimpleName());
+                // AGENT-ERRCODE-SEC: the code is uniform across faces, the description is graded by
+                // exposure -- see AgentErrorMessage.
+                return error(Status.fromThrowable(ex).getCode().value(),
+                        AgentErrorMessage.forClient(Status.fromThrowable(ex),
+                                requestHeaders.get(TraceMeta.TRACEPARENT)));
+            }
+            // Not a mapping gap: this covers the work OUTSIDE invokeWeb's own try -- building the
+            // ServerContext, attaching the gRPC Context, and serializing the response in
+            // outputToJson. Those never reach UnaryMethod's logging, so this is the ONLY record of
+            // them and it must carry the full throwable. They are genuinely unknown failures, so
+            // they answer like one: INTERNAL, with no detail crossing the boundary.
+            log.error("agent invoke {}/{} failed outside dispatch", req.getService(),
+                    req.getMethod(), ex);
+            return error(CODE_INTERNAL, AgentErrorMessage.INTERNAL);
         }
     }
 

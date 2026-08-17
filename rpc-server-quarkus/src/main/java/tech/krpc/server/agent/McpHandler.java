@@ -25,6 +25,8 @@ import tech.krpc.server.WebInvoker;
 import tech.krpc.server.invoke.ValidationException;
 import tech.krpc.server.jws.HttpConst;
 import tech.krpc.util.EnvUtils;
+import io.grpc.StatusException;
+import io.grpc.StatusRuntimeException;
 import tech.krpc.util.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -395,9 +397,19 @@ public class McpHandler implements PostHandler<String> {
             // Credential failure / dispatch error -> MCP tool execution error (isError), not a
             // protocol error. AGENT-002 F1/F2/F3: surface the structured envelope (gRPC status
             // code + safe message + typed jakarta violations, no rejected value) instead of the
-            // bare exception class name. Full detail is already logged server-side by the dispatch.
-            log.warn("mcp tools/call {} failed: {}", toolName, ex.toString());
-            return toolError(id, envelopeFromThrowable(ex));
+            // bare exception class name.
+            if (ex instanceof StatusException || ex instanceof StatusRuntimeException) {
+                // One line, no stack: UnaryMethod.invokeWeb logged it at the level its class
+                // warrants; this adds only the tool identity.
+                log.warn("mcp tools/call {} failed: {} {}", toolName,
+                        io.grpc.Status.fromThrowable(ex).getCode(), ex.getClass().getSimpleName());
+            } else {
+                // Outside invokeWeb's try (input resolution, response serialization): nothing else
+                // logs these, so this is the only record and it carries the full throwable.
+                log.error("mcp tools/call {} failed outside dispatch", toolName, ex);
+            }
+            return toolError(id, envelopeFromThrowable(ex,
+                    requestHeaders.get(TraceMeta.TRACEPARENT)));
         }
     }
 
@@ -495,7 +507,7 @@ public class McpHandler implements PostHandler<String> {
      * string reparse. Any other status is code + its own description, with NO violations key (so
      * business prose is never mistaken for a jakarta violation).
      */
-    private static Map<String, Object> envelopeFromThrowable(Throwable ex) {
+    private static Map<String, Object> envelopeFromThrowable(Throwable ex, String traceparent) {
         io.grpc.Status status = io.grpc.Status.fromThrowable(ex);
         var envelope = new LinkedHashMap<String, Object>();
         envelope.put("code", status.getCode().value());
@@ -515,8 +527,11 @@ public class McpHandler implements PostHandler<String> {
             return envelope;
         }
 
-        String desc = status.getDescription();
-        envelope.put("message", (null != desc && !desc.isBlank()) ? desc : status.getCode().name());
+        // AGENT-ERRCODE-SEC: the description is NOT echoed verbatim. An UNKNOWN carries the thrown
+        // class and its raw message (SQL, paths, interpolated input); an auth failure carries the
+        // precise reason, which to an unauthenticated caller is a credential-state oracle. The code
+        // stays uniform across faces; only the detail level is graded by exposure.
+        envelope.put("message", AgentErrorMessage.forClient(status, traceparent));
         return envelope;
     }
 

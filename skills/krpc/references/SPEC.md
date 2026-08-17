@@ -101,15 +101,36 @@ public RpcResult<Integer> testLogicError(Integer i) {
     return RpcResult.error(666, "业务逻辑失败");   // DemoServiceImpl.java:43-46
 }
 ```
-`RpcResult.java:22-24` is explicit: **do not use Java exceptions to convey
+`RpcResult.java:22-25` is explicit: **do not use Java exceptions to convey
 business errors — define an error code instead.**
+
+**Numbering (a suggestion, not a rule): start business codes at 1000.** gRPC status occupies
+0–16 and 17–999 is reserved for system codes krpc may add later, so a business code at 1000 or
+above cannot collide with either, and a four-digit code is recognisable on sight as business
+semantics rather than a transport or framework failure. Band widths are unchanged: hundreds per
+business area (1000–1099, 1100–1199, …), thousands for a large one (1000–1999, 2000–2999, …).
+
+**The framework does not act on this.** Nothing validates the range, nothing reserves it, and
+nothing routes on it; a business code below 1000 works exactly as before. It is a numbering
+convention — do not write code that depends on it.
 
 ### Hard (system/security/validation) → throw
 System errors, auth failures, validation failures, and unexpected
 `RuntimeException`s are thrown. The server catches everything
-(`UnaryMethod.java:212-231`): a `StatusException`/`StatusRuntimeException` passes
+(`UnaryMethod.toClientError`): a `StatusException`/`StatusRuntimeException` passes
 through as-is; anything else is wrapped in `Status.UNKNOWN` with the message
-**truncated to 100 chars** and an error log keyed by `traceId`.
+**truncated to 100 chars**.
+
+**Two caveats before you reach for `Status.X.withDescription(...)`:**
+
+- **The description does not always reach the client.** On gRPC it does. On the agent faces it
+  reaches the caller only for the request-refusal codes (`INVALID_ARGUMENT`, `NOT_FOUND`,
+  `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE`); every other code, including
+  `INTERNAL`, is replaced with a generic string — see §4. If you want the caller to read your
+  text, model the failure as a refusal code, or return a soft `RpcResult.error`.
+- **Not every throw is logged with a stack.** Only failures classified as the server's are
+  (`INTERNAL`/`UNKNOWN`/`DATA_LOSS`/`ABORTED`/`DEADLINE_EXCEEDED` and anything unrecognised).
+  A refused request is a bounded one-line WARN — see §4.
 
 | | Soft | Hard |
 | --- | --- | --- |
@@ -117,7 +138,7 @@ through as-is; anything else is wrapped in `Status.UNKNOWN` with the message
 | express | `return RpcResult.error(code,msg)` | `throw` (prefer `Status.X.withDescription(..).asRuntimeException()`) |
 | code | business code (hundreds/thousands) | gRPC Status code |
 | client sees | normal `RpcResult`, `!isOk()` | gRPC `onError` / `StatusRuntimeException` |
-| logged | no | `log.error(traceId, ex)` |
+| logged | no | server fault: `log.error` + stack; refusal: bounded WARN (§4) |
 
 - **DON'T:** throw for business errors; rely on exception messages reaching the
   client intact (they're truncated to 100 chars).
@@ -128,7 +149,7 @@ through as-is; anything else is wrapped in `Status.UNKNOWN` with the message
 ## 4. DTO rules
 
 ### Use boxed types, never primitives
-JSON serialization is `NON_NULL` (`rpc-common/.../util/JsonUtils.java:24-26`):
+JSON serialization is `NON_NULL` (`rpc-common/.../util/JsonUtils.java:68`):
 null fields are **omitted**. Primitives can't be null and serialize as `0`/`false`,
 destroying the "absent vs zero" distinction.
 
@@ -161,9 +182,269 @@ public class Book {            // Book.java:10-17
 - **`Map<K,V>` is NOT RECOMMENDED** — generated client code loses readability; model the shape
   as an explicit DTO class. Not an error: the scan logs a WARN (deduped per DTO field).
 
-### Deserialization is lenient
+### Unknown fields are tolerated; scalar types are not
 `FAIL_ON_UNKNOWN_PROPERTIES=false` — extra fields from clients are tolerated
 (forward compatibility). `JavaTimeModule` auto-registers if jsr310 is present.
+
+**Scalar decoding is strict, and this is the default since 1.2.0.** A JSON **number or
+boolean** sent into a `String` target is a **decode failure**. It is not stringified:
+
+```
+{"phone": 13800138000}   → rejected   (send {"phone": "13800138000"})
+{"flag":  true}          → rejected   (into a String field)
+{"phone": []} / {}       → rejected   (unchanged; these always failed)
+```
+
+> **BREAKING in 1.2.0 — read this before upgrading.** Through 1.1.1 those first two were
+> silently coerced (`12345` → `"12345"`, `true` → `"true"`), so a wrongly-typed request
+> passed field validation and reached your method body carrying a stringified value.
+>
+> **A second breaking change ships in the same release**, in the same area: the
+> `/agent/invoke` and MCP faces now report accurate gRPC error codes instead of a blanket
+> `13`/`2`. Details and the old→new table are further down this section.
+>
+> **Why this ships as a minor and not a patch.** §14.1 reserves patch for compatible
+> changes — old clients keep working, front and back may deploy staggered. This one can
+> reject a request that 1.1.1 accepted, so it fails that test and takes the minor bump,
+> which is the line that carries "consumers must move" and a same-window deploy (§14.3).
+> The version number is the warning; treat it as one.
+>
+> **Who is affected.** Any caller that sends a JSON number or boolean where the DTO declares
+> a `String` — it starts being rejected on deploy, with no code change on its side. Whether
+> that describes your callers is a question to answer per service, not to assume in either
+> direction: enumerate the `String` fields on your request DTOs and check what actually
+> reaches them (one downstream audit of ~70 such fields found zero). Client-side response
+> decoding is in scope too, so a caller on 1.2.0 also reads replies strictly.
+>
+> **Migration.** Fix the callers: send JSON strings for `String` fields. If the audit cannot
+> finish on the deploy timeline, set `KRPC_JSON_STRICT=false`, ship, then fix and remove the
+> variable. The kill switch is a bridge, not a setting — it restores the exact pre-1.2.0
+> decoding, including the failure mode this change exists to remove.
+
+**The kill switch** — one environment variable, no system-property equivalent (a kill
+switch must be settable from a deployment manifest without touching the JVM command line):
+
+| `KRPC_JSON_STRICT` | decoding |
+| --- | --- |
+| unset | **strict** (the default) |
+| blank / whitespace (Java `isBlank()`) | **strict** — blank is treated as unset |
+| `true` / `1` (case-insensitive, trimmed) | **strict** — explicitly, a valid affirmation |
+| `false` / `0` (case-insensitive, trimmed) | lenient — the documented escape |
+| anything else (`fasle`, `yes`, …) | lenient |
+| environment unreadable (restricted JVM) | lenient |
+
+Two boundaries are deliberate and worth knowing:
+
+- **Blank keeps strict.** An empty value is far more often an unsubstituted template
+  variable (`KRPC_JSON_STRICT="${FLAG}"` collapsing to `""`) than a decision to disable the
+  guard, and an accident must not silently widen what a service accepts. Same
+  blank-means-unset rule as `APP_ENV` and `KRPC_OTEL`.
+- **"Blank" and "trimmed" mean exactly what Java means by them** — `String.isBlank()` and
+  `String.trim()`, which recognise ASCII whitespace but **not** NBSP (`U+00A0`), figure space
+  (`U+2007`) or narrow NBSP (`U+202F`). A value carrying one of those is neither blank nor a
+  recognised token, so it lands in the row below: **lenient**. Concretely, `"true\u00A0"` —
+  which is what you get pasting an affirmative out of a rendered document or a chat client —
+  turns strict decoding **off**, silently. Type the value rather than pasting it, and if a
+  deployment's behaviour disagrees with its manifest, suspect an invisible character first.
+- **An unrecognised value falls to lenient**, the opposite of what a feature flag would do.
+  Whoever sets this is mid-incident, and an escape hatch that only opens when spelled
+  perfectly fails exactly when it is needed. A typo lands somewhere recoverable.
+  `true`/`1` are still honoured as "keep strict", so the intuitive spelling of *enabling*
+  the guard cannot silently disable it.
+
+Resolution is `JsonUtils.strictTextualCoercion` (`JsonUtils.java:160`); the variable name is
+`JsonUtils.STRICT_TEXTUAL_COERCION_ENV` (`:50`).
+
+**What strict covers.** Every decode that goes through `JsonUtils.parse` into a *typed*
+target — not just request DTOs, and not just the server:
+
+- gRPC server request decode (`JsonSerial.readInput`);
+- **client-side response decode** (`JsonSerial.readOutput` → `ClientResult`) — a caller on
+  1.2.0 also reads the callee's reply strictly;
+- `/agent/invoke` — twice: the outer envelope, then the target method's own typed decode;
+- MCP `tools/call` — the tool arguments are re-serialized and decoded through the same path.
+
+The target does not have to be a DTO *field*: a top-level `String`, `List<String>` or
+`Map<String,String>` value is a textual target too, so members of those collections are
+covered as well.
+
+**What strict does not cover.** Serialization (no coercion semantics — `stringify` always
+uses the lenient mapper); and untyped `Map`/`Object` decoding, which has no textual target,
+so nothing coerces. That second exemption is why `JwsCredential`'s JWT header/payload reads
+and `McpHandler`'s envelope reads are unaffected.
+
+**There is no lenient back door.** krpc has one decode entry point and it honours the
+switch; no internal call site opts itself out. JWKS used to look like a counter-example —
+`Jwks.keys` was typed `List<Map<String,String>>`, which depended on stringifying whatever a
+provider put in a JWK member, so one vendor extension carrying a number would have failed
+the whole keyset. That was a wrong DTO, not a reason for an escape hatch: RFC 7517 §4 places
+no type constraint on JWK members, so `keys` is now `List<Map<String,Object>>`
+(`Jwks.java:31`) and `JwsVerify` reads only the members it consumes, skipping an individual
+unusable JWK instead of rejecting the document (`JwsVerify.java:244-267`).
+
+**Every face that goes through the dispatcher reports the same code for the same cause.**
+gRPC, `/agent/invoke` and MCP all read one table. Plain HTTP's *outer body* parse is the
+exception, and deliberately so: it happens in the netty handler before dispatch, never reaches
+`toClientError`, and answers on the HTTP status line (400/500) because that is what an HTTP
+client branches on. Once a request is dispatched, its code comes from the table below whatever
+face it arrived on:
+
+| face | rejected value / invalid input | unexpected server failure |
+| --- | --- | --- |
+| gRPC | `INVALID_ARGUMENT` = **3** | `UNKNOWN` = **2** |
+| plain HTTP POST (outer body) | **HTTP 400** | HTTP 500 |
+| `/agent/invoke` | HTTP 200, `{"code":3,"message":"…"}` | `{"code":2,…}` |
+| MCP `tools/call` | `isError:true`, `{"code":3,…}` | `{"code":2,…}` |
+
+One table produces all of them: `UnaryMethod.toClientError` (`UnaryMethod.java:238-262`) is the
+single exception→`Status` mapping, applied by both the gRPC path (`invoke`) and the HTTP path
+(`invokeWeb`) that `/agent/invoke` and MCP dispatch through.
+
+| exception | code |
+| --- | --- |
+| `InvocationTargetException` | unwrapped, then classified by its cause |
+| `JsonDecodeException` (malformed body, or a value strict decoding rejects) | `INVALID_ARGUMENT` (3), sanitized description |
+| `ValidationException` and any other `Status` carrier (all auth failures) | passed through unchanged — validation is `INVALID_ARGUMENT` (3) with `field(constraint)` detail |
+| anything else | `UNKNOWN` (2), description `traceId,Class,message` |
+
+There is no `INTERNAL` (13) row: an unexpected server-side exception has always been `UNKNOWN`
+on the gRPC face, and the HTTP faces agree with it rather than inventing a different code.
+
+> **BREAKING in 1.2.0 — `/agent/invoke` and MCP error codes changed.** Until 1.1.1 neither HTTP
+> face applied the mapping: `invokeWeb` let the raw exception escape, so `AgentInvokeHandler`
+> reported a hardcoded `CODE_INTERNAL = 13` for *everything* and MCP fell to
+> `Status.fromThrowable`'s `UNKNOWN` = 2. A malformed body, a failed field validation and a
+> genuine crash were indistinguishable, and all three claimed the server was at fault.
+>
+> | face | input | 1.1.1 | 1.2.0 |
+> | --- | --- | --- | --- |
+> | `/agent/invoke` | missing / null / empty / blank required field | `13` | **`3`** |
+> | `/agent/invoke` | malformed JSON, or a scalar strict decoding rejects | `13` | **`3`** |
+> | `/agent/invoke` | auth failure | `13` | **`16`** `UNAUTHENTICATED` / **`7`** `PERMISSION_DENIED` |
+> | `/agent/invoke` | unexpected server exception | `13` | **`2`** |
+> | `/agent/invoke` | error `message` field | exception class name | graded — see below |
+>
+> MCP codes for validation and auth failures are unchanged — those already carried a `Status`
+> that `Status.fromThrowable` could read. **If you branch on `13` from `/agent/invoke` to mean
+> "bad request", that stops working**: a dispatched request never answers 13 any more. Branch on
+> `3` for "fix your input" and `2` for "retryable/server-side". (13 is not extinct on this face:
+> a failure OUTSIDE dispatch — building the request context, or serializing the response — still
+> answers `{"code":13,"message":"internal error"}`. It means the same thing it now means
+> everywhere: the server broke, and it was not your request's shape.)
+
+**How much the `message` says depends on the face.** The *code* is uniform everywhere; the
+*description* is graded. That is not a re-split of the mapping — one classification, two
+disclosure levels — and it exists because an agent-facing endpoint answers arbitrary callers
+while gRPC is a service-to-service surface.
+
+The rule is a single question — **whose fault is it, and does naming the fault give anything
+away** — answered from the status code alone:
+
+| class | statuses | agent-face `message` | server log |
+| --- | --- | --- | --- |
+| **the caller's request was refused** | `INVALID_ARGUMENT`, `NOT_FOUND`, `ALREADY_EXISTS`, `FAILED_PRECONDITION`, `OUT_OF_RANGE` | **the description, verbatim** | bounded WARN — unless it carries a cause† |
+| **the caller's request was refused, but the reason is sensitive** | `UNAUTHENTICATED`, `PERMISSION_DENIED`, `UNAVAILABLE`, `RESOURCE_EXHAUSTED`, `UNIMPLEMENTED`, `CANCELLED` | one fixed string per code (`unauthenticated`, `permission denied`, …) | bounded WARN — unless it carries a cause† |
+| **we broke** | `INTERNAL`, `UNKNOWN`, `DATA_LOSS`, `ABORTED`, `DEADLINE_EXCEEDED`, **and anything not listed above** | `internal error`, plus `, trace=<traceparent>` when the caller sent one | **ERROR with the full stack** |
+
+Read the two columns independently — they are separate decisions, and for one whole row they
+disagree. `RESOURCE_EXHAUSTED` is the clearest case: its description is withheld from the client
+(a quota message and an out-of-memory condition arrive on the same code and the framework cannot
+tell them apart), yet it is normally logged without a stack, because anyone who can reach the
+port can trigger it at will and a stack per rejected request is a log-amplification lever. The
+same reasoning covers `UNIMPLEMENTED` (endpoint scanning) and `CANCELLED` (client hang-ups).
+
+**† A cause raises the log floor.** The code alone is too coarse — `RESOURCE_EXHAUSTED` is a
+quota refusal *or* a full disk, `UNAVAILABLE` is an unloaded JWKS *or* a dependency that fell
+over — so the deciding signal is whether anything actually threw:
+
+- `Status.X.withCause(someException)` → something failed → **ERROR with the full stack**,
+  whatever the code.
+- `Status.X.withDescription("daily quota")` with no cause → somebody *decided* to refuse →
+  **bounded WARN**.
+
+A flood against a rate limiter takes the second path, so the amplification lever stays shut; an
+`IOException` surfaced as `UNAVAILABLE` takes the first, so the cause chain survives.
+`INVALID_ARGUMENT` is the one code that never upgrades: its cause is the decode failure itself,
+whose Jackson chain quotes the rejected value and the input around it — there, a cause means
+caller data, not a server fault.
+
+**The default is the bottom row.** A code not named above — including any gRPC adds later — is
+opaque to the client and fully logged. Disclosure is opt-in.
+
+Two things are withheld, both because they were actively harmful:
+
+- **Server-fault detail.** These descriptions carry the thrown class and its raw message — SQL
+  fragments, connection strings, hostnames, file paths, and whatever an application exception
+  interpolated, including the caller's own input echoed back.
+- **Auth reasons.** The underlying descriptions distinguish "JWKS not ready" from "empty token"
+  from "unknown kid" from "bad signature" from "expired", several quoting the `kid`, `exp`,
+  audience or client id back. To an unauthenticated caller that is a credential-state oracle —
+  it turns "is my token rejected?" into "which part of my forgery was wrong?". One string per
+  code removes the oracle while leaving the code (and therefore retry/re-auth logic) intact.
+
+**What the server records, exactly** — the earlier claim that "whatever the client is not shown,
+the server logs" was aspirational, so here is the actual behaviour:
+
+- The **status code and the failing exception's class name** are always logged, on every path.
+- The **description** is logged for every code EXCEPT `INVALID_ARGUMENT`, after being
+  **stripped of control characters and capped at 200 characters**. For a pass-through code that
+  adds no exposure (the client already sees it); for a withheld code it is the entire reason
+  withholding is acceptable — this is where `JWKS not reachable at …` and `daily quota exceeded`
+  survive for an operator.
+
+  The cleaning is not cosmetic. Auth descriptions interpolate request-supplied values — the
+  `kid` from the token header, the rejected `exp`/`nbf`, the client id — all chosen by an
+  **unauthenticated** caller. Logged raw, they would let anyone who can reach the port forge a
+  log line with an embedded newline, inflate log volume with padding, or park arbitrary text in
+  retention. None of those values is secret (a `kid` is a public identifier, `exp`/`nbf` are
+  numbers), and they are diagnostically useful, so they are cleaned rather than dropped. Audited:
+  no token body, signature bytes or JWKS key material reaches any description.
+- The **full cause chain** is logged whenever the status carries a cause, or the code is one of
+  ours (`INTERNAL`/`UNKNOWN`/`DATA_LOSS`/`ABORTED`/`DEADLINE_EXCEEDED`/anything unlisted).
+- **Not logged at all: an `INVALID_ARGUMENT` description or cause.** Deliberate — a custom jakarta
+  validator that interpolates the rejected value into its constraint message would otherwise put
+  user input into the log, and the Jackson chain behind a decode failure quotes the rejected
+  scalar directly. The code plus the exception class name identify what happened without it.
+
+Everything logged is keyed by the same traceparent the client is handed for a server fault, so
+the two join.
+
+> **Service authors: your refusal text reaches the client verbatim.** The message you put in a
+> `NOT_FOUND`, `FAILED_PRECONDITION`, `ALREADY_EXISTS`, `OUT_OF_RANGE` or an
+> `RpcResult.error(...)` is delivered unedited to whoever called you — including an agent over
+> `/agent/invoke` or MCP. Write it for that reader: no internal identifiers or hostnames, no SQL
+> or stack fragments, no file paths, no user data or anything echoed back from the request. Say
+> what the caller should do, not what the server saw.
+>
+> **If you need the caller to see a withheld detail, use the business-code channel.** The
+> framework will not open up a system code's description — it cannot tell your "daily quota
+> reached" from a `RESOURCE_EXHAUSTED` raised by the server running out of memory, so it withholds
+> both. When the caller genuinely needs the specifics, return them as a soft
+> `RpcResult.error(code, msg)` with a business code (§3, ≥ 1000 by the numbering suggestion):
+> that channel is yours, it is delivered verbatim, and it is the one the caller can branch on.
+> Throwing `Status.RESOURCE_EXHAUSTED.withDescription("…")` and expecting the text through is the
+> mistake this note exists to prevent.
+>
+> **The same applies to custom jakarta validators.** A constraint message travels on
+> `INVALID_ARGUMENT` and is passed through, so a validator that interpolates the rejected value
+> into its message (`"'" + value + "' is not a valid IBAN"`) will echo that value back to the
+> caller — and into the `violations[]` on the MCP face. The built-in constraints are safe:
+> krpc reads only `ConstraintViolation.getMessage()` and never `getInvalidValue()`, so nothing
+> leaks unless your own message puts it there.
+
+The switch is evaluated on the decode path — during the first `parse` call(s), not in the
+class initializer — and the result is then cached for the life of the process. The
+resolution is racy-but-deterministic, so a few concurrent first callers may each evaluate it;
+they cannot disagree. Reading it there rather than in a static block is what keeps it live
+under GraalVM, which runs class initializers at image build time.
+
+**Verified on a real native image** (quickstart, GraalVM 25.0.3 / Quarkus 3.33.2, macOS
+aarch64): one binary, two runs. With no variable set, `{"name":12345}` into a `String` field
+→ `{"code":3,"message":"malformed JSON request body"}`; with `KRPC_JSON_STRICT=false` in the runtime
+environment the same request → `{"code":0,"data":{"message":"Hello, 12345!"}}`. The kill
+switch therefore works on a deployed native binary without a rebuild. Caveat: a consumer
+whose own class initializer calls `JsonUtils.parse` *and* is initialized at build time would
+resolve the cache at build time. No such path exists in this repo.
 
 ---
 
@@ -753,12 +1034,14 @@ key (`WebMethodRegistry.java:36-40`) — hidden/unknown → `null` → `code:5` 
 ### 15.3 Field-format conventions (quick table)
 
 **DTO-authoring conventions** — how to *type* a field for clean polyglot round-trips, **not**
-serializer behaviour (`JsonUtils.java` only guarantees `NON_NULL` output (`:28`) + lenient
-input `FAIL_ON_UNKNOWN_PROPERTIES=false` (`:29`)). Combine with §4 (boxed scalars, `NON_NULL`).
+serializer behaviour (`JsonUtils.java` guarantees `NON_NULL` output (`:76`), tolerates unknown
+input fields `FAIL_ON_UNKNOWN_PROPERTIES=false` (`:77`), and since 1.2.0 REJECTS a
+number/boolean sent into a `String` target unless the `KRPC_JSON_STRICT` kill switch is
+pulled, §4). Combine with §4 (boxed scalars, `NON_NULL`).
 
 | logical type | represent as | why (convention, not serializer-enforced) |
 | --- | --- | --- |
-| date | `String`, `YYYY-MM-DD` | `java.time` is NOT ISO-configured — `JsonUtils` adds `JavaTimeModule` only if on classpath (`JsonUtils.java:31-38`), never disables `WRITE_DATES_AS_TIMESTAMPS`, so a raw `LocalDate`/`OffsetDateTime` serializes numeric (test DTOs keep it off the wire, `test-api/.../dto/TimeResult.java:23-25` commented) |
+| date | `String`, `YYYY-MM-DD` | `java.time` is NOT ISO-configured — `JsonUtils` adds `JavaTimeModule` only if on classpath (`JsonUtils.java:79-88`), never disables `WRITE_DATES_AS_TIMESTAMPS`, so a raw `LocalDate`/`OffsetDateTime` serializes numeric (test DTOs keep it off the wire, `test-api/.../dto/TimeResult.java:23-25` commented) |
 | datetime | `String`, ISO-8601 with zone | same as date |
 | money | `Long`, integer **cents** (`1999`=19.99) | avoids float rounding — never `Float`/`Double` (contrast tolerant geo `Float`, `Book.java:10-17`) |
 | large id | `String` (`"7300000000000000001"`) | avoids the JSON/JS `2^53` cliff for 64-bit ids (`test-api/.../dto/Img.java:26` `String id`); a boxed `Long` risks silent precision loss in JS/TS/Dart |

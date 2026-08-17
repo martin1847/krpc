@@ -3,6 +3,7 @@ package tech.krpc.server.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -117,6 +118,49 @@ class McpErrorEnvelopeTest {
         var args = null == argumentsJson ? "" : ",\"arguments\":" + argumentsJson;
         return "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\","
                 + "\"params\":{\"name\":\"" + toolName + "\"" + args + "}}";
+    }
+
+    // --- Case 0: AGENT-ERRCODE — a malformed body is a client error on this face too ------
+
+    /**
+     * A JSON scalar the strict decoder rejects. {@code UnaryMethod.invokeWeb} now applies the
+     * shared exception -> Status mapping before the exception reaches this handler, so
+     * {@code Status.fromThrowable} finds a real INVALID_ARGUMENT instead of defaulting to
+     * UNKNOWN(2). Previously the raw {@code JsonDecodeException} escaped unmapped and every
+     * malformed request reported {@code code:2} — "the server broke" — to the agent.
+     */
+    @Test
+    void toolsCall_malformedBody_isInvalidArgument_notUnknown() {
+        WebInvoker web = (in, md) -> {
+            throw Status.INVALID_ARGUMENT
+                    .withDescription(":trace,malformed JSON request body").asRuntimeException();
+        };
+        var h = handler(Map.of("Calc/add", web));
+
+        var env = call(h, toolsCall("Calc_add", "{\"name\":12345}"));
+        assertTrue(Boolean.TRUE.equals(result(env).get("isError")), "decode failure -> isError:true");
+
+        var envelope = envelope(env);
+        assertEquals(Status.Code.INVALID_ARGUMENT.value(),
+                ((Number) envelope.get("code")).intValue(),
+                "a malformed body is INVALID_ARGUMENT(3), no longer UNKNOWN(2)");
+        assertNotEquals(Status.Code.UNKNOWN.value(), ((Number) envelope.get("code")).intValue());
+    }
+
+    /**
+     * The counterpart: a genuinely unexpected server-side failure stays UNKNOWN(2), matching the
+     * gRPC face. Proves the fix sharpened client errors without flattening everything to 3.
+     */
+    @Test
+    void toolsCall_unexpectedServerFailure_staysUnknown() {
+        WebInvoker web = (in, md) -> {
+            throw Status.UNKNOWN.withDescription(":trace,IllegalStateException,db pool exhausted")
+                    .asRuntimeException();
+        };
+        var h = handler(Map.of("Calc/add", web));
+
+        var envelope = envelope(call(h, toolsCall("Calc_add", "{}")));
+        assertEquals(Status.Code.UNKNOWN.value(), ((Number) envelope.get("code")).intValue());
     }
 
     // --- Case 1: validation failure names the field -------------------------------------

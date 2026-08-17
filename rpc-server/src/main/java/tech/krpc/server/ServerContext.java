@@ -115,8 +115,19 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         return headers;
     }
 
+    /**
+     * The log/description correlation prefix: {@code ":" + traceparent}, or the EMPTY string when
+     * the caller sent no {@code traceparent}.
+     *
+     * <p>It used to return the literal {@code ":null"} in the no-trace case. That was tolerable
+     * while it only reached server logs and gRPC status descriptions, but the agent faces now
+     * surface the status description to clients verbatim, so a missing trace header would have
+     * shipped a {@code ":null,"} prefix into a public API response. Empty means callers must join
+     * conditionally -- see {@code UnaryMethod.describe}.
+     */
     public String logTrace() {
-        return ":" + headers.get(TraceMeta.TRACEPARENT_KEY);
+        var traceparent = headers.get(TraceMeta.TRACEPARENT_KEY);
+        return null == traceparent ? "" : ":" + traceparent;
     }
 
     public Metadata getResponseHeaders() {

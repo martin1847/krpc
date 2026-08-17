@@ -4,7 +4,7 @@
 
 - Spring client/server auto-configuration and scanning.
 - Quarkus and GraalVM native-image support.
-- HTTP gateway behavior and RPC CLI tooling.
+- HTTP gateway behavior that the external `rpcurl` CLI (`krpc-crates`, Rust) rides over.
 - Code generation and test/demo applications that validate supported integration paths.
 
 ## NOT FOR
@@ -19,7 +19,6 @@
 - `rpc-server-spring`
 - `rpc-server-quarkus`
 - `http-server`
-- `rpcurl`
 - `test-rpc-gen`
 - `test-server`
 - `test-server-spring`
@@ -36,3 +35,4 @@
 ### Deferred / Obsolete
 
 - Separate test/demo applications into another repository. Status: deferred - keeping them local currently supports regression validation.
+- In-repo `rpcurl` CLI (Java, then Dart). Status: obsolete - both were retired; the CLI now lives externally in `krpc-crates` (Rust), validated against this repo only via CI (`native-smoke.yml`).

@@ -41,7 +41,7 @@ This index maps the repository source of truth for KRPC.
 | --- | --- | --- | --- |
 | Interface-first RPC contracts | `rpc-api`, `test-api`, `proto` | ADR-0001 | GOV-001 |
 | Java client/server runtime over gRPC and HTTP/2 | `rpc-common`, `rpc-client`, `rpc-server` | ADR-0001 | GOV-001 |
-| Framework, native-image, gateway, and tooling integrations | `rpc-client-spring`, `rpc-server-spring`, `rpc-server-quarkus`, `http-server`, `rpcurl`, `test-rpc-gen` | ADR-0001 | GOV-001 |
+| Framework, native-image, gateway, and tooling integrations | `rpc-client-spring`, `rpc-server-spring`, `rpc-server-quarkus`, `http-server`, `test-rpc-gen` | ADR-0001 | GOV-001 |
 | JDK 21 baseline and virtual-thread runtime feature | `rpc-server`, `rpc-client`, `http-server`, integration modules | ADR-0002 | N/A |
 | Agent-friendly introspection (HTTP discover→call, runtime MCP surface) | `rpc-common`, `rpc-server`, `rpc-client`, `http-server`, `rpc-api` | ADR-0004 | AGENT-001 |
 | Distributed-trace span creation + W3C context on KRPC faces (gRPC + HTTP) | `rpc-common`, `rpc-server`, `rpc-client`, `http-server` | ADR-0006 (amends ADR-0003) | OTEL-001 |

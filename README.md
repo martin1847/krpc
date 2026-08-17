@@ -103,7 +103,8 @@ rpcurl https://demo.krpc.tech/quickstart/Hello/hello -d '{"name":"you"}'
 - `rpc-server-quarkus`: Quarkus and native-image integration.
 - `http-server`: HTTP gateway support.
 - `test-rpc-gen`: client code generation examples.
-- `rpcurl`: command-line RPC client.
+
+The command-line `rpcurl` client is a separate Rust project — see [Call With rpcurl](#call-with-rpcurl).
 
 ![Architecture](./ARCHITECTURE.png)
 

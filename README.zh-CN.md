@@ -69,7 +69,8 @@ JDK 21（virtual threads 是已支持的运行时特性，不是 roadmap 项）�
 - `rpc-server-quarkus`：Quarkus 和 native-image 集成。
 - `http-server`：HTTP gateway 支持。
 - `test-rpc-gen`：客户端代码生成示例。
-- `rpcurl`：命令行 RPC 客户端。
+
+命令行客户端 `rpcurl` 是独立的 Rust 项目，见[使用 rpcurl 调用](#使用-rpcurl-调用)。
 
 ![Architecture](./ARCHITECTURE.png)
 

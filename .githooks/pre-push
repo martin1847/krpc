@@ -16,6 +16,41 @@ BASELINE="$(git config --get hooks.baseline 2>/dev/null || echo origin/dev)"
 ZERO=0000000000000000000000000000000000000000
 FAIL=0
 
+# Existence precondition shared by ① and ③ — the SPEC mirror pair is a repository
+# invariant (AGENTS.md Repo Facts), so a path missing at the pushed tip is a FAIL, not
+# a reason to skip.
+#   Source: 2026-08-18 review of this hook. Both SPEC checks resolved a missing path to
+#   `return 0`, so deleting or moving either copy made EVERY SPEC gate pass silently —
+#   locally and in CI, which runs this same script.
+#   SCOPE: these two fixed paths only. Do NOT generalise "file missing → FAIL" to
+#   optional or future checks; a check over a path that may legitimately not exist must
+#   keep skipping.
+#   Negative probe: `git rm skills/krpc/references/SPEC.md`, commit, run
+#   `.githooks/pre-push --range HEAD~1..HEAD` → BLOCKED by ① and ③; then reset --hard.
+SPEC_PAIR="SPEC.md skills/krpc/references/SPEC.md"
+SPEC_PAIR_STATE=""
+spec_pair_present() {
+  local tip="$1" f missing=""
+  case "$SPEC_PAIR_STATE" in ok) return 0 ;; missing) return 1 ;; esac
+  for f in $SPEC_PAIR; do
+    git rev-parse --verify -q "$tip:$f" >/dev/null 2>&1 && continue
+    missing="$missing $f"
+  done
+  if [ -z "$missing" ]; then
+    SPEC_PAIR_STATE=ok
+    return 0
+  fi
+  SPEC_PAIR_STATE=missing
+  for f in $missing; do
+    printf 'pre-push: BLOCKED — %s does not exist at %s.\n' "$f" "$tip" >&2
+  done
+  printf '  The SPEC mirror pair is a repository invariant: both paths must exist. Deleting or\n' >&2
+  printf '  moving either copy needs owner approval AND a matching change to this hook —\n' >&2
+  printf '  otherwise every SPEC gate silently passes on an absent file.\n' >&2
+  FAIL=1
+  return 1
+}
+
 # ① SPEC mirror drift.
 #   Source: SPEC.md and skills/krpc/references/SPEC.md are a byte-identical pair
 #   (AGENTS.md Repo Facts); until this hook the discipline was manual-only.
@@ -26,8 +61,12 @@ check_spec_mirror() {
   git diff --name-only "$range" -- SPEC.md skills/krpc/references/SPEC.md 2>/dev/null \
     | grep -q . || return 0
   tip="${range##*..}"
-  a=$(git rev-parse --verify -q "$tip:SPEC.md") || return 0
-  b=$(git rev-parse --verify -q "$tip:skills/krpc/references/SPEC.md") || return 0
+  if ! spec_pair_present "$tip"; then
+    printf '  → hook ① (mirror drift) cannot be evaluated: the pair is incomplete.\n' >&2
+    return 1
+  fi
+  a=$(git rev-parse --verify -q "$tip:SPEC.md")
+  b=$(git rev-parse --verify -q "$tip:skills/krpc/references/SPEC.md")
   if [ "$a" != "$b" ]; then
     printf 'pre-push: BLOCKED — SPEC.md and skills/krpc/references/SPEC.md differ at %s.\n' "$tip" >&2
     printf '  They are a byte-identical mirror pair: update both in the same commit.\n' >&2
@@ -49,9 +88,41 @@ check_docs_site_branch() {
   FAIL=1
 }
 
+# ③ SPEC length cap — anti-bloat on the contract SoT.
+#   Source: 2026-08-18 SPEC diet. SPEC.md had grown to 1155 lines (§4 alone 302, §12 230)
+#   as review prose, migration narrative and changelog history accreted into what is meant
+#   to be a wire-contract source of truth; skills/krpc/references/SPEC.md is a byte-identical
+#   mirror that every agent load pays for in tokens. Compression alone regrows — the cap is
+#   the part that holds.
+#   Negative probe: `printf '\n%.0s' {1..60} >> SPEC.md && cp SPEC.md skills/krpc/references/SPEC.md`,
+#   commit, run `.githooks/pre-push --range HEAD~1..HEAD` → BLOCKED; then reset --hard.
+SPEC_MAX_LINES=1010   # 2026-08-18: post-diet 969 + 41 headroom. Raising this needs owner approval, noted here.
+check_spec_length() {
+  local range="$1" tip f n
+  git diff --name-only "$range" -- SPEC.md skills/krpc/references/SPEC.md 2>/dev/null \
+    | grep -q . || return 0
+  tip="${range##*..}"
+  if ! spec_pair_present "$tip"; then
+    printf '  → hook ③ (length cap) cannot be evaluated: the pair is incomplete.\n' >&2
+    return 1
+  fi
+  for f in $SPEC_PAIR; do
+    n=$(git show "$tip:$f" 2>/dev/null | wc -l | tr -d ' ')
+    [ "${n:-0}" -le "$SPEC_MAX_LINES" ] && continue
+    printf 'pre-push: BLOCKED — %s is %s lines, over the %s-line cap.\n' "$f" "$n" "$SPEC_MAX_LINES" >&2
+    printf '  SPEC exceeds %s lines — compress prose first: rationale, migration history and\n' "$SPEC_MAX_LINES" >&2
+    printf '  "why we changed it" belong in changelog.md / ADRs / skills/krpc/references/*, not in\n' >&2
+    printf '  the contract. Raising the CAP requires owner approval, recorded in the comment on\n' >&2
+    printf '  the SPEC_MAX_LINES line of this hook.\n' >&2
+    FAIL=1
+  done
+}
+
 check_range() {
   local range="$1" remote_ref="${2:-}"
+  SPEC_PAIR_STATE=""   # per-range: the cache is keyed to one tip, never reused across refs
   check_spec_mirror "$range"
+  check_spec_length "$range"
   check_docs_site_branch "$range" "$remote_ref"
 }
 

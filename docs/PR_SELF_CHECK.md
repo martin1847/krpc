@@ -9,6 +9,8 @@ Hook-enforced (listed for awareness only):
 
 - [ ] SPEC mirror: `SPEC.md` ≡ `skills/krpc/references/SPEC.md`, same commit. *(hook ①)*
 - [ ] docs-site changes land on `dev`, never straight to `main`. *(hook ②)*
+- [ ] SPEC stays under the line cap (`SPEC_MAX_LINES` in the hook); compress prose
+      rather than raising it. *(hook ③)*
 
 Human/agent judgment required — a hook cannot catch these:
 

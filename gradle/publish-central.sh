@@ -8,16 +8,21 @@ PUBLISHING_TYPE="${CENTRAL_PUBLISHING_TYPE:-USER_MANAGED}"
 STATE_FILE="${CENTRAL_STATE_FILE:-$ROOT_DIR/build/central-deployment-id}"
 DEPLOYMENT_ID=""
 ASSUME_YES="false"
+RELEASE_BRANCH="${RELEASE_BRANCH:-dev}"
 
 usage() {
   cat <<'USAGE'
 Usage:
+  gradle/publish-central.sh preflight
   gradle/publish-central.sh bundle
   gradle/publish-central.sh upload
   gradle/publish-central.sh status [deployment-id]
   gradle/publish-central.sh publish [deployment-id] --yes
 
 Commands:
+  preflight Assert the checkout is safe to publish from (clean tree, on the
+            release branch, no rebase/merge in progress). Runs automatically
+            before bundle/upload; runnable standalone for testing.
   bundle    Build, sign, stage, and zip Central bundle locally.
   upload    Build bundle, upload as USER_MANAGED, and wait for VALIDATED.
   status    Print Central deployment status JSON. Defaults to last uploaded deployment.
@@ -28,6 +33,7 @@ Environment:
   OSSRH_BEARER_TOKEN         Central Portal bearer token. If missing, read from Gradle properties.
   CENTRAL_PUBLISHING_TYPE    Upload publishing type. Default: USER_MANAGED
   CENTRAL_STATE_FILE         File that stores last deployment id. Default: build/central-deployment-id
+  RELEASE_BRANCH              Branch preflight checks HEAD against. Default: dev
 USAGE
 }
 
@@ -38,6 +44,40 @@ die() {
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
+}
+
+# preflight guards against two real incidents (shared-checkout-single-writer):
+# 1) an orchestrator ran publishToMavenLocal on a checkout a worker had mid-edit.
+# 2) a release commit landed on the wrong local branch and got published from there.
+# Both are caught by: clean tracked tree + HEAD pinned to the exact commit origin
+# has for RELEASE_BRANCH (rev comparison, not branch-name comparison, so a
+# detached HEAD sitting on the right commit still passes).
+preflight() {
+  local dirty
+  dirty="$(git -C "$ROOT_DIR" status --porcelain | grep -v '^??' || true)"
+  if [[ -n "$dirty" ]]; then
+    die "working tree has uncommitted changes to tracked files — refusing to publish from a dirty checkout (an orchestrator publishing from a worker's in-progress checkout bit us before). Commit or stash first. Dirty files:
+$dirty"
+  fi
+
+  local git_dir
+  git_dir="$(git -C "$ROOT_DIR" rev-parse --git-dir)"
+  if [[ -d "$git_dir/rebase-merge" || -d "$git_dir/rebase-apply" || -f "$git_dir/MERGE_HEAD" ]]; then
+    die "a rebase or merge is in progress in this checkout — finish or abort it before publishing"
+  fi
+
+  git -C "$ROOT_DIR" fetch origin >&2
+
+  local head_rev origin_rev
+  head_rev="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+  origin_rev="$(git -C "$ROOT_DIR" rev-parse "origin/${RELEASE_BRANCH}" 2>/dev/null)" \
+    || die "origin/${RELEASE_BRANCH} not found — fetch failed or RELEASE_BRANCH is wrong"
+
+  if [[ "$head_rev" != "$origin_rev" ]]; then
+    die "HEAD (${head_rev}) does not match origin/${RELEASE_BRANCH} (${origin_rev}) — refusing to publish from an unsynced or wrong-branch checkout (a release commit landing on the wrong local branch bit us before). If you really mean to publish from a different branch, override explicitly: RELEASE_BRANCH=<branch>"
+  fi
+
+  echo "preflight ok: clean tree, HEAD == origin/${RELEASE_BRANCH} (${head_rev})" >&2
 }
 
 project_version() {
@@ -223,7 +263,7 @@ main() {
     ""|help|--help|-h)
       usage
       ;;
-    bundle|upload|status|publish)
+    preflight|bundle|upload|status|publish)
       ;;
     *)
       usage
@@ -243,12 +283,17 @@ main() {
   local bundle_zip=""
 
   case "$COMMAND" in
+    preflight)
+      preflight
+      ;;
     bundle)
+      preflight
       version="$(project_version)"
       project_name="$(project_name)"
       build_bundle "$project_name" "$version"
       ;;
     upload)
+      preflight
       token="$(central_token)"
       [[ -n "$token" ]] || die "missing Central token"
       version="$(project_version)"

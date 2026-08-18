@@ -1,6 +1,6 @@
 # 1.2.0, 2026-08-17
 
-Strict JSON scalar decoding and honest error codes on the agent HTTP faces — two breaking changes, each with an env-var rollback — plus the error-disclosure hardening they exposed, and the native metadata / MCP 07-28 work that had been sitting unreleased. Merged to `dev` via PRs #54, #55, #56.
+Strict JSON scalar decoding and honest error codes on the agent HTTP faces — two breaking changes, each with an env-var rollback — plus the error-disclosure hardening they exposed, and the native metadata / MCP 07-28 work that had been sitting unreleased. Merged to `dev` via PRs #54–#61.
 
 * **BREAKING — JSON scalar decoding is strict by default (#56).** A JSON number or boolean sent
   into a `String` target is now a decode failure instead of being silently stringified (`12345` →
@@ -51,6 +51,21 @@ Strict JSON scalar decoding and honest error codes on the agent HTTP faces — t
   refused request is one bounded WARN with the description sanitized of control characters and
   capped, while a genuine fault keeps the full cause chain. If your service needs the caller to see
   detail on a withheld code, return it as a soft `RpcResult.error(code, msg)` instead. SPEC §4.
+* **Cross-repo dependency cycle closed — `rpc-server-quarkus` gets `rpc-client` from core
+  only, not through ext-rpc (#59).** `extRpcVersion` bumped 1.0.3 → 1.1.0; from that version
+  ext-rpc's published POM carries **zero `tech.krpc` dependencies** (mirroring how its server
+  half was already runtime-classpath-gated, not compile-dependency-gated). This closes a
+  cross-repo cycle PR #32 had already flagged as a hedge, not a design: `rpc-server-quarkus →
+  ext-rpc → rpc-client` used to make `rpc-client` reachable transitively through the extension.
+  `rpc-server-quarkus` now declares `api project(':rpc-client')` directly — same module, same
+  version, compile+runtime exposed — so **a consumer that depends on `rpc-server-quarkus` the
+  normal way sees no change.** A consumer that depended on `rpc-server-quarkus` *and* was
+  pulling `rpc-client` transitively through ext-rpc does: upgrading ext-rpc to 1.1.0 alone drops
+  that path, and anything still using `rpc-client` types breaks at compile or runtime unless it
+  now takes `rpc-client` from krpc core directly. Verified at the graph level:
+  `:examples:quickstart:dependencies --configuration runtimeClasspath` shows ext-rpc 1.1.0 with
+  no `rpc-client` child, and `rpc-client` appearing exactly once — as `rpc-server-quarkus`'s
+  direct dependency.
 * **`Jwks.keys` is `List<Map<String,Object>>` (#56).** RFC 7517 §4 places no type constraint on JWK
   members, so a vendor extension carrying a number, boolean or array is a legal keyset — under
   strict decoding the old `Map<String,String>` would have failed the *entire* document over one
@@ -60,6 +75,19 @@ Strict JSON scalar decoding and honest error codes on the agent HTTP faces — t
   is source-incompatible and binary-compatible** (both erase to `List`): already-compiled consumers
   keep running, but code assigning to `List<Map<String,String>>` fails to compile until updated.
   `rpc-server` is outside the japicmp-covered set, so no gate catches this for you.
+* **JWKS refetch throttle unified to one 5-minute window (#60).** An unknown `kid` —
+  attacker-controlled, no valid credential needed to trigger it — used to drive a JWKS origin
+  refetch on its own 30-second window (`MIN_FETCH_GAP_MILL`), independent of and 10× shorter
+  than the HIT path's 5-minute refresh. A kid-spray could drive origin fetches at up to 10× the
+  rate legitimate traffic ever produces. Both paths now share one `GAP_MILL` (5 min) and one
+  clock (`lastTryFetch`), yielding the invariant this closes on: **a random-kid spray cannot
+  push the origin fetch rate above what steady-state legitimate traffic already produces** — at
+  most one fetch per instance per window, on either path. Tradeoff, accepted and documented:
+  worst-case pickup latency for a genuinely new signing key moves 30s → 5min, usually invisible
+  since the HIT-path refresh already rebuilds the whole keyset under normal traffic.
+  `maybeRefetch(long)` lost its now-single-valued parameter. Also new: a successful `verify()`
+  logs one DEBUG line carrying only the `kid`, so forensics can confirm acceptance directly
+  instead of inferring it from the absence of a failure line.
 * **Business error codes: start at 1000 (suggestion, #56).** gRPC status occupies `0`–`16` and
   `17`–`999` is reserved for system codes krpc may add later, so a business code at `1000`+ cannot
   collide with either and is recognisable on sight as business semantics. Existing band widths are
@@ -124,6 +152,13 @@ Strict JSON scalar decoding and honest error codes on the agent HTTP faces — t
   and a deterministic name sort. An explicit `"id": null` is now `-32600` (invalid RequestId),
   not a notification. SSE resumability, sessions, MRTR / `input_required` and
   `subscriptions`/`listen` stay **design-exempt** (SPEC §12.2).
+* **rpcurl removed from this repo — Java and Dart CLIs both retired (#57, #58).** The Rust CLI
+  in `krpc-crates` was already the one actually shipped and exercised (`native-smoke.yml` drives
+  native images with it); the in-repo Java implementation (never wired into `settings.gradle`,
+  so never built or tested) and the Dart shell (last functional commit 2023-10-27) are gone.
+  Nothing published from this repo changes — neither CLI was ever a build target — but anyone
+  working from a local checkout of `rpcurl/java-rpcurl` or `rpcurl/dart` should switch to the
+  `krpc-crates` binary.
 * **ext-rpc-gen 1.0.2 — agent-native client generator dependency fix (2026-07-19, GEN-NETTY-102).**
   1.0.1 regression on clean consumer classpaths: `Gen.scan` loads `RpcServerBuilder` →
   `NoClassDefFoundError: NettyServerBuilder` (rpc-server keeps grpc-netty `compileOnly` by

@@ -571,11 +571,23 @@ public AccountInfo me() {
 
 ### 8.6 Key rotation and revocation
 
-An unknown `kid` triggers a JWKS refetch on a **30 s** backoff (`MIN_FETCH_GAP_MILL`), so a
-rotated-in key is picked up quickly; on a cache **hit** JWKS refreshes in the background at most
-once per **5 min** (`GAP_MILL`). Each successful fetch **rebuilds** the keyset (replace, not
-merge), so a **removed** key stops verifying within that serving without burning the 5-min window
-(`JwsVerify.java`, O3/O4). A successful fetch returning **zero usable keys** (`{"keys":[]}`, null,
+A cache **hit** or an unknown `kid` (**miss**) both throttle their JWKS refetch through the SAME
+window, at most once per **5 min** (`GAP_MILL`) — one constant, one clock (`JwsVerify.java`,
+O3/O4). This used to be two independent windows: a 5 min hit-path freshness refresh plus a
+separate, SHORTER 30 s window for the unknown-kid/miss path so rotation was picked up fast. That
+30 s window was an anti-amplification hole: an unknown-kid refetch is attacker-controlled (anyone
+can mint a JWT header carrying a random kid, no valid credential required), so a kid-spray could
+hammer the JWKS origin (a downstream h5 CDN) at up to 10x the rate legitimate traffic would ever
+produce. Unifying onto one window closes that gap — a random-kid spray can never push the origin
+fetch rate above the baseline steady-state traffic already causes. The accepted tradeoff: a
+freshly-rotated-in key's worst-case pickup latency moves from 30 s to 5 min. In practice this is
+usually invisible, since the hit-path refresh rebuilds the whole keyset on every fetch, so any
+request against an existing still-valid kid pulls a newly-published key in as a side effect, and
+the first request carrying the new kid gets an immediate fetch if it lands outside the window;
+only a sustained kid-spray that keeps the window continuously pinned pushes a legitimate new-kid
+pickup out to the full 5 min. Each successful fetch **rebuilds** the keyset (replace, not merge),
+so a **removed** key stops verifying within that serving without burning the window. A successful
+fetch returning **zero usable keys** (`{"keys":[]}`, null,
 or only non-EC) on an already-ready verifier = **full revocation**: the live keyset is replaced
 empty so every `kid` is rejected `PERMISSION_DENIED` (fail-closed), not dropped keeping the stale
 keyset (HARDEN-B1 fix-round-1, O3). Before the first successful load, an empty/null-keys document

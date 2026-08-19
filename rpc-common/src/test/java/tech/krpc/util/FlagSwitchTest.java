@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,51 @@ class FlagSwitchTest {
         new FlagSwitch("KRPC_PROBE", false).publish(FlagResolution.of(false, false, "true", null));
         assertEquals(1, RecordingLoggerProvider.events().size(),
                 "the recording provider must be bound, or the log assertions here prove nothing");
+    }
+
+    /**
+     * Requirement 5, ordering half (review R1 finding 1): the effective value must not be observable
+     * before its line has been written. The hook runs inside the logging call, i.e. exactly in the
+     * window a "publish, then log" implementation would leave open — there, {@code resolved()} already
+     * returns the value and a concurrent caller could act on evidence that does not exist yet.
+     */
+    @Test
+    void theValueBecomesObservableOnlyAfterItsLineIsWritten() {
+        FlagSwitch flag = new FlagSwitch("KRPC_ORDER", true);
+        var observedWhileLogging = new AtomicReference<Object>("unset");
+        RecordingLoggerProvider.duringEmit(() -> observedWhileLogging.set(flag.resolved()));
+
+        assertFalse(flag.publish(FlagResolution.of(true, false, "false", null)));
+
+        assertNull(observedWhileLogging.get(),
+                "while the resolution line is being written the value must still be unpublished");
+        assertEquals(Boolean.FALSE, flag.resolved(), "and published once the line is out");
+        assertEquals(1, RecordingLoggerProvider.events().size());
+    }
+
+    /**
+     * Requirement 2 + 5 (review R1 finding 1): a broken logging backend must neither break the flag
+     * read nor leave a published value whose promised evidence can never appear. Nothing is memoised
+     * on failure, so the next caller writes the missing line and publishes the same value.
+     */
+    @Test
+    void aFailedEmissionPublishesNothingAndIsRetriedByTheNextCaller() {
+        FlagSwitch flag = new FlagSwitch("KRPC_RETRY", true);
+        FlagResolution off = FlagResolution.of(true, false, "false", null);
+        RecordingLoggerProvider.failNext(1);
+
+        assertFalse(flag.publish(off), "a logging failure must not break the flag read");
+        assertNull(flag.resolved(),
+                "a value whose resolution line failed must NOT be published — the evidence is the"
+                + " only proof requirement 5 promises, so publishing without it is the worse state");
+        assertTrue(RecordingLoggerProvider.events().isEmpty(), "the failed line was not recorded");
+
+        assertFalse(flag.publish(off), "the retry resolves to the same value");
+        Event retried = onlyEvent();
+        assertEquals(Level.WARN, retried.level());
+        assertEquals("ADR-0003 flag KRPC_RETRY resolved: enabled=false source=property",
+                retried.message(), "the missing line is written by the caller that retries");
+        assertEquals(Boolean.FALSE, flag.resolved(), "and only now is the value published");
     }
 
     @Test

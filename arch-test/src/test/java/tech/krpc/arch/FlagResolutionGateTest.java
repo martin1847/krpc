@@ -116,8 +116,8 @@ import java.util.Set;
  * <ul>
  *   <li>{@code KrpcOtel.ENABLED} ({@code KrpcOtel.java:62}, 2 lines: the property read and the env
  *       read) — the OTEL kill switch, layer 1. The switch this gate exists for. Now resolved on the
- *       first {@code enabled()} call and memoised in a {@code compareAndSet}, so no
- *       {@code <clinit>} touches the environment.</li>
+ *       first {@code enabled()} call and memoised behind a guard, so no {@code <clinit>} touches the
+ *       environment.</li>
  *   <li>{@code AbstractHttpHandler.OTEL_ENABLED} ({@code AbstractHttpHandler.java:88}) — layer 2:
  *       captured {@code KrpcOtel.enabled()} into a static field, which would have stayed frozen even
  *       after {@code KrpcOtel} was made lazy (that is why both had to be fixed together). The
@@ -127,11 +127,19 @@ import java.util.Set;
  * has always held three such entries. The count was the error, not the list.)
  *
  * <p>Layer 2 keeps its teeth only because the accessor's read stays statically reachable from
- * {@code enabled()} (a direct call into {@code FlagResolution}'s parser + a {@code System} read in
- * the accessor's own body). A holder class or a {@code Supplier} indirection would hide it: the
- * derivation below would stop deriving {@code KrpcOtel.enabled()} as a flag accessor and layer 2
- * would silently match nothing — which the anti-vacuous-green guard does NOT cover (it guards
- * layer 1's seed set only). Keep flag accessors free of both.
+ * {@code enabled()} (a direct {@code System} read in the accessor's own body). A {@code Supplier},
+ * method reference or lambda passed in as "the resolver" would hide it: the read then sits behind
+ * virtual dispatch or in a lambda body, both of which the derivation below skips by design, so
+ * {@code KrpcOtel.enabled()} would stop being derived as a flag accessor and layer 2 would silently
+ * match nothing — which the anti-vacuous-green guard does NOT cover (it guards layer 1's seed set
+ * only). Keep the read in the accessor's body for that reason.
+ *
+ * <p>A holder class is a different case and is NOT a blind spot: its {@code <clinit>} does the read,
+ * so it is reported here directly (layer 1 or 2, depending on shape), and the accessor that hands the
+ * holder's field on is still derived through rule (c). It is forbidden because build-time class
+ * initialization bakes it, not because it evades this gate — measured, not assumed: a static memo
+ * inside {@code McpFlag} was probed during KRPC-FLAG-001 and this rule reported
+ * {@code calls flag accessor <McpFlag.read(String)>}.
  *
  * <p><b>(2) Undecided — the 3 lines that remain; DO NOT "fix" these:</b>
  * {@code RpcConstants.CI_BUILD_ID} (layer 1) is <em>not a flag</em>. Its source comment

@@ -1,6 +1,5 @@
 package tech.krpc.util;
 
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,13 +8,13 @@ import org.slf4j.LoggerFactory;
  * ADR-0003 (umbrella) requirements 3, 4 and 5: the memo cell behind a hand-written flag accessor,
  * plus the single resolution log line that is bound to it atomically.
  *
- * <p><b>Why the accessor keeps the read (requirement 3).</b> This class deliberately does NOT take
- * a resolver supplier and does NOT memoise in a holder class. Both would move the environment read
- * out of the accessor's own body: a holder class puts it back into a {@code <clinit>} — which
- * GraalVM/Quarkus run at image BUILD time, welding the switch shut — and a supplier hides it behind
- * virtual dispatch, where the ADR-0005 flag gate's layer 2 (which derives "flag accessor" from the
- * static call graph) can no longer see it, silently weakening the gate that guards requirement 4.
- * So the accessor reads on the first-use path and hands the outcome here:
+ * <p><b>Why the accessor keeps the read (requirement 3).</b> This class deliberately does NOT take a
+ * resolver supplier or any other indirection for the read: a {@code Supplier}, method reference or
+ * lambda hides the {@code System} call behind virtual dispatch or a lambda body, both of which the
+ * ADR-0005 flag gate's layer 2 cannot follow — its "flag accessor" set is derived from the static
+ * call graph, so the indirection would silently stop deriving {@code KrpcOtel.enabled()} and layer 2
+ * would match nothing (the anti-vacuous-green guard covers layer 1 only). So the accessor reads on
+ * the first-use path and hands the outcome here:
  *
  * <pre>{@code
  * public static boolean enabled() {
@@ -24,11 +23,24 @@ import org.slf4j.LoggerFactory;
  * }
  * }</pre>
  *
- * <p><b>One line, reporting the value that won (requirement 5).</b> The log is emitted inside the
- * {@code compareAndSet} that publishes the value, never by a separate "have I logged yet?" flag:
- * racing callers may each compute a resolution, but exactly one publishes, and the one line
- * describes exactly that published value. A log decoupled from the publish could report a state
- * that was recomputed differently — misleading evidence in the one place evidence was promised.
+ * <p><b>One line, and the value is not observable before it exists (requirement 5).</b> Resolution
+ * is one guarded step: the winner emits the line and only then publishes the value, all inside the
+ * monitor. Two consequences, both load-bearing. Racing callers produce exactly one line describing
+ * exactly the published value — never a loser's, and never a second line from a separate "have I
+ * logged yet?" flag. And no caller can observe an effective value whose promised evidence has not
+ * been written yet: a later caller either blocks on the monitor or, once past it, reads a value that
+ * is already logged. Publishing first and logging after would leave that window open, and worse: if
+ * the logging backend then threw, the value would stay published with its evidence permanently
+ * missing — a state ADR-0003 requirement 5 explicitly calls worse than no log.
+ *
+ * <p><b>A failed emission does not publish.</b> If the backend throws, the caller still gets its
+ * value (requirement 2: reading a flag must never break its caller) but nothing is memoised, so the
+ * next caller re-emits and publishes. That trades a possible re-read of the environment on a broken
+ * logging stack for never holding a value whose evidence cannot be produced.
+ *
+ * <p>The monitor is taken at most until the first successful publish; afterwards every call is a
+ * single volatile read on the fast path (JDK 21+ virtual threads are not pinned by it on JDK 24+,
+ * and this is one-shot work regardless).
  *
  * <p>Level is INFO, or WARN when the resolution turns OFF a behaviour that defaults ON: a pressed
  * kill switch is an unusual state an operator should see without looking for it. Never DEBUG —
@@ -45,8 +57,12 @@ public final class FlagSwitch {
     /** The value that stands when nothing is configured — decides the log level (see class doc). */
     private final boolean defaultValue;
 
-    /** Null until the first resolution is published; the memo requirement 4 keeps off call sites. */
-    private final AtomicReference<Boolean> state = new AtomicReference<>();
+    /**
+     * Null until the first resolution is published — and it is published only AFTER its log line has
+     * been emitted, so a non-null read always implies the evidence exists. This is the memo that
+     * requirement 4 keeps off the call sites.
+     */
+    private volatile Boolean state;
 
     public FlagSwitch(String name, boolean defaultValue) {
         this.name = name;
@@ -55,20 +71,37 @@ public final class FlagSwitch {
 
     /** The memoised value, or {@code null} while this flag has not been resolved yet. */
     public Boolean resolved() {
-        return state.get();
+        return state;
     }
 
     /**
-     * Publishes {@code resolution} as this flag's value if it is the first one, logging it in the
-     * same guarded step, and returns the value that is now in effect — the winner's, never the
-     * caller's own, so two racing callers agree.
+     * Resolves this flag in one guarded step if it is not resolved yet: emit the requirement-5 line,
+     * then publish the value. Returns the value now in effect — the winner's, so racing callers
+     * agree. When the emission fails, the caller's own value is returned and nothing is published,
+     * leaving the line for the next caller to write (see class doc).
      */
     public boolean publish(FlagResolution resolution) {
-        if (state.compareAndSet(null, resolution.value())) {
-            emit(resolution);
+        Boolean published = state;
+        if (published != null) {
+            return published;
+        }
+        synchronized (this) {
+            published = state;
+            if (published != null) {
+                return published;
+            }
+            try {
+                emit(resolution);
+            } catch (RuntimeException | LinkageError failure) {
+                // A broken logging backend must not break a flag read (requirement 2) and must not
+                // leave a published value with no evidence: publish nothing, so the next caller
+                // retries the line. Errors other than LinkageError (OOM, StackOverflow) are not this
+                // class's to absorb.
+                return resolution.value();
+            }
+            state = resolution.value();
             return resolution.value();
         }
-        return state.get();
     }
 
     private void emit(FlagResolution resolution) {

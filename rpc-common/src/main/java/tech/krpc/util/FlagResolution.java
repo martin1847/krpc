@@ -1,5 +1,7 @@
 package tech.krpc.util;
 
+import java.util.Objects;
+
 /**
  * ADR-0003 (umbrella) requirements 1 and 2: the one place raw property/environment text becomes a
  * krpc boolean flag value, together with <em>where</em> that value came from — requirement 5's log
@@ -41,6 +43,20 @@ public record FlagResolution(boolean value, Source source, String detail) {
 
     /** Cap for the echoed raw value in a log line; a flag value is never legitimately long. */
     private static final int DETAIL_MAX = 32;
+
+    /**
+     * Canonical constructor — the invariant boundary, not just a data holder. This type is public so
+     * flag accessors in other modules can build a resolution, which means the constructor (not only
+     * the factories below) is a way in: it enforces both invariants {@link FlagSwitch} relies on when
+     * it logs. A {@code null} {@link Source} is rejected outright — a resolution that cannot say where
+     * it came from cannot satisfy requirement 5, and letting it through only moves the failure into
+     * the logging step. {@code detail} is sanitised here, so no construction path can smuggle CR/LF or
+     * ANSI escapes out of a configured value and into a log line.
+     */
+    public FlagResolution {
+        Objects.requireNonNull(source, "a resolution must name its source (ADR-0003 requirement 5)");
+        detail = detail == null ? null : sanitise(detail);
+    }
 
     /**
      * Resolves already-read property/env text per requirements 1 and 2.
@@ -95,7 +111,9 @@ public record FlagResolution(boolean value, Source source, String detail) {
         if ("false".equalsIgnoreCase(trimmed) || "0".equals(trimmed)) {
             return new FlagResolution(false, source, null);
         }
-        return new FlagResolution(safeValue, Source.UNRECOGNIZED, sanitise(trimmed));
+        // The canonical constructor sanitises detail, so no path — factory or direct — can carry
+        // control characters from a configured value into the resolution log.
+        return new FlagResolution(safeValue, Source.UNRECOGNIZED, trimmed);
     }
 
     /**

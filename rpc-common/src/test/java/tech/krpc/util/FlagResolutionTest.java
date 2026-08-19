@@ -2,6 +2,8 @@ package tech.krpc.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -121,6 +123,31 @@ class FlagResolutionTest {
 
         FlagResolution bounded = FlagResolution.of(true, false, "x".repeat(200), null);
         assertEquals("x".repeat(32) + "...", bounded.detail(), "the echoed value is bounded");
+    }
+
+    /**
+     * Review R1 finding 4: this type is public, so its canonical constructor — not only the factories
+     * — is a way in, and it must enforce the same invariants {@link FlagSwitch} logs against.
+     */
+    @Test
+    void theCanonicalConstructorEnforcesTheInvariants() {
+        assertThrows(NullPointerException.class,
+                () -> new FlagResolution(true, null, "x"),
+                "a resolution that cannot name its source cannot satisfy requirement 5; rejecting it"
+                + " at construction beats failing later inside the logging step");
+
+        FlagResolution injected =
+                new FlagResolution(false, Source.UNRECOGNIZED, "x\r\n\u001b[31mFAKE INFO line");
+        assertEquals("x??\u001b[31mFAKE INFO line".replace("\u001b", "?"), injected.detail(),
+                "control characters must be neutralised on every construction path, not just parse()");
+        assertFalse(injected.describe().contains("\r"), "no CR may reach the log line");
+        assertFalse(injected.describe().contains("\n"), "no LF may reach the log line");
+        assertEquals("x".repeat(32) + "...",
+                new FlagResolution(false, Source.UNRECOGNIZED, "x".repeat(64)).detail(),
+                "the length cap applies to the constructor too");
+
+        FlagResolution clean = new FlagResolution(true, Source.ENV, null);
+        assertNull(clean.detail(), "a null detail stays null (sources that need no detail)");
     }
 
     /** The {@code source=} half of the requirement-5 log line. */

@@ -13,7 +13,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import tech.krpc.http.server.AbstractHttpHandler;
 import tech.krpc.http.server.AsciiHeader;
 import tech.krpc.http.server.GetHandler;
-import tech.krpc.util.EnvUtils;
 
 /**
  * ADR-0004 (AGENT-001 P1): {@code GET /mcp} → HTTP 405.
@@ -45,13 +44,15 @@ public class McpGetHandler implements GetHandler {
         return AbstractHttpHandler.TYPE_JSON;
     }
 
+    /**
+     * Same gate as {@link McpHandler}, through the same accessor (ADR-0003 requirement 4): the
+     * container-injected {@code rpc.server.mcp.enabled} or the env half in {@link McpFlag}. Neither
+     * face parses {@code KRPC_MCP} itself, so the GET face can never disagree with the POST face
+     * about whether {@code /mcp} exists. Default OFF.
+     */
     @Override
     public boolean enabled() {
-        if (mcpEnabled) {
-            return true;
-        }
-        var env = EnvUtils.env("KRPC_MCP", "false");
-        return "true".equalsIgnoreCase(env) || "1".equals(env);
+        return mcpEnabled || McpFlag.enabled();
     }
 
     @Override

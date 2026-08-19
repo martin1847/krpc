@@ -83,9 +83,12 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     // never a foreign thread). Virtual threads are daemon, so no explicit shutdown is needed.
     static final ExecutorService HANDLER_VT = Executors.newVirtualThreadPerTaskExecutor();
 
-    // OTEL-001 (ADR-0006): resolved once (KrpcOtel.enabled() is a constant) so the disabled path
-    // JIT-folds to the original behaviour — zero cost, zero wire change.
-    private static final boolean OTEL_ENABLED = KrpcOtel.enabled();
+    // ADR-0003 requirement 4 (known debt 2, fixed): the OTEL kill switch has exactly ONE resolution
+    // point — KrpcOtel.enabled(). This class used to capture it into a `private static final boolean`
+    // for JIT folding; that capture resolves at class-init, i.e. at image BUILD time under
+    // GraalVM/Quarkus, while the accessor now resolves at runtime — so one KRPC_OTEL=false would be
+    // honoured on the gRPC face and ignored on this HTTP face of the same binary. The accessor is
+    // therefore called per request (a volatile read once resolved); caching is its business, not ours.
 
     // W3C context extraction from inbound Netty HTTP headers (webhook/callback entry).
     private static final TextMapGetter<HttpHeaders> HTTP_HEADERS_GETTER = new TextMapGetter<>() {
@@ -205,7 +208,7 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
             // forward the trace via PropagateTraceCall, so a webhook/callback keeps one trace even
             // with no OTel SDK. Cleared in finally (the VT is per-request, but clear is hygiene).
             bindTraceMdc(requestHeaders);
-            Span span = (OTEL_ENABLED && !KrpcOtel.isNoop())
+            Span span = (KrpcOtel.enabled() && !KrpcOtel.isNoop())
                     ? startHttpServerSpan(handler, requestHeaders) : null;
             Scope scope = span != null ? span.makeCurrent() : null;
             // OTEL-002 R1-5: once a real SERVER span is current, logging MDC traceId/spanId must

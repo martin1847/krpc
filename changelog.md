@@ -1,3 +1,46 @@
+# Unreleased
+
+Flag mechanics, not flag polarity: the two switches that are read by hand in core now resolve
+through one lazy accessor each, with the value semantics and the resolution log umbrella ADR-0003
+requires. Every default keeps its polarity (`KRPC_OTEL` ON, `KRPC_MCP` OFF).
+
+* **BREAKING (behaviour) — an unrecognised `KRPC_OTEL` / `rpc.otel.enabled` value now disables
+  telemetry instead of enabling it.** Through 1.2.0 anything that was not `false`/`0` counted as ON,
+  so a typo'd kill switch (`KRPC_OTEL=fasle`, or `KRPC_OTEL=yes` used as a synonym for on) silently
+  left the OTel interceptors registered — precisely the case the switch exists for. Recognised values
+  are now `true`/`1` and `false`/`0` only, trimmed and case-insensitive; **anything else, and a
+  lookup that throws, resolve to OFF** (a behaviour stuck ON in production has no remedy short of a
+  rebuild, while a spuriously OFF one is visible in the log and fixed by correcting the value). Blank
+  or unset is still "not configured", so an unconfigured runtime keeps telemetry ON, and
+  `rpc.otel.enabled` still wins over `KRPC_OTEL` — a *blank* property no longer shadows a configured
+  env var. If you relied on `KRPC_OTEL=yes`, change it to `true`. Approved in advance in umbrella
+  ADR-0003 (known debt 1).
+* **Fixed — `KRPC_MCP` with surrounding whitespace now enables `/mcp`.** The two hand-written reads
+  compared `System.getenv`'s value verbatim, so `KRPC_MCP=" true "` — what a YAML block scalar, a
+  Dockerfile line continuation or a terminal copy-paste actually produces — resolved to OFF, with no
+  endpoint and nothing in the log to explain it. The value is trimmed now, and an unrecognised or
+  unreadable value keeps the capability unexposed (class B safe side; `rpc.server.mcp.enabled`
+  default OFF is unchanged, NS-6).
+* **Both `/mcp` faces gate on one accessor.** `McpHandler` (POST) and `McpGetHandler` (GET) each
+  parsed `KRPC_MCP` themselves, so an edit to one could desynchronise the POST face from the GET face
+  of the same endpoint; both now call `McpFlag.enabled()`. Likewise `AbstractHttpHandler` no longer
+  captures `KrpcOtel.enabled()` into a `static final boolean`: a captured copy resolves at class-init
+  — image *build* time under GraalVM/Quarkus — while the accessor resolves at runtime, which is how
+  one `KRPC_OTEL=false` ends up honoured on the gRPC face and ignored on the HTTP face of the same
+  binary. The OTel kill switch is likewise no longer resolved in a static field initializer, so it is
+  now actually pressable in a native image.
+* **New — one log line per flag resolution, at INFO or WARN.** The first time a hand-written flag is
+  resolved it logs `ADR-0003 flag <name> resolved: enabled=<state> source=<property|env|default|
+  unrecognized(<value>)|read-failure(<exception>)>` — WARN when the resolution turns OFF a behaviour
+  that defaults ON (a pressed kill switch), INFO otherwise, never DEBUG. Emitted inside the
+  `compareAndSet` that publishes the value, so racing callers produce exactly one line and it reports
+  the value that won. For `KRPC_OTEL`, whose effect is invisible without an OTel SDK, this line is
+  the only evidence that the switch took at runtime rather than being baked in at build time.
+* Shared building blocks for the above are public in `rpc-common`: `tech.krpc.util.FlagResolution`
+  (value semantics + source) and `tech.krpc.util.FlagSwitch` (memo cell + one-shot log). The
+  ADR-0005 flag gate's frozen baseline shrinks from 6 violations to 3; the remaining three are the
+  `RpcConstants.CI_BUILD_ID` open question, untouched.
+
 # 1.2.0, 2026-08-17
 
 Strict JSON scalar decoding and honest error codes on the agent HTTP faces — two breaking changes, each with an env-var rollback — plus the error-disclosure hardening they exposed, and the native metadata / MCP 07-28 work that had been sitting unreleased. Merged to `dev` via PRs #54–#61.

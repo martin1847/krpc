@@ -32,13 +32,15 @@ requires. Every default keeps its polarity (`KRPC_OTEL` ON, `KRPC_MCP` OFF).
 * **New — one log line per flag resolution, at INFO or WARN.** The first time a hand-written flag is
   resolved it logs `ADR-0003 flag <name> resolved: enabled=<state> source=<property|env|default|
   unrecognized(<value>)|read-failure(<exception>)>` — WARN when the resolution turns OFF a behaviour
-  that defaults ON (a pressed kill switch), INFO otherwise, never DEBUG. The line and the value are one
-  guarded step: the line is written first and the value published only after, so racing callers produce
-  exactly one line, it reports the value that actually won, and no caller can observe an effective
-  value whose line has not been written yet. A logging failure publishes nothing (the read still
-  returns its value) so the next caller writes the missing line rather than inheriting a resolved flag
-  with no evidence. For `KRPC_OTEL`, whose effect is invisible without an OTel SDK, this line is the
-  only evidence that the switch took at runtime rather than being baked in at build time.
+  that defaults ON (a pressed kill switch), INFO otherwise, never DEBUG. Value and line are bound to
+  one immutable resolution: the first resolution to arrive is claimed once and never replaced, so the
+  single line always describes the value every caller received — racing callers cannot produce a
+  second line, nor a line naming a value that lost. If the logging backend throws, the read still
+  returns its value and the line stays owed: the next read of that flag re-emits the SAME stored
+  resolution rather than looking at the environment again, so a permanently broken logging stack means
+  permanently no line, never a different value. For `KRPC_OTEL`, whose effect is invisible without an
+  OTel SDK, this line is the only evidence that the switch took at runtime rather than being baked in
+  at build time.
 * Shared building blocks for the above are public in `rpc-common`: `tech.krpc.util.FlagResolution`
   (value semantics + source) and `tech.krpc.util.FlagSwitch` (memo cell + one-shot log). The
   ADR-0005 flag gate's frozen baseline shrinks from 6 violations to 3; the remaining three are the

@@ -1,12 +1,15 @@
 package tech.krpc.util;
 
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * ADR-0003 (umbrella) requirements 3, 4 and 5: the memo cell behind a hand-written flag accessor,
- * plus the single resolution log line that is bound to it atomically.
+ * plus the single resolution log line bound to it.
  *
  * <p><b>Why the accessor keeps the read (requirement 3).</b> This class deliberately does NOT take a
  * resolver supplier or any other indirection for the read: a {@code Supplier}, method reference or
@@ -23,24 +26,33 @@ import org.slf4j.LoggerFactory;
  * }
  * }</pre>
  *
- * <p><b>One line, and the value is not observable before it exists (requirement 5).</b> Resolution
- * is one guarded step: the winner emits the line and only then publishes the value, all inside the
- * monitor. Two consequences, both load-bearing. Racing callers produce exactly one line describing
- * exactly the published value — never a loser's, and never a second line from a separate "have I
- * logged yet?" flag. And no caller can observe an effective value whose promised evidence has not
- * been written yet: a later caller either blocks on the monitor or, once past it, reads a value that
- * is already logged. Publishing first and logging after would leave that window open, and worse: if
- * the logging backend then threw, the value would stay published with its evidence permanently
- * missing — a state ADR-0003 requirement 5 explicitly calls worse than no log.
+ * <p><b>Lock-free, and the log can never contradict the value.</b> The mechanism is two CAS cells and
+ * nothing else — no monitor, no lock, no spin-wait anywhere on the resolution path:
  *
- * <p><b>A failed emission does not publish.</b> If the backend throws, the caller still gets its
- * value (requirement 2: reading a flag must never break its caller) but nothing is memoised, so the
- * next caller re-emits and publishes. That trades a possible re-read of the environment on a broken
- * logging stack for never holding a value whose evidence cannot be produced.
+ * <ul>
+ *   <li>{@link #canonical} is claimed once by {@code compareAndExchange} and never replaced. The
+ *       first caller to arrive decides the flag; every later or racing caller — including one whose
+ *       own re-read of the environment disagrees — is answered from that claim. So the effective
+ *       value is immutable from the moment it is observable.</li>
+ *   <li>{@link #lineClaimed} is a one-shot claim on the resolution line. Exactly one caller emits;
+ *       whoever loses the claim returns immediately instead of waiting for the logging backend.</li>
+ * </ul>
  *
- * <p>The monitor is taken at most until the first successful publish; afterwards every call is a
- * single volatile read on the fast path (JDK 21+ virtual threads are not pinned by it on JDK 24+,
- * and this is one-shot work regardless).
+ * <p>Requirement 5 forbids a log line decoupled from the value it reports, because a decoupled line
+ * can name a value that was later recomputed ("bound to the first effective resolution"). With an
+ * immutable claim that disease has no host: the line is always formatted from {@link #canonical},
+ * which is the value every caller already received, so a separate claim for the line cannot make the
+ * two disagree — it can only decide WHO writes it and that it is written once.
+ *
+ * <p><b>A failed emission keeps the value and owes the line.</b> If the backend throws, the caller
+ * still gets its value (requirement 2: reading a flag must never break its caller), the claim stands,
+ * and the line claim is released so the next read of this flag re-emits — the SAME stored resolution,
+ * with no second look at the environment. A permanently broken logging stack therefore means
+ * permanently no line (and one throwing attempt per read); that is an accepted cost, not a silently
+ * different value.
+ *
+ * <p>Steady state after the line is out is two volatile reads and a branch: no allocation, no CAS,
+ * no lock — which is why the OTEL flag can be consulted per request.
  *
  * <p>Level is INFO, or WARN when the resolution turns OFF a behaviour that defaults ON: a pressed
  * kill switch is an unusual state an operator should see without looking for it. Never DEBUG —
@@ -58,49 +70,65 @@ public final class FlagSwitch {
     private final boolean defaultValue;
 
     /**
-     * Null until the first resolution is published — and it is published only AFTER its log line has
-     * been emitted, so a non-null read always implies the evidence exists. This is the memo that
-     * requirement 4 keeps off the call sites.
+     * The resolution in effect: null until the first caller claims it, immutable afterwards. This is
+     * the memo requirement 4 keeps off the call sites, and the only thing the line is formatted from.
      */
-    private volatile Boolean state;
+    private final AtomicReference<FlagResolution> canonical = new AtomicReference<>();
+
+    /**
+     * One-shot claim on the requirement-5 line. Taken by the caller that emits, released again only
+     * when the backend threw, so the line is owed rather than lost.
+     */
+    private final AtomicBoolean lineClaimed = new AtomicBoolean();
 
     public FlagSwitch(String name, boolean defaultValue) {
         this.name = name;
         this.defaultValue = defaultValue;
     }
 
-    /** The memoised value, or {@code null} while this flag has not been resolved yet. */
+    /**
+     * The resolved value, or {@code null} while this flag has not been resolved yet. Also settles the
+     * resolution line if a previous attempt was lost to a broken backend — that retry reuses the
+     * stored resolution and never re-reads the environment.
+     */
     public Boolean resolved() {
-        return state;
+        FlagResolution claimed = canonical.get();
+        if (claimed == null) {
+            return null;
+        }
+        emitOnce(claimed);
+        return claimed.value();
     }
 
     /**
-     * Resolves this flag in one guarded step if it is not resolved yet: emit the requirement-5 line,
-     * then publish the value. Returns the value now in effect — the winner's, so racing callers
-     * agree. When the emission fails, the caller's own value is returned and nothing is published,
-     * leaving the line for the next caller to write (see class doc).
+     * Claims {@code resolution} as this flag's value if nothing is claimed yet, then makes sure the
+     * one line is written. Returns the value now in effect — the winner's, so racing callers agree
+     * and a later re-read can never displace a value already handed out.
      */
     public boolean publish(FlagResolution resolution) {
-        Boolean published = state;
-        if (published != null) {
-            return published;
+        FlagResolution winner = canonical.compareAndExchange(null, resolution);
+        if (winner == null) {
+            winner = resolution;
         }
-        synchronized (this) {
-            published = state;
-            if (published != null) {
-                return published;
-            }
-            try {
-                emit(resolution);
-            } catch (RuntimeException | LinkageError failure) {
-                // A broken logging backend must not break a flag read (requirement 2) and must not
-                // leave a published value with no evidence: publish nothing, so the next caller
-                // retries the line. Errors other than LinkageError (OOM, StackOverflow) are not this
-                // class's to absorb.
-                return resolution.value();
-            }
-            state = resolution.value();
-            return resolution.value();
+        emitOnce(winner);
+        return winner.value();
+    }
+
+    /**
+     * Writes the resolution line at most once. The plain read short-circuits the steady state (and
+     * keeps a re-entrant logging backend from recursing); the CAS decides the single writer.
+     */
+    private void emitOnce(FlagResolution resolution) {
+        if (lineClaimed.get() || !lineClaimed.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            emit(resolution);
+        } catch (RuntimeException | LinkageError failure) {
+            // A broken logging backend must not break a flag read (requirement 2). The value stands;
+            // release the claim so the next read of this flag re-emits THIS resolution. Errors other
+            // than LinkageError (OOM, StackOverflow) are not this class's to absorb.
+            lineClaimed.set(false);
         }
     }
 

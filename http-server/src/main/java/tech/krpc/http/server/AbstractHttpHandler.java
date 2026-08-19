@@ -88,7 +88,8 @@ public abstract class AbstractHttpHandler extends SimpleChannelInboundHandler<Fu
     // for JIT folding; that capture resolves at class-init, i.e. at image BUILD time under
     // GraalVM/Quarkus, while the accessor now resolves at runtime — so one KRPC_OTEL=false would be
     // honoured on the gRPC face and ignored on this HTTP face of the same binary. The accessor is
-    // therefore called per request (a volatile read once resolved); caching is its business, not ours.
+    // therefore called per request (two volatile reads once resolved); caching is its business, not
+    // ours.
 
     // W3C context extraction from inbound Netty HTTP headers (webhook/callback entry).
     private static final TextMapGetter<HttpHeaders> HTTP_HEADERS_GETTER = new TextMapGetter<>() {

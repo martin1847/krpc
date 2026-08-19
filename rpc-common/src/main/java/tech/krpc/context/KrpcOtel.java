@@ -90,7 +90,7 @@ public final class KrpcOtel {
      * method <em>each time</em> and NEVER copies the result into a field of its own: a captured copy
      * freezes at class-init while this accessor resolves at runtime, so one {@code KRPC_OTEL=false}
      * would be honoured on one path and ignored on another in the same binary. Caching is this
-     * accessor's business (a single volatile read once resolved), never the call site's.
+     * accessor's business (two volatile reads and a branch once resolved), never the call site's.
      */
     public static boolean enabled() {
         Boolean memo = ENABLED.resolved();

@@ -38,11 +38,11 @@ import org.slf4j.LoggerFactory;
  *       whoever loses the claim returns immediately instead of waiting for the logging backend.</li>
  * </ul>
  *
- * <p>Requirement 5 forbids a log line decoupled from the value it reports, because a decoupled line
- * can name a value that was later recomputed ("bound to the first effective resolution"). With an
- * immutable claim that disease has no host: the line is always formatted from {@link #canonical},
- * which is the value every caller already received, so a separate claim for the line cannot make the
- * two disagree — it can only decide WHO writes it and that it is written once.
+ * <p>This is the canonical shape requirement 5's second constraint names — "memoise the winning
+ * record itself via one compare-and-set, publish, then emit the stored record under a separate
+ * emission once-guard" — and it satisfies that constraint's three binding points directly: at most
+ * one line reporting the winner, emitted from the stored immutable record rather than a re-read at
+ * logging time, with no lock, monitor or spin-wait held across the logging-backend call on any path.
  *
  * <p><b>A failed emission keeps the value and owes the line.</b> If the backend throws, the caller
  * still gets its value (requirement 2: reading a flag must never break its caller), the claim stands,

@@ -171,9 +171,9 @@ class FlagSwitchTest {
     }
 
     /**
-     * Requirement 5, atomicity: the line is emitted by the same guarded step that publishes the value,
-     * so racing callers produce exactly ONE line, it reports the value that won, and every caller
-     * observes that same value — never its own losing resolution.
+     * Requirement 5, binding point (1): two racing callers produce at most ONE line and any line
+     * emitted reports the resolution that actually won — because the line is formatted from the
+     * CAS-claimed record, so every caller observes that same value, never its own losing resolution.
      */
     @Test
     void racingCallersProduceOneLineReportingTheWinner() throws Exception {

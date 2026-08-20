@@ -81,13 +81,16 @@ Local hook is the fast reminder (`--no-verify` bypasses it);
 - **ADR-0003 flag discipline, static-initializer half** —
   `FlagResolutionGateTest#flagsMustNotResolveInStaticInitializers`. Blocks **new**
   hits only: a `System.getProperty`/`getenv`/`getProperties` read in a `<clinit>`
-  (layer 1), or a `<clinit>` that captures an already-resolved flag — calling a
-  derived flag accessor, or reading another class's resolved flag field, into a
-  static field (layer 2, a hard gate within its measured face, not a convention).
+  (layer 1), or a `<clinit>` that touches an already-resolved flag **at all** — any
+  call to a derived flag accessor, or any read of another class's resolved flag field
+  (layer 2, a hard gate within its measured face, not a convention). The matcher does
+  not look at assignment: a discarded return value, or a value used only inside a
+  condition, is reported exactly like one captured into a field. Reads of the class's
+  own fields are excluded, and so are lambda bodies — they are the lazy shape the ADR
+  asks for.
   Native-image bakes such a read in at build time, so the switch is dead in
   production. `FreezingArchRule`: pre-existing hits are grandfathered in
-  `arch-test/archunit_store/`, the baseline only shrinks, and lambdas are excluded
-  by design (they are the lazy shape the ADR asks for).
+  `arch-test/archunit_store/` and the baseline only shrinks.
 - **That baseline is exactly three lines today, and none of them is debt.**
   `RpcConstants.CI_BUILD_ID` (`RpcConstants.java:28`, a direct `System.getProperty`)
   plus two collateral reads of that already-baked constant from `RpcServiceExpose`'s

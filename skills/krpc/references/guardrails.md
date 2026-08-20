@@ -37,10 +37,13 @@ for new projects.
 
 ## Live gates in this repo — what each one blocks, and where it is enforced
 
-Verified 2026-08-20 against the script/test that implements each entry. Three
-families, by cost: diff-scoped shell (milliseconds, every push/PR), build-time JVM
-(minutes, every PR), release-time script (only when publishing). A gate nobody can
-name is a gate nobody maintains — hence the inventory.
+Verified 2026-08-20 against the script/test that implements each entry. Grouped by
+cost **and by trigger surface**, because the two differ: diff-scoped shell
+(milliseconds — every push locally, every PR in CI), the unfiltered JVM build
+(minutes — push to `dev` + every PR), an unfiltered shell workflow
+(`skill-spec-sync`), and two path-filtered workflows (`japicmp`, `native-smoke`)
+that a doc-only PR skips entirely, plus the release script (only when publishing).
+A gate nobody can name is a gate nobody maintains — hence the inventory.
 
 ### Diff-scoped shell — `.githooks/pre-push`
 
@@ -76,41 +79,103 @@ Local hook is the fast reminder (`--no-verify` bypasses it);
   "hardcoded scan-face silent miss" (a new module drifting in un-analyzed while
   the gate still reports green).
 - **ADR-0003 flag discipline, static-initializer half** —
-  `FlagResolutionGateTest#flagsMustNotResolveInStaticInitializers`. Blocks: a
-  `System.getProperty`/`getenv` read or known flag accessor called from a
-  `<clinit>` (native-image bakes such a read in at build time, so the switch is
-  dead in production). Frozen baseline, shrink-only. **Scope caveat, stated so
-  green is not mistaken for proof:** it sees only the six core modules and only
-  `System`-style reads — duplicate hand-written reads, reflection, and
-  container-injected config (`@ConfigProperty` / `@Value`) are invisible to it.
-  The rest of umbrella ADR-0003 (lazy first-use resolution, one INFO+ log line of
-  effective state, never copying an accessor result into a static field) is
-  reviewer-enforced convention.
+  `FlagResolutionGateTest#flagsMustNotResolveInStaticInitializers`. Blocks **new**
+  hits only: a `System.getProperty`/`getenv`/`getProperties` read in a `<clinit>`
+  (layer 1), or a `<clinit>` that captures an already-resolved flag — calling a
+  derived flag accessor, or reading another class's resolved flag field, into a
+  static field (layer 2, a hard gate within its measured face, not a convention).
+  Native-image bakes such a read in at build time, so the switch is dead in
+  production. `FreezingArchRule`: pre-existing hits are grandfathered in
+  `arch-test/archunit_store/`, the baseline only shrinks, and lambdas are excluded
+  by design (they are the lazy shape the ADR asks for).
+- **That baseline is exactly three lines today, and none of them is debt.**
+  `RpcConstants.CI_BUILD_ID` (`RpcConstants.java:28`, a direct `System.getProperty`)
+  plus two collateral reads of that already-baked constant from `RpcServiceExpose`'s
+  static block (`:55`, `:56`). The source comment says the build-time bake is the
+  *intent* — build metadata stamped into the native image — so the freeze records the
+  disposition as **UNDECIDED**: an open question awaiting an owner decision under
+  umbrella ADR-0003, whose likely answer is an explicit exemption mechanism (allowlist
+  or annotation), **not** lazy resolution. **Do not "fix" these three on the strength
+  of this gate**; take it to the owner via ADR-0003. (Debts 1-2 — `KrpcOtel.ENABLED`
+  and `AbstractHttpHandler.OTEL_ENABLED` — were the other three lines, and are repaid;
+  the baseline shrank 6 → 3.)
+- **Scope caveat, so green is not mistaken for proof.** The face is the six core
+  modules, `System`-style reads and derived accessors — duplicate hand-written reads,
+  reflection, and container-injected config (`@ConfigProperty` / `@Value`) are
+  invisible to it. Layer 2 also keeps its teeth only while the accessor's own body
+  holds the `System` read: route it through a `Supplier`/method reference and layer 2
+  silently matches nothing (the anti-vacuous-green guard covers layer 1's seed set
+  only).
+- **The rest of umbrella ADR-0003 is reviewer-enforced, and it is more than a
+  slogan:** the default must be the correct behavior (no correctness or strictness
+  fix shipped as an opt-in switch); resolution lazy on the first-use path inside
+  `try`/`catch` with safe-side failure; one accessor per flag; effective state logged
+  exactly once at INFO or above (WARN when it switches off a default-ON behavior);
+  documented value grammar and precedence; and the injection exemption is
+  **per read site**, not per flag — a flag injected in one place and hand-read in
+  another is still bound for the hand-read part.
 - **No hand-written proto in production source** — `NoProtoInProductionSourceTest`.
   Blocks: a `.proto` file under any production module's source set (NS-1: the Java
   interface is the contract).
+- **NS-4 — JSON is the real default decode codec** — `rpc-client`
+  `DefaultCodecJsonTest`. Blocks: a change that makes a codec-unset envelope decode
+  as anything but JSON. Exercised on the ACTUAL path: a DEFAULT envelope through
+  `InputMarshaller.parse` yields `getEValue()==0`, and the server-dispatch resolver
+  `Serial.Instance.get(...)` maps that to the JSON serial; it also pins
+  `RpcClientFactory.globalSerialEnum == JSON`.
+- **NS-6 — the agent/MCP surface is opt-in** — `rpc-server-quarkus`
+  `McpDefaultOffContractTest`. Blocks: turning the agent surface on by default —
+  `@UnsafeWeb.agentTool()` must default `false`, the runtime-retained
+  `@ConfigProperty(name="rpc.server.mcp.enabled", defaultValue="false")` on
+  `McpHandler` / `McpGetHandler` must stay `"false"` (flipping the production
+  `defaultValue` turns it RED), and `KRPC_MCP` unset must resolve to `"false"`.
+- NS-1/NS-4/NS-6 are plain JUnit tests, not frozen ArchUnit rules — they express
+  contracts bytecode analysis cannot (files on disk, the default wire-decode path,
+  annotation/env defaults), ADR-0005. Each lives in its owning module and rides the
+  same unfiltered `gradle build`.
 - **Known-red exclusion:** the workflow runs `-x :test-server-spring:test`. That is
   a documented hole (two bugs in published modules — `RpcClientAutoConfigure` NPE,
   then `RpcServiceExposer` hanging `SpringApplication.run()`; AGENTS.md Repo
   Facts), not a passing test.
 
-### Build-time JVM — contract compat (`japicmp` workflow, PRs touching `rpc-api`/`rpc-common`/build wiring)
+### Path-filtered JVM workflow — contract compat (`japicmp`)
 
-- **JAPICMP-001** — `gradle japicmpCheck` (`gradle/japicmp.gradle`) diffs the
-  working tree's `rpc-api` + `rpc-common` against the last released Central
-  baseline (`japicmp.baseline`) and encodes the SPEC §14.1 version policy: on a
-  **patch** bump a binary-incompatible change FAILS; on a **minor** bump
-  incompatibilities require `-Pjapicmp.acceptBreaking=true`; a major bump is
-  off-policy (major is frozen at 1). Run with `--rerun-tasks` so a cached
-  UP-TO-DATE never stands in for a real comparison. (SPEC §14.2 still describes
-  japicmp as "recommended, NOT wired here" — that line is stale; the workflow is
-  the reality.)
-- **Skill bundle sync** — `skill-spec-sync` workflow `diff -q SPEC.md
-  skills/krpc/references/SPEC.md` on push to `dev` and every PR. Overlaps hook ①
-  deliberately: the hook is diff-scoped, this one checks unconditionally.
-- **native-smoke** — builds the DB-free quickstart as a native image and boots it,
-  curling the agent/MCP endpoints. Blocks: reflection/init gaps that only appear in
-  a native image, including runtime-only failures a build-only check would miss.
+Triggers: push to `dev`, and PRs — but **only** when `rpc-api/**`, `rpc-common/**`,
+`**/*.gradle`, `gradle.properties`, the Gradle wrapper, or the workflow itself
+changes. A doc-only PR skips this gate entirely.
+
+- **JAPICMP-001** — `gradle japicmpCheck` (`gradle/japicmp.gradle`) diffs the working
+  tree's `rpc-api` + `rpc-common` against the **configured** baseline
+  `japicmp.baseline` (in `gradle.properties`), and derives its mode from that
+  baseline versus the in-dev `version`: on a **patch** bump a binary-incompatible
+  change FAILS; on a **minor** bump incompatibilities require
+  `-Pjapicmp.acceptBreaking=true`; a major bump is off-policy (SPEC §14.1 freezes
+  major at 1). CI passes `--rerun-tasks` so a cached UP-TO-DATE never stands in for a
+  real comparison.
+- **Known hole in today's configuration:** `japicmp.baseline=1.1.1` while
+  `version=1.2.0` and Central's latest **is** 1.2.0. The comparison therefore runs
+  against a surface one release behind what consumers already have, and the version
+  pair reads as a MINOR bump — so an acknowledged break
+  (`-Pjapicmp.acceptBreaking=true`) is still admissible against API that shipped in
+  1.2.0, and nothing compares against 1.2.0 until the baseline is advanced.
+  Advancing it is a build change, not a doc edit.
+- (SPEC §14.2 still describes japicmp as "recommended, NOT wired here" — that line is
+  stale; the workflow is the reality.)
+
+### Unfiltered shell workflow — skill bundle sync (`skill-spec-sync`)
+
+- Runs `diff -q SPEC.md skills/krpc/references/SPEC.md` on push to `dev` and on every
+  PR, with **no** path filter. Blocks: a drifted skill copy. Overlaps pre-push hook ①
+  deliberately — the hook is diff-scoped, this one checks unconditionally, so it
+  still fires on a PR that touches neither file.
+
+### Path-filtered native workflow — `native-smoke`
+
+- Triggers: push to `dev`, and PRs touching `**/*.java`, `**/*.gradle`,
+  `**/*.properties`, `**/native-image/**`, or the workflow itself; doc-only PRs skip
+  it. Builds the DB-free quickstart as a GraalVM native image, boots it and curls the
+  agent/MCP endpoints. Blocks: reflection/init gaps that surface only in a native
+  image, including runtime-only failures a build-only check would miss.
 
 ### Release-time script — `gradle/publish-central.sh`
 

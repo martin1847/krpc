@@ -20,12 +20,13 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -160,9 +161,12 @@ import java.util.Set;
  *       would defeat the constant's purpose. The exemption is the decided outcome, not a stopgap
  *       pending one.</li>
  *   <li>What ADR-0003 rejected — and this does NOT become — is a <em>silent</em> carve-out. Every
- *       entry is named, carries its reason, is pinned narrowly enough that a second read point in
- *       the same class still fails RED, and throws once it stops matching anything. See the
- *       constant's own doc for how each entry is pinned.</li>
+ *       entry is named, carries its reason, and is pinned on identity plus cardinality: layer 1 to
+ *       the exact call target {@code System.getProperty(java.lang.String)} and to exactly one such
+ *       read, layer 2 to the exact field. A different {@code System} reader, a second read, or a
+ *       different resolved flag field is RED. An entry that stops matching throws, and so does the
+ *       layer-2 liveness canary if the derivation behind it collapses. The one unpinned dimension
+ *       (the property NAME) is declared as a residual in the constant's own doc, not hidden.</li>
  * </ul>
  *
  * <p>The baseline annotation lives here rather than inside the store file because ArchUnit treats
@@ -209,16 +213,24 @@ public final class FlagResolutionGateTest {
     private static final int ANY = -1;
 
     /**
-     * One exempted read point: {@code owner}'s {@code <clinit>}, the layer it trips, the named
-     * field (layer 2 only), how many occurrences the entry covers, and why it is not a flag.
+     * One exempted read point.
+     *
+     * @param owner       the class whose {@code <clinit>} is exempted, by full name
+     * @param kind        which gate layer the entry speaks to
+     * @param subject     layer 1: the EXACT call target that may be read, e.g.
+     *                    {@code java.lang.System.getProperty(java.lang.String)}; layer 2: the
+     *                    full name of the field that may be read
+     * @param occurrences how many matching accesses the entry covers exactly, or {@link #ANY}
+     * @param rationale   why this read point is build metadata rather than a flag; quoted back in
+     *                    the staleness/canary failure messages, so it is read by a machine too
      */
-    record Exemption(String owner, ExemptKind kind, String field, int occurrences,
+    record Exemption(String owner, ExemptKind kind, String subject, int occurrences,
                      String rationale) {
         String describe() {
             return kind == ExemptKind.DIRECT_SYSTEM_READ
                 ? "exactly " + occurrences + " direct java.lang.System read(s) in its static"
-                    + " initializer"
-                : "a static-initializer read of " + field;
+                    + " initializer, all of them <" + subject + ">"
+                : "a static-initializer read of " + subject;
         }
     }
 
@@ -240,18 +252,35 @@ public final class FlagResolutionGateTest {
      *
      * <p><b>How the two entries are pinned, and why differently.</b>
      * <ul>
-     *   <li><b>Layer 2 pins the field.</b> Identity is exact: only a {@code <clinit>} read of THAT
-     *       field in THAT class is exempt. Reading a different resolved flag field from the same
-     *       static block is still RED. Cardinality is {@link #ANY} on purpose — reading the same
-     *       already-baked constant twice is the same fact twice (it is twice today, lines 55-56),
-     *       so pinning the count would buy no precision and cost a false RED on a reformat.</li>
-     *   <li><b>Layer 1 can pin nothing but cardinality.</b> ArchUnit sees the call target
-     *       {@code System.getProperty(String)} — not its argument, not the field the result lands
-     *       in — so "the CI_BUILD_ID read" is simply not expressible as a target. The entry
-     *       therefore pins the EXACT number of direct reads in that {@code <clinit>} (one). A
-     *       second read of any kind makes the count disagree, the exemption stops applying, and
-     *       BOTH reads are reported. Fail-closed is what keeps this entry from silently degrading
-     *       into "RpcConstants may read the environment".</li>
+     *   <li><b>Layer 2 pins field identity, and only counts while the field is still DERIVED.</b>
+     *       Only a {@code <clinit>} read of THAT field in THAT class is exempt; reading a
+     *       different resolved flag field from the same static block is still RED. The
+     *       suppression is applied AFTER the {@code flagFields} test, so a read that layer 2 no
+     *       longer derives as a resolved flag field cannot keep the entry alive — see the canary
+     *       in {@link NoFlagResolutionInStaticInitializer#finish}. Cardinality is {@link #ANY} on
+     *       purpose: reading the same already-baked constant twice is the same fact twice (it is
+     *       twice today, lines 55-56), so pinning the count would buy no precision and cost a
+     *       false RED on a reformat.</li>
+     *   <li><b>Layer 1 pins the call target signature AND the exact read count.</b> Every direct
+     *       {@code java.lang.System} read in that {@code <clinit>} must be
+     *       {@code System.getProperty(java.lang.String)}, and there must be exactly one. Swapping
+     *       it for {@code getenv} / {@code getProperties} is RED; adding a second read of any
+     *       kind makes the count disagree, the exemption stops applying, and BOTH reads are
+     *       reported. Fail-closed on both axes.</li>
+     *   <li><b>Declared residual surface (layer 1), owner-visible on purpose.</b> The one thing
+     *       still NOT pinned is the property NAME: ArchUnit's domain model exposes the call
+     *       target, never its arguments, so {@code System.getProperty("something.else")} as the
+     *       single read of this {@code <clinit>} would still pass. The two available ways to bind
+     *       the {@code "ci.build"} literal — parsing the class file's constant pool, or reading
+     *       the source line behind {@code getSourceCodeLocation()} — were rejected: both leave
+     *       the gate asserting on a representation (bytecode layout / source text) rather than on
+     *       the imported model, and both break silently on a compiler or formatting change, which
+     *       is a worse failure than a named residual. What narrows the residual is the layer-2
+     *       canary below: the exempted {@code <clinit>} must still be a derived resolver that
+     *       still stamps {@code CI_BUILD_ID}, or the run fails loudly. So the residual reads:
+     *       <em>a single {@code getProperty(String)} call, in a {@code <clinit>} that still
+     *       produces the CI_BUILD_ID flag field, may read a different property name.</em>
+     *       Recorded for owner adjudication rather than silently absorbed.</li>
      * </ul>
      *
      * <p>An entry that matches nothing is not tolerated either:
@@ -260,11 +289,16 @@ public final class FlagResolutionGateTest {
      */
     static final Set<Exemption> BUILD_TIME_METADATA_EXEMPTIONS = Set.of(
         new Exemption(
-            "tech.krpc.common.RpcConstants", ExemptKind.DIRECT_SYSTEM_READ, null, 1,
+            "tech.krpc.common.RpcConstants", ExemptKind.DIRECT_SYSTEM_READ,
+            "java.lang.System.getProperty(java.lang.String)", 1,
             "CI_BUILD_ID stamps System.getProperty(\"ci.build\") into the image at build time on"
             + " purpose — source comment 「利用graalVM特性，缓存构建信息」. Build metadata has no"
             + " runtime switch to keep pressable, so baking IS the intended behaviour and"
-            + " requirement 3 (lazy resolution) has nothing to protect here."),
+            + " requirement 3 (lazy resolution) has nothing to protect here. RESIDUAL, declared:"
+            + " the property NAME is not bindable (ArchUnit exposes no call arguments), so the"
+            + " single getProperty(String) read of this <clinit> could name another property and"
+            + " still pass; getenv/getProperties, a second read, or losing the CI_BUILD_ID flag"
+            + " field are all RED."),
         new Exemption(
             "tech.krpc.server.quarkus.RpcServiceExpose", ExemptKind.FLAG_FIELD_READ,
             "tech.krpc.common.RpcConstants.CI_BUILD_ID", ANY,
@@ -383,22 +417,24 @@ public final class FlagResolutionGateTest {
             }
             JavaStaticInitializer clinit = maybeClinit.get();
 
-            // Layer 1 is exempted by CARDINALITY (see BUILD_TIME_METADATA_EXEMPTIONS): the call
-            // target carries no argument, so "the CI_BUILD_ID read" is only identifiable as "the
-            // one and only direct read this <clinit> performs". Count first, then report.
-            int directReads = 0;
+            // Layer 1 is exempted by CALL TARGET + CARDINALITY (see
+            // BUILD_TIME_METADATA_EXEMPTIONS): every direct read must be the pinned target and
+            // there must be exactly as many as the entry declares. Collect first, then report.
+            List<String> directReadTargets = new ArrayList<>();
             for (JavaCall<?> call : clinit.getCallsFromSelf()) {
                 if (!isLambdaBody(call) && isSystemEnvRead(call.getTarget())) {
-                    directReads++;
+                    directReadTargets.add(call.getTarget().getFullName());
                 }
             }
             Exemption directExemption = exemptionFor(clazz, ExemptKind.DIRECT_SYSTEM_READ, null);
             boolean directExempt = false;
             if (directExemption != null) {
-                exemptionHits.merge(directExemption, directReads, Integer::sum);
-                // Count disagrees -> the class grew a read the sign-off never covered; the
-                // exemption stops applying and EVERY direct read here is reported (fail-closed).
-                directExempt = directExemption.occurrences() == directReads;
+                exemptionHits.merge(directExemption, directReadTargets.size(), Integer::sum);
+                // Either axis disagreeing -> a read the sign-off never covered (a different
+                // System reader, or a second read); the exemption stops applying and EVERY direct
+                // read here is reported (fail-closed on both axes).
+                directExempt = directReadTargets.size() == directExemption.occurrences()
+                    && directReadTargets.stream().allMatch(directExemption.subject()::equals);
             }
 
             for (JavaCall<?> call : clinit.getCallsFromSelf()) {
@@ -424,27 +460,47 @@ public final class FlagResolutionGateTest {
                     continue;
                 }
                 String field = access.getTarget().getFullName();
-                // Layer 2 is exempted by FIELD IDENTITY: any other resolved flag field read from
-                // the same static block stays RED.
+                if (!flagFields.contains(field)) {
+                    continue;
+                }
+                // Layer 2 is exempted by FIELD IDENTITY, and only for a field layer 2 STILL
+                // derives as resolved (tested above): a derivation that collapsed must not be
+                // kept alive by the exemption's hit counter. Any other resolved flag field read
+                // from the same static block stays RED.
                 Exemption fieldExemption = exemptionFor(clazz, ExemptKind.FLAG_FIELD_READ, field);
                 if (fieldExemption != null) {
                     exemptionHits.merge(fieldExemption, 1, Integer::sum);
                     continue;
                 }
-                if (flagFields.contains(field)) {
-                    report(events, clazz, access,
-                        "reads resolved flag field <" + field + ">");
-                }
+                report(events, clazz, access, "reads resolved flag field <" + field + ">");
             }
         }
 
         /**
-         * An exemption that matches nothing is a licence nobody re-reads: fail loudly, in a way no
-         * baseline can absorb (same reflex as the anti-vacuous-green guard in {@link #init}).
+         * Two ways an exemption can go bad, both fatal and neither absorbable by a baseline (same
+         * reflex as the anti-vacuous-green guard in {@link #init}):
+         * <ol>
+         *   <li><b>Liveness canary.</b> A layer-2 entry's field must still be DERIVED as a
+         *       resolved flag field. With an empty baseline there is no frozen line left to fail
+         *       when the layer-2 derivation collapses, so this is the canary that replaces
+         *       them — it is an assertion about the detector, not about the exempted code.</li>
+         *   <li><b>Staleness.</b> An entry that matched no read point is a licence nobody
+         *       re-reads.</li>
+         * </ol>
          */
         @Override
         public void finish(ConditionEvents events) {
             for (Exemption exemption : BUILD_TIME_METADATA_EXEMPTIONS) {
+                if (exemption.kind() == ExemptKind.FLAG_FIELD_READ
+                    && !flagFields.contains(exemption.subject())) {
+                    throw new IllegalStateException(
+                        "Layer-2 liveness canary FAILED: <" + exemption.subject() + "> is no longer"
+                        + " derived as a resolved flag field, so layer 2 of this gate now matches"
+                        + " nothing and would pass vacuously — the exemption for <"
+                        + exemption.owner() + "> must not be read as evidence that it still bites."
+                        + " Either the derivation broke (fix it) or the field is gone (delete the"
+                        + " entry). Recorded reason for the entry: " + exemption.rationale());
+                }
                 if (exemptionHits.getOrDefault(exemption, 0) > 0) {
                     continue;
                 }
@@ -456,11 +512,11 @@ public final class FlagResolutionGateTest {
             }
         }
 
-        private static Exemption exemptionFor(JavaClass clazz, ExemptKind kind, String field) {
+        private static Exemption exemptionFor(JavaClass clazz, ExemptKind kind, String subject) {
             for (Exemption exemption : BUILD_TIME_METADATA_EXEMPTIONS) {
                 if (exemption.kind() == kind
                     && exemption.owner().equals(clazz.getFullName())
-                    && Objects.equals(exemption.field(), field)) {
+                    && (subject == null || subject.equals(exemption.subject()))) {
                     return exemption;
                 }
             }

@@ -8,6 +8,9 @@ import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.context.propagation.TextMapGetter;
 import io.opentelemetry.context.propagation.TextMapSetter;
 
+import tech.krpc.util.FlagResolution;
+import tech.krpc.util.FlagSwitch;
+
 /**
  * ADR-0006: span creation joins the framework via the OpenTelemetry <em>API</em> only. No OTel
  * SDK/exporter enters core (ADR-0001 / NS-3); the SDK arrives from the consumer's stack.
@@ -55,35 +58,65 @@ public final class KrpcOtel {
     public static final AttributeKey<Long> HTTP_RESPONSE_STATUS_CODE =
             AttributeKey.longKey("http.response.status_code");
 
-    // Kill-switch: rpc.otel.enabled (system property) or KRPC_OTEL (env), default ON. Default-ON is
-    // safe because instrumentation is a no-op without an OTel SDK (see class doc). Resolved once —
-    // the interceptors read this at registration, so the disabled path costs nothing per call.
-    private static final boolean ENABLED = resolveEnabled(
-            System.getProperty("rpc.otel.enabled"), System.getenv("KRPC_OTEL"));
+    /** Kill-switch system property; wins over {@link #ENV_ENABLED} when both are configured. */
+    static final String PROPERTY_ENABLED = "rpc.otel.enabled";
+
+    /** Kill-switch environment variable (so the switch works without a properties file). */
+    static final String ENV_ENABLED = "KRPC_OTEL";
+
+    /** ADR-0003 class A: the default encodes the behaviour we defend — telemetry present. */
+    private static final boolean DEFAULT_ENABLED = true;
 
     /**
-     * Pure resolver (package-private for tests): explicit {@code false}/{@code 0} on either the
-     * system property or the env var disables; anything else (including unset) leaves it ON.
-     * The system property wins over the env var when both are set.
+     * ADR-0003 requirement 2's safe side for a class-A kill switch: OFF, i.e. the switch stays
+     * pressable. A typo'd kill switch ({@code KRPC_OTEL=fasle}) must not silently leave telemetry
+     * ON — that is precisely the case the switch exists for, and a behaviour stuck ON in production
+     * has no remedy short of a rebuild, while a spuriously OFF one is visible and immediately
+     * recoverable by fixing the value.
      */
-    static boolean resolveEnabled(String prop, String env) {
-        if (prop != null && !prop.isBlank()) {
-            return !isFalse(prop);
-        }
-        if (env != null && !env.isBlank()) {
-            return !isFalse(env);
-        }
-        return true;
-    }
+    private static final boolean SAFE_ENABLED = false;
 
-    private static boolean isFalse(String v) {
-        v = v.trim();
-        return "false".equalsIgnoreCase(v) || "0".equals(v);
-    }
+    // ADR-0003 requirement 3: the memo cell only — resolution happens on the first enabled() call,
+    // NEVER here. A static initializer is executed at image BUILD time by GraalVM/Quarkus, which
+    // bakes the build machine's environment into the binary and welds the kill switch shut (NS-7).
+    private static final FlagSwitch ENABLED =
+            new FlagSwitch(PROPERTY_ENABLED + " / " + ENV_ENABLED, DEFAULT_ENABLED);
 
-    /** Kill-switch state. When false the interceptors are never registered (byte-level absent). */
+    /**
+     * Kill-switch state: ON unless {@code rpc.otel.enabled} / {@code KRPC_OTEL} explicitly says
+     * otherwise, says something unrecognised, or cannot be read (both fall to the safe side, OFF).
+     *
+     * <p>ADR-0003 requirement 4 — this is the flag's ONE resolution point. Every caller calls this
+     * method <em>each time</em> and NEVER copies the result into a field of its own: a captured copy
+     * freezes at class-init while this accessor resolves at runtime, so one {@code KRPC_OTEL=false}
+     * would be honoured on one path and ignored on another in the same binary. Caching is this
+     * accessor's business (two volatile reads and a branch once resolved), never the call site's.
+     */
     public static boolean enabled() {
-        return ENABLED;
+        Boolean memo = ENABLED.resolved();
+        return memo != null ? memo : ENABLED.publish(read(PROPERTY_ENABLED, ENV_ENABLED));
+    }
+
+    /**
+     * Guarded read (package-private so the unit contract can drive the failure branch with a key
+     * the JDK rejects): ADR-0003 requirement 2 — a lookup that throws resolves to the safe side
+     * instead of propagating out of {@link #enabled()}, so reading the flag can never break a
+     * caller (nor, before requirement 3 moved it off the static path, class loading).
+     */
+    static FlagResolution read(String propertyName, String envName) {
+        try {
+            return resolve(System.getProperty(propertyName), System.getenv(envName));
+        } catch (RuntimeException failure) {
+            return FlagResolution.readFailure(SAFE_ENABLED, failure);
+        }
+    }
+
+    /**
+     * Pure resolver (package-private for the unit contract): ADR-0003 requirements 1 and 2 with this
+     * flag's own default (ON) and safe side (OFF).
+     */
+    static FlagResolution resolve(String property, String env) {
+        return FlagResolution.of(DEFAULT_ENABLED, SAFE_ENABLED, property, env);
     }
 
     // The installed OpenTelemetry. Volatile: written once at integration startup, read per call.

@@ -24,7 +24,6 @@ import tech.krpc.server.ServerResult;
 import tech.krpc.server.WebInvoker;
 import tech.krpc.server.invoke.ValidationException;
 import tech.krpc.server.jws.HttpConst;
-import tech.krpc.util.EnvUtils;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import tech.krpc.util.JsonUtils;
@@ -162,16 +161,15 @@ public class McpHandler implements PostHandler<String> {
     }
 
     /**
-     * Flag gate. Honours both {@code rpc.server.mcp.enabled} and the documented env
-     * {@code KRPC_MCP} (so the switch works without a properties file). Default OFF.
+     * Flag gate, ONE resolution point (ADR-0003 requirement 4 / known debt 3): the
+     * container-injected {@code rpc.server.mcp.enabled} — exempt, resolved after image build — or the
+     * documented env {@code KRPC_MCP} via {@link McpFlag}, which trims, falls to the safe side on an
+     * unrecognised or unreadable value, and logs its resolution once. {@link McpGetHandler} gates on
+     * the same accessor, so the POST and GET faces of {@code /mcp} cannot desynchronise. Default OFF.
      */
     @Override
     public boolean enabled() {
-        if (mcpEnabled) {
-            return true;
-        }
-        var env = EnvUtils.env("KRPC_MCP", "false");
-        return "true".equalsIgnoreCase(env) || "1".equals(env);
+        return mcpEnabled || McpFlag.enabled();
     }
 
     @Override

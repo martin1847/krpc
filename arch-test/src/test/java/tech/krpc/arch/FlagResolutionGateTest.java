@@ -108,18 +108,40 @@ import java.util.Set;
  *
  * <p><b>Frozen baseline.</b> Per ADR-0005 the pre-existing violations are grandfathered in
  * {@code arch-test/archunit_store/}; any NEW one fails the build and the baseline only shrinks.
- * The six frozen lines fall into TWO different categories — do not treat them alike:
+ * It started at six lines in TWO different categories — do not treat them alike — and is now
+ * <b>three</b>: category (1) has been repaid, category (2) is still open.
  *
- * <p><b>(1) Real debt — 4 lines, scheduled to be fixed, baseline shrinks when they are:</b>
+ * <p><b>(1) Real debt — 3 lines, REPAID (KRPC-FLAG-001, umbrella ADR-0003 known debts 1 and 2);
+ * the baseline shrank by exactly these:</b>
  * <ul>
  *   <li>{@code KrpcOtel.ENABLED} ({@code KrpcOtel.java:62}, 2 lines: the property read and the env
- *       read) — the OTEL kill switch, layer 1. The switch this gate exists for.</li>
+ *       read) — the OTEL kill switch, layer 1. The switch this gate exists for. Now resolved on the
+ *       first {@code enabled()} call and memoised behind a guard, so no {@code <clinit>} touches the
+ *       environment.</li>
  *   <li>{@code AbstractHttpHandler.OTEL_ENABLED} ({@code AbstractHttpHandler.java:88}) — layer 2:
- *       captures {@code KrpcOtel.enabled()} into a static field, so it stays frozen even after
- *       {@code KrpcOtel} is made lazy. Both sites must be fixed together.</li>
+ *       captured {@code KrpcOtel.enabled()} into a static field, which would have stayed frozen even
+ *       after {@code KrpcOtel} was made lazy (that is why both had to be fixed together). The
+ *       handler now calls the accessor per request.</li>
  * </ul>
+ * (An earlier revision of this paragraph said "4 lines" while listing these same three; the store
+ * has always held three such entries. The count was the error, not the list.)
  *
- * <p><b>(2) Undecided — 2 lines plus their root; DO NOT "fix" these:</b>
+ * <p>Layer 2 keeps its teeth only because the accessor's read stays statically reachable from
+ * {@code enabled()} (a direct {@code System} read in the accessor's own body). A {@code Supplier},
+ * method reference or lambda passed in as "the resolver" would hide it: the read then sits behind
+ * virtual dispatch or in a lambda body, both of which the derivation below skips by design, so
+ * {@code KrpcOtel.enabled()} would stop being derived as a flag accessor and layer 2 would silently
+ * match nothing — which the anti-vacuous-green guard does NOT cover (it guards layer 1's seed set
+ * only). Keep the read in the accessor's body for that reason.
+ *
+ * <p>A holder class is a different case and is NOT a blind spot: its {@code <clinit>} does the read,
+ * so it is reported here directly (layer 1 or 2, depending on shape), and the accessor that hands the
+ * holder's field on is still derived through rule (c). It is forbidden because build-time class
+ * initialization bakes it, not because it evades this gate — measured, not assumed: a static memo
+ * inside {@code McpFlag} was probed during KRPC-FLAG-001 and this rule reported
+ * {@code calls flag accessor <McpFlag.read(String)>}.
+ *
+ * <p><b>(2) Undecided — the 3 lines that remain; DO NOT "fix" these:</b>
  * {@code RpcConstants.CI_BUILD_ID} (layer 1) is <em>not a flag</em>. Its source comment
  * ("利用graalVM特性，缓存构建信息") says the build-time bake is the intended behaviour: build
  * metadata stamped into the native image. The two {@code RpcServiceExpose} lines are collateral —

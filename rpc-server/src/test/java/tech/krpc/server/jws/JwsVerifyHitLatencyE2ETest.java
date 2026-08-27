@@ -24,6 +24,7 @@
 package tech.krpc.server.jws;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -53,6 +54,8 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.Server;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -68,6 +71,8 @@ class JwsVerifyHitLatencyE2ETest {
 
     static final String APP = "jwks-hit-latency-e2e";
     static final String KID = "e2e-key";
+    /** Published ONLY by the rotated document the refresh fetches — the commit witness. */
+    static final String KID2 = "e2e-key-rotated";
     static final String SUB = "user-4711";
     static final String JWKS_PATH = "/.well-known/jwks.json";
     /** Real wall-clock cost of one JWKS fetch, served over loopback. */
@@ -94,6 +99,8 @@ class JwsVerifyHitLatencyE2ETest {
 
     final AtomicInteger fetchStarted = new AtomicInteger();
     final AtomicInteger fetchServed = new AtomicInteger();
+    /** The document the endpoint serves; rotated by the test between fetches. */
+    volatile String currentJwks;
 
     @AfterEach
     void tearDown() {
@@ -117,15 +124,12 @@ class JwsVerifyHitLatencyE2ETest {
 
     @Test
     void staleWindowDoesNotShowUpInClientCallLatency() throws Exception {
-        var kpg = KeyPairGenerator.getInstance("EC");
-        kpg.initialize(new ECGenParameterSpec("secp256r1"));
-        KeyPair kp = kpg.generateKeyPair();
-        String priB64 = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(kp.getPrivate().getEncoded());
-        String jwks = jwksJson(KID, (ECPublicKey) kp.getPublic());
-        String token = signJwt(priB64, KID, SUB);
+        Kp k1 = genKey(KID);
+        Kp k2 = genKey(KID2); // published ONLY by the document the refresh will fetch
+        String token1 = signJwt(k1.priB64(), KID, SUB);
+        String token2 = signJwt(k2.priB64(), KID2, SUB);
 
-        startJwks(jwks);
+        startJwks(jwksJson(jwkEntry(k1)));
         JwsVerify verify = new JwsVerify(jwksUrl());
         verify.loadJwks(); // bootstrap: one real (delayed) fetch, outside every measurement
         ServerContext.regCredentialVerify(verify);
@@ -138,8 +142,7 @@ class JwsVerifyHitLatencyE2ETest {
                 .build()
                 .startServer();
         channel = ManagedChannelBuilder.forAddress("127.0.0.1", port).usePlaintext().build();
-        Channel authed = ClientInterceptors.intercept(channel, bearer(token));
-        AuthEchoService client = new RpcClientFactory(APP, asManaged(authed)).get(AuthEchoService.class);
+        AuthEchoService client = clientWith(token1);
 
         // Warm the whole chain (netty channel, proxies, JIT) so the numbers below are not startup
         // noise. The window is FRESH here, so no refresh can be triggered.
@@ -154,26 +157,38 @@ class JwsVerifyHitLatencyE2ETest {
         long freshWindowMillis = timeCall(client);
         assertEquals(startedAfterWarmup, fetchStarted.get(), "the control call must not refresh");
 
+        // ROTATION: the document the refresh is about to fetch publishes a SECOND kid. Nothing but a
+        // real, successfully COMMITTED refresh can make a token signed by K2 verify — "the HTTP body
+        // was written" cannot fake it (a malformed or rejected body leaves the old keyset live).
+        assertUnknownKidRejected(token2, "precondition: the rotated-in kid must NOT be known before the refresh");
+        currentJwks = jwksJson(jwkEntry(k1), jwkEntry(k2));
+
         // MEASURED CASE: window expired (clock injection ONLY). The refresh is due; the fetch it
         // triggers really costs JWKS_DELAY_MILLIS on the wire.
-        verify.lastOkFetch = System.currentTimeMillis() - JwsVerify.GAP_MILL - 1_000L;
-        verify.lastTryFetch = verify.lastOkFetch;
+        long okBeforeRefresh = System.currentTimeMillis() - JwsVerify.GAP_MILL - 1_000L;
+        verify.lastOkFetch = okBeforeRefresh;
+        verify.lastTryFetch = okBeforeRefresh;
         long staleWindowMillis = timeCall(client);
         int servedWhenCallReturned = fetchServed.get();
+        long okWhenCallReturned = verify.lastOkFetch;
 
         System.out.println("KRPC-JWKS-001-E2E jwksDelayMillis=" + JWKS_DELAY_MILLIS
                 + " freshWindowCallMillis=" + freshWindowMillis
                 + " staleWindowCallMillis=" + staleWindowMillis
-                + " refreshServedWhenCallReturned=" + (servedWhenCallReturned - servedAfterWarmup));
+                + " refreshServedWhenCallReturned=" + (servedWhenCallReturned - servedAfterWarmup)
+                + " refreshCommittedWhenCallReturned=" + (okWhenCallReturned != okBeforeRefresh));
 
         // POSITIVE PROOF that a refresh was really triggered by this call...
         awaitAtLeast(fetchStarted, startedAfterWarmup + 1, "the stale window triggered no JWKS fetch");
-        // ...that it had NOT completed when the client call returned...
+        // ...that it had neither responded nor COMMITTED when the client call returned...
         assertEquals(servedAfterWarmup, servedWhenCallReturned,
                 "the JWKS fetch had already completed when the client call returned — the request "
                         + "waited for it");
-        // ...and that it completes for real afterwards.
-        awaitAtLeast(fetchServed, servedAfterWarmup + 1, "the deferred JWKS fetch never completed");
+        assertEquals(okBeforeRefresh, okWhenCallReturned,
+                "the refresh had already COMMITTED when the client call returned — the request "
+                        + "waited for it");
+        // ...and that it really COMMITS afterwards (lastOkFetch only advances on a committed fetch).
+        awaitCommit(verify, okBeforeRefresh);
 
         // THE PROPERTY: the client-observed latency does not contain the JWKS round-trip.
         assertTrue(staleWindowMillis < JWKS_DELAY_MILLIS / 2,
@@ -181,8 +196,40 @@ class JwsVerifyHitLatencyE2ETest {
                         + JWKS_DELAY_MILLIS + "ms JWKS endpoint (fresh-window control: "
                         + freshWindowMillis + "ms): the refresh is still on the request path");
 
-        // And the refreshed keyset is live afterwards: the call keeps working.
-        assertEquals(SUB, ok(client.whoAmI()), "authentication still works after the refresh");
+        // THE COMMIT, proven end to end: a token signed by the kid that ONLY the refreshed document
+        // carries now authenticates through the real client — and the pre-existing kid still does.
+        assertEquals(SUB, ok(clientWith(token2).whoAmI()),
+                "the rotated-in kid must authenticate: the refreshed keyset really went live");
+        assertEquals(SUB, ok(client.whoAmI()), "the pre-existing kid must keep authenticating");
+    }
+
+    private AuthEchoService clientWith(String token) {
+        Channel authed = ClientInterceptors.intercept(channel, bearer(token));
+        return new RpcClientFactory(APP, asManaged(authed)).get(AuthEchoService.class);
+    }
+
+    /**
+     * A call that must be turned away with the EXACT status an unknown kid produces — the
+     * precondition that makes the post-refresh success attributable to the commit and nothing else.
+     */
+    private void assertUnknownKidRejected(String token, String label) {
+        StatusRuntimeException ex = assertThrows(StatusRuntimeException.class,
+                () -> clientWith(token).whoAmI(),
+                () -> label + " — but the call was accepted");
+        assertEquals(Status.Code.PERMISSION_DENIED, ex.getStatus().getCode(),
+                () -> label + " — rejected, but with " + ex.getStatus().getCode()
+                        + " instead of the unknown-kid status");
+    }
+
+    private static void awaitCommit(JwsVerify v, long okBefore) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 15_000L;
+        while (v.lastOkFetch == okBefore) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new AssertionError("the deferred JWKS refresh never COMMITTED (lastOkFetch "
+                        + "still " + v.lastOkFetch + "): a written HTTP body is not a commit");
+            }
+            Thread.sleep(10);
+        }
     }
 
     // --- helpers ---------------------------------------------------------------------------
@@ -213,17 +260,18 @@ class JwsVerifyHitLatencyE2ETest {
     }
 
     private void startJwks(String body) throws Exception {
+        currentJwks = body;
         jwksPool = Executors.newCachedThreadPool();
         jwksServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         jwksServer.setExecutor(jwksPool);
         jwksServer.createContext(JWKS_PATH, ex -> {
             fetchStarted.incrementAndGet();
+            byte[] out = currentJwks.getBytes(StandardCharsets.UTF_8);
             try {
                 Thread.sleep(JWKS_DELAY_MILLIS); // a genuinely slow IdP, on the wire
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             }
-            byte[] out = body.getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "application/json");
             ex.sendResponseHeaders(200, out.length);
             try (OutputStream os = ex.getResponseBody()) {
@@ -307,11 +355,26 @@ class JwsVerifyHitLatencyE2ETest {
         return new Es256Signature(priB64).sign(header64, payload64);
     }
 
-    private static String jwksJson(String kid, ECPublicKey pub) {
-        var w = pub.getW();
-        return "{\"keys\":[{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"" + kid
-                + "\",\"x\":\"" + coord(w.getAffineX()) + "\",\"y\":\"" + coord(w.getAffineY())
-                + "\"}]}";
+    /** An EC P-256 keypair plus the url-base64 PKCS8 private key the production signer wants. */
+    record Kp(String kid, String priB64, ECPublicKey pub) {}
+
+    private static Kp genKey(String kid) throws Exception {
+        var kpg = KeyPairGenerator.getInstance("EC");
+        kpg.initialize(new ECGenParameterSpec("secp256r1"));
+        KeyPair kp = kpg.generateKeyPair();
+        String priB64 = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(kp.getPrivate().getEncoded());
+        return new Kp(kid, priB64, (ECPublicKey) kp.getPublic());
+    }
+
+    private static String jwksJson(String... entries) {
+        return "{\"keys\":[" + String.join(",", entries) + "]}";
+    }
+
+    private static String jwkEntry(Kp kp) {
+        var w = kp.pub().getW();
+        return "{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"" + kp.kid()
+                + "\",\"x\":\"" + coord(w.getAffineX()) + "\",\"y\":\"" + coord(w.getAffineY()) + "\"}";
     }
 
     private static String coord(BigInteger v) {

@@ -328,7 +328,7 @@ class JwsVerifyAsyncRefreshTest {
     // ------------------------------------------------------------------------------------------
     // 6. Single-flight + no stale overwrite: the async refresh takes part in the SAME fetchLock as
     //    loadJwks (max 1 concurrent JWKS request), and a slow older response can never end up as
-    //    the live keyset. Phase B: a worker whose claim predates a newer commit drops its attempt.
+    //    the live keyset.
     // ------------------------------------------------------------------------------------------
     @Test
     void asyncAndSyncFetchSerializeWithNoStaleOverwrite() throws Exception {
@@ -375,15 +375,28 @@ class JwsVerifyAsyncRefreshTest {
         assertEquals(2, httpAttempts.get(), "both attempts really happened (not a vacuous pass)");
         assertEquals(Set.of("K1", "K2"), verify.jwksCache.keySet(),
                 "the NEWER response must be the live keyset — an older async response overwrote it");
+    }
 
-        // --- Phase B: a claim that predates a newer commit must be DROPPED, not refetched.
+    // ------------------------------------------------------------------------------------------
+    // 7. A claim that predates a newer commit is DROPPED, not refetched (interleaving cells 3/4).
+    //    The queued worker's exit is observed through the fetch lock itself — no sleep, no
+    //    "probably finished by now".
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void staleClaimIsDroppedWhenANewerKeysetCommitted() throws Exception {
+        Kp k1 = genKey("K1");
+        Kp k2 = genKey("K2");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
         httpAttempts.set(0);
+
         verify.fetchLock.lock();
         try {
             ageWindow(verify);
-            Thread hit = new Thread(() -> verify.useKey("K1"), "hit-caller-2");
+            Thread hit = new Thread(() -> verify.useKey("K1"), "hit-caller");
             hit.start();
-            hit.join(5_000); // the request thread returns; its worker is queued on the lock
+            hit.join(5_000);
+            // POSITIVE HANDSHAKE #1: the worker exists and is really queued on the fetch lock.
+            awaitQueuedWorker(verify);
             // Commit a NEWER keyset while holding the lock (reentrant from this thread), then make
             // the endpoint serve a STALE document again: a worker that refetches would publish it.
             currentJwks = jwksDoc(k1, k2);
@@ -392,19 +405,69 @@ class JwsVerifyAsyncRefreshTest {
         } finally {
             verify.fetchLock.unlock();
         }
-        Thread.sleep(SETTLE_MILLIS);
+        // POSITIVE HANDSHAKE #2: the queued worker acquired the lock and released it — it RAN and
+        // finished, so "no second fetch" is a statement about a completed worker.
+        awaitQueuedWorkerDone(verify);
+
         assertEquals(1, httpAttempts.get(),
                 "the worker refetched although a NEWER keyset had been committed after its claim");
         assertEquals(Set.of("K1", "K2"), verify.jwksCache.keySet(),
                 "a stale claim's response replaced the newer keyset");
 
         // Known-positive for that negative assertion: attempts ARE observable right afterwards.
-        CountDownLatch entered2 = armEntered();
-        ageWindow(verify);
+        CountDownLatch entered = armEntered();
+        long okBefore = ageWindow(verify);
         assertNotNull(verify.useKey("K1"), "HIT still served");
-        assertTrue(entered2.await(10, TimeUnit.SECONDS),
-                "no attempt is observable at all — the phase-B assertion above was vacuous");
-        awaitAttempts(2);
+        assertTrue(entered.await(10, TimeUnit.SECONDS),
+                "no attempt is observable at all — the assertion above was vacuous");
+        awaitCommit(verify, okBefore);
+        assertEquals(2, httpAttempts.get(), "exactly one further attempt for the fresh window");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // 8. R1 BLOCKER regression: the drop above must rest on COMMIT ORDER, not on wall-clock
+    //    comparison. A backwards clock jump after a newer commit used to make that commit look
+    //    older than the claim, so the queued worker fetched again (and could publish an older view
+    //    over a newer one). Formalised from the reviewer's probe of the same name.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void probeClockRollbackAfterNewerLoadMustNotRefetch() throws Exception {
+        Kp k1 = genKey("K1");
+        Kp k2 = genKey("K2");
+        JwsVerify verify = readyVerifier(jwksDoc(k1));
+        httpAttempts.set(0);
+
+        verify.fetchLock.lock();
+        try {
+            ageWindow(verify);
+            Thread hit = new Thread(() -> verify.useKey("K1"), "hit-caller");
+            hit.start();
+            hit.join(5_000);
+            awaitQueuedWorker(verify);
+            long claimedAt = verify.lastTryFetch;
+
+            // A newer synchronous load commits AFTER that claim...
+            currentJwks = jwksDoc(k1, k2);
+            verify.loadJwks();
+            assertEquals(Set.of("K1", "K2"), verify.jwksCache.keySet(), "the newer load must commit");
+
+            // ...and then the wall clock jumps BACKWARDS past the claim instant (NTP step, VM
+            // suspend/restore, manual clock set). Nothing about the COMMIT changed; only the number
+            // written next to it did.
+            verify.lastOkFetch = claimedAt - 1;
+            // Trap: the endpoint now serves the OLDER document again, so a redundant refetch is
+            // visible both as an extra attempt and as the newer keyset being replaced.
+            currentJwks = jwksDoc(k1);
+        } finally {
+            verify.fetchLock.unlock();
+        }
+        awaitQueuedWorkerDone(verify);
+
+        assertEquals(1, httpAttempts.get(),
+                "a backwards clock jump made the queued worker refetch: the freshness re-check is "
+                        + "comparing timestamps instead of commit order");
+        assertEquals(Set.of("K1", "K2"), verify.jwksCache.keySet(),
+                "the older view was published over the newer committed keyset after a clock rollback");
     }
 
     // ==========================================================================================
@@ -412,9 +475,8 @@ class JwsVerifyAsyncRefreshTest {
     // ==========================================================================================
 
     /**
-     * Model a verifier that has not fetched for more than one window: BOTH clocks are old. Ageing
-     * only {@code lastTryFetch} would be an impossible state (a commit "just happened" while the
-     * window is stale) in which the worker's freshness re-check legitimately drops the attempt.
+     * Model a verifier that has not fetched for more than one window: BOTH clocks are old, which is
+     * the only state a real idle verifier can be in (they advance together on every commit).
      *
      * @return the aged timestamp, which is now the value of both clocks
      */
@@ -423,6 +485,37 @@ class JwsVerifyAsyncRefreshTest {
         v.lastOkFetch = aged;
         v.lastTryFetch = aged;
         return aged;
+    }
+
+    /**
+     * Wait until a refresh worker is queued on the fetch lock. Positive proof that the worker
+     * EXISTS and is waiting — the caller must hold {@code fetchLock} while calling this.
+     */
+    private static void awaitQueuedWorker(JwsVerify v) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 15_000L;
+        while (!v.fetchLock.hasQueuedThreads()) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new AssertionError("no refresh worker ever queued on the fetch lock");
+            }
+            Thread.sleep(5);
+        }
+    }
+
+    /**
+     * Completion handshake for a worker that was proven queued by {@link #awaitQueuedWorker}: it
+     * has left the wait queue (⇒ it acquired the lock) and the lock is free again (⇒ it released
+     * it), so the worker RAN TO COMPLETION. Nothing else in these tests touches the lock, so this
+     * replaces "sleep and hope the worker got scheduled".
+     */
+    private static void awaitQueuedWorkerDone(JwsVerify v) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 15_000L;
+        while (v.fetchLock.hasQueuedThreads() || v.fetchLock.isLocked()) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new AssertionError("the queued refresh worker never finished (queued="
+                        + v.fetchLock.hasQueuedThreads() + ", locked=" + v.fetchLock.isLocked() + ")");
+            }
+            Thread.sleep(5);
+        }
     }
 
     private CountDownLatch armGate() {

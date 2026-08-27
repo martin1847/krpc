@@ -116,6 +116,15 @@ public class JwsVerify implements CredentialVerify {
     private static final AtomicLongFieldUpdater<JwsVerify> LAST_TRY_FETCH =
             AtomicLongFieldUpdater.newUpdater(JwsVerify.class, "lastTryFetch");
 
+    // KRPC-JWKS-001 fix-round-1: COMMIT CAUSALITY, not wall clock. Every successful commit in
+    // doFetch() bumps this counter (always under fetchLock, so ++ needs no CAS). The async worker
+    // captures it at claim time and compares under the lock: a DIFFERENT value means some commit
+    // landed after the claim, so the attempt is dropped. Timestamps cannot express that ordering —
+    // a backwards clock jump makes a newer commit look older (lastOkFetch < claimedAt), which sent
+    // the worker off to fetch again and reopened a window for an older view to be published after
+    // a newer one. Monotonic and never reset: the only comparison that matters is same/different.
+    volatile long commitGeneration;
+
     volatile Jwks lastJwks;
 
     // O1 (HARDEN-B1): fail-closed readiness. false until the FIRST successful fetch. While false,
@@ -216,12 +225,13 @@ public class JwsVerify implements CredentialVerify {
      * closed immediately on commit (O3/B3 in {@link #doFetch}).
      */
     void refreshAsyncIfStale() {
-        long claimedAt = claimFetchAttempt(true);
-        if (claimedAt == 0L) {
+        if (claimFetchAttempt(true) == 0L) {
             return; // inside the window, or another request already owns this window's attempt
         }
+        // Captured AFTER the claim: the worker only has to recognise commits that land from here on.
+        long claimedGeneration = commitGeneration;
         try {
-            startRefreshWorker(claimedAt);
+            startRefreshWorker(claimedGeneration);
         } catch (RuntimeException | Error e) {
             // The claim is deliberately NOT rolled back: this window is spent and the next one
             // retries. Rolling back would turn a thread-start failure into a spawn/claim storm
@@ -232,33 +242,38 @@ public class JwsVerify implements CredentialVerify {
     }
 
     /** Spawns the refresh worker on a daemon virtual thread. Own method so tests can observe it. */
-    void startRefreshWorker(long claimedAt) {
-        Thread.ofVirtual().name("jwks-refresh-" + url).start(() -> refreshClaimed(claimedAt));
+    void startRefreshWorker(long claimedGeneration) {
+        Thread.ofVirtual().name("jwks-refresh-" + url).start(() -> refreshClaimed(claimedGeneration));
     }
 
     /**
      * The worker half of the HIT-path refresh. It PARTICIPATES in the existing {@link #fetchLock}
      * single-flight (a blocking lock parks this virtual thread instead of pinning its carrier), so
-     * at most one JWKS request is ever in flight and every commit is serialized — a slow older
+     * at most one JWKS request is ever in flight and every commit is serialized — a slower older
      * response can never overwrite a newer whole-map replace (O3), because there is no commit path
-     * outside this lock. Holding the lock it re-checks freshness: if a synchronous
-     * {@link #loadJwks()}, a MISS refetch or the background retry has already committed a keyset
-     * AFTER this claim, the attempt is dropped rather than repeated. A same-millisecond tie counts
-     * as "already fresh" and drops the attempt — the ambiguous case resolves to FEWER origin
-     * fetches (anti-amplification, see {@link #GAP_MILL}).
+     * outside this lock.
+     *
+     * <p>Holding the lock it re-checks {@link #commitGeneration} against the value captured at
+     * claim time: if a synchronous {@link #loadJwks()}, a MISS refetch or the background retry
+     * committed a keyset after this claim, the generation differs and the attempt is DROPPED
+     * instead of repeated. The check is on commit ORDER, never on timestamps: two wall-clock
+     * readings cannot tell "committed after my claim" from "the clock jumped backwards", and
+     * getting that wrong both duplicates the origin fetch and re-opens the stale-overwrite window
+     * this method exists to close.
      */
-    void refreshClaimed(long claimedAt) {
+    void refreshClaimed(long claimedGeneration) {
         fetchLock.lock();
         try {
-            if (lastOkFetch >= claimedAt) {
-                return; // someone fresher already committed while we waited for the lock
+            if (commitGeneration != claimedGeneration) {
+                return; // a commit landed after our claim — this attempt is redundant
             }
             doFetch();
         } catch (RuntimeException e) {
-            // P3/GR-007: doFetch already logged THIS attempt's failure at ERROR — exactly one line
-            // per attempt, no second one here. Swallowed on purpose: the last-known-good keyset
-            // keeps serving, ready is untouched, lastOkFetch did not move, and an uncaught throw on
-            // a virtual thread would only add noise.
+            // P3/GR-007 (as narrowed by the R1 errata: the "exactly one line" rule is about the
+            // ASYNC path): doFetch already logged THIS attempt's failure at ERROR, so the async
+            // wrapper adds no second line. Swallowed on purpose: the last-known-good keyset keeps
+            // serving, ready is untouched, lastOkFetch did not move, and an uncaught throw on a
+            // virtual thread would only add noise.
         } finally {
             fetchLock.unlock();
         }
@@ -272,8 +287,9 @@ public class JwsVerify implements CredentialVerify {
      * @param gated {@code true} for the window-gated request paths (HIT async refresh, MISS
      *              refetch): the claim succeeds only once {@link #GAP_MILL} has elapsed AND only
      *              for ONE of N racing callers. {@code false} for the ungated callers (bootstrap
-     *              {@link #loadJwks()} and the background retry): they always attempt — unchanged
-     *              behaviour — and only stamp the clock.
+     *              {@link #loadJwks()} and the background retry): they always attempt, and they
+     *              DO stamp the window clock — see {@link #loadJwks()} for why that is the wanted
+     *              behaviour and not an oversight.
      * @return the claim timestamp, or {@code 0} when this caller did NOT win an attempt and must
      *         not fetch. Losing is always the safe side: fewer origin fetches, never more.
      */
@@ -301,8 +317,11 @@ public class JwsVerify implements CredentialVerify {
      * {@link #claimFetchAttempt} — a caller-selectable shorter window on the MISS path is exactly
      * the amplification surface that unification closed. Non-blocking on contention: if another
      * thread (or the async refresh worker) already holds the fetch lock we skip (single-flight); a
-     * failed fetch is swallowed (last-known-good keyset keeps serving) and does NOT advance
-     * {@link #lastOkFetch}, so the window survives.
+     * failed fetch is swallowed so the last-known-good keyset keeps serving, and it does NOT
+     * advance {@link #lastOkFetch}. NOTE what is and is not preserved: the ATTEMPT window is
+     * already spent — {@link #claimFetchAttempt} advanced {@link #lastTryFetch} before the I/O and
+     * never rolls it back, so the next attempt waits a full {@link #GAP_MILL} (deliberate: a
+     * failing origin must not be retried harder). Only the SUCCESS timestamp survives the failure.
      */
     void maybeRefetch() {
         if (System.currentTimeMillis() - lastTryFetch < GAP_MILL) {
@@ -328,9 +347,14 @@ public class JwsVerify implements CredentialVerify {
     /**
      * Force a synchronous fetch, throwing on failure. Used by bootstrap and the background retry
      * (and by tests that want eager loading). Blocking under {@link #fetchLock}; on a virtual
-     * thread the VT parks (ReentrantLock + NIO HttpClient) without pinning its carrier. Ungated:
-     * never throttled by {@link #GAP_MILL}, but it still stamps the window clock exactly where the
-     * attempt used to stamp it.
+     * thread the VT parks (ReentrantLock + NIO HttpClient) without pinning its carrier.
+     *
+     * <p>UNGATED but still stamping: {@link #GAP_MILL} never throttles this call, yet it claims
+     * (ungated) so the window clock advances exactly where the pre-KRPC-JWKS-001 attempt stamped it
+     * (the first line of {@code doFetch}). Keeping that stamp is the anti-amplification side: a
+     * bootstrap or retry fetch that did NOT stamp would leave the window open, so the very first
+     * request after startup would immediately claim a second origin fetch. Byte-for-byte the
+     * pre-existing behaviour (R1 errata #1).
      */
     public void loadJwks() {
         fetchLock.lock();
@@ -344,8 +368,9 @@ public class JwsVerify implements CredentialVerify {
 
     /**
      * C4/O3/O-sec-47 (HARDEN-B1): fetch JWKS with timeout + body cap, then REBUILD the keyset map
-     * (replace, not merge). Advances, only on success, {@link #lastOkFetch} (and {@link #ready} on
-     * the first load); the attempt's {@link #lastTryFetch} stamp already happened at claim time
+     * (replace, not merge). Advances, only on success, {@link #lastOkFetch} and
+     * {@link #commitGeneration} (and {@link #ready} on the first load); the attempt's
+     * {@link #lastTryFetch} stamp already happened at claim time
      * (KRPC-JWKS-001: {@link #claimFetchAttempt} is the single advance point — do not re-stamp
      * here). B3 (fix-round-1): a successful fetch yielding ZERO usable keys is a REVOCATION — when
      * already ready it REPLACES the live map with an empty one and returns (fail-closed, no throw
@@ -435,6 +460,7 @@ public class JwsVerify implements CredentialVerify {
                     jwksCache = rebuilt;
                     lastJwks = jwks;
                     lastOkFetch = System.currentTimeMillis();
+                    commitGeneration++; // KRPC-JWKS-001: a commit IS a generation (under fetchLock)
                     log.warn("!!! JWKS fetched with NO usable keys — treating as full revocation, "
                             + "failing CLOSED (every token now rejected) : {}", url);
                     return;
@@ -446,6 +472,7 @@ public class JwsVerify implements CredentialVerify {
             jwksCache = rebuilt;
             lastJwks = jwks;
             lastOkFetch = System.currentTimeMillis();
+            commitGeneration++; // KRPC-JWKS-001: a commit IS a generation (under fetchLock)
             ready = true;
             log.info("success fetch jwks : {}", rebuilt.keySet());
         } catch (RuntimeException e) {

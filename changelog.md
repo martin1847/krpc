@@ -46,6 +46,32 @@ requires. Every default keeps its polarity (`KRPC_OTEL` ON, `KRPC_MCP` OFF).
   ADR-0005 flag gate's frozen baseline shrinks from 6 violations to 3; the remaining three are the
   `RpcConstants.CI_BUILD_ID` open question, untouched.
 
+JWKS freshness refresh: **stale-while-revalidate on the HIT path.**
+
+* **BREAKING (behaviour) — a periodic JWKS refresh no longer runs on the request thread, and the
+  requests that trigger it are served from the OLD keyset (KRPC-JWKS-001).** Until now a request
+  whose `kid` was already cached but whose refresh window (`GAP_MILL`, 5 min) had elapsed performed
+  the JWKS fetch itself and only then answered — a cold-TLS fetch measured at 65–700ms landed
+  directly in authentication latency. The refresh is now claimed by that request and executed on a
+  daemon virtual thread; the request, and every concurrent request until the refresh commits, keeps
+  verifying against the last-known-good keyset. **This is an auth semantics change, not only a
+  performance one: a revocation published upstream now takes effect at worst one fetch duration
+  later than before** (bounded by the existing 5s connect / 10s request / body-read deadlines),
+  stacked on top of the 5-minute window that already applied. Everything else is preserved
+  deliberately: a fetch that comes back with ZERO usable keys still replaces the live keyset and
+  fails closed on commit; the unknown-`kid` MISS path still refetches **synchronously** (that
+  request has no key to serve, and a freshly rotated key must be usable by the request that needs
+  it); both paths still spend from the ONE anti-amplification window, and the total number of
+  window-gated origin fetches is unchanged (at most one per instance per window). A failed refresh
+  keeps the old keyset, does not reopen the fail-closed gate, does not advance `lastOkFetch`, does
+  not self-retry, and logs exactly one line.
+* **`lastTryFetch` now advances at CLAIM time, through a single atomic writer.** Both request paths
+  reserve their attempt in `JwsVerify.claimFetchAttempt` (CAS) before any I/O, so N concurrent stale
+  HITs produce one claim, one worker and one origin fetch, and the window clock has exactly one
+  advance point. The async worker takes part in the existing `fetchLock` single-flight and re-checks
+  freshness under the lock, so a slow older response can never overwrite a newer keyset. Bootstrap
+  `loadJwks()` and the background retry are unchanged: never window-gated, still stamping the clock.
+
 # 1.2.0, 2026-08-17
 
 Strict JSON scalar decoding and honest error codes on the agent HTTP faces — two breaking changes, each with an env-var rollback — plus the error-disclosure hardening they exposed, and the native metadata / MCP 07-28 work that had been sitting unreleased. Merged to `dev` via PRs #54–#61.

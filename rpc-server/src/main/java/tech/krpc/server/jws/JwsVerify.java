@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.locks.ReentrantLock;
 
 import tech.krpc.util.JsonUtils;
@@ -101,10 +102,19 @@ public class JwsVerify implements CredentialVerify {
     volatile Map<String, ECPublicKey> jwksCache = new ConcurrentHashMap<>();
 
     // O4 (HARDEN-B1): lastOkFetch advances ONLY on success (tests/observability read it to prove a
-    // failed attempt didn't move it); lastTryFetch advances on EVERY attempt and is the sole clock
-    // maybeRefetch() gates against — see GAP_MILL for why HIT and MISS now share this one clock.
+    // failed attempt didn't move it); lastTryFetch is the sole clock the window gates against —
+    // see GAP_MILL for why HIT and MISS share this one clock.
+    //
+    // KRPC-JWKS-001: lastTryFetch is written through exactly ONE place, claimFetchAttempt(), which
+    // stamps it atomically at CLAIM time, before the attempt's I/O. That single advance point is
+    // what makes the off-thread HIT refresh safe: N concurrent HITs CAS for one claim, so the
+    // window still admits at most one attempt. Do NOT add a second timestamp or a second advance
+    // point (e.g. re-stamping inside doFetch) — the two paths' windows would drift apart.
     volatile long lastOkFetch;
     volatile long lastTryFetch;
+
+    private static final AtomicLongFieldUpdater<JwsVerify> LAST_TRY_FETCH =
+            AtomicLongFieldUpdater.newUpdater(JwsVerify.class, "lastTryFetch");
 
     volatile Jwks lastJwks;
 
@@ -177,25 +187,122 @@ public class JwsVerify implements CredentialVerify {
         var cache = jwksCache;
         var key = cache.get(kid);
         if (null != key) {
-            // O3 (HARDEN-B1): on a HIT still refresh periodically so revocations take effect.
-            maybeRefetch();
+            // O3 (HARDEN-B1) + KRPC-JWKS-001: on a HIT still refresh periodically so revocations
+            // take effect — but NEVER on this thread (see refreshAsyncIfStale). Re-read the volatile
+            // afterwards: if a worker committed a revocation in the meantime this request already
+            // sees the empty/rebuilt keyset.
+            refreshAsyncIfStale();
             return jwksCache.get(kid);
         }
-        // O4 (HARDEN-B1) + anti-amplification: a MISS may be a fresh rotation — refetch, but on the
-        // SAME GAP_MILL window as the HIT path above (see GAP_MILL javadoc for why: a MISS is
+        // O4 (HARDEN-B1) + anti-amplification: a MISS may be a fresh rotation — refetch
+        // SYNCHRONOUSLY (this request has no key to serve, so there is nothing to be stale about),
+        // on the SAME GAP_MILL window as the HIT path above (see GAP_MILL javadoc for why: a MISS is
         // attacker-controlled and must not get a shorter, gameable window).
         maybeRefetch();
         return jwksCache.get(kid);
     }
 
     /**
-     * O4 (HARDEN-B1) + anti-amplification: throttled, best-effort refetch used on BOTH the HIT and
-     * MISS request paths (see {@link #useKey}). Gated by {@link #GAP_MILL} against
-     * {@link #lastTryFetch} — ONE window for both callers on purpose (no {@code minGapMill}
-     * parameter): a caller-selectable shorter window on the MISS path is exactly the amplification
-     * surface this was unified to close. Non-blocking: if another thread already holds the fetch
-     * lock we skip (single-flight); a failed fetch is swallowed (last-known-good keyset keeps
-     * serving) and does NOT advance {@link #lastOkFetch}, so the window survives.
+     * KRPC-JWKS-001 (stale-while-revalidate, owner-accepted): the periodic HIT-path freshness
+     * refresh, moved OFF the request thread. The request thread does ZERO JWKS I/O and NEVER takes
+     * or waits on {@link #fetchLock}: it only claims the window (one CAS) and hands the fetch to a
+     * virtual thread, then keeps serving the key it already has.
+     *
+     * <p>SEMANTIC TRADEOFF, accepted by owner: this request — and every concurrent request until
+     * the refresh commits — is served from the possibly one-window-stale keyset, so a revocation
+     * takes effect at worst one fetch duration (bounded by CONNECT/REQUEST/body-read timeouts)
+     * later than before. The cost it buys off is a cold-TLS JWKS round-trip (65-700ms measured)
+     * inside the authentication path. A refresh that comes back with ZERO usable keys still fails
+     * closed immediately on commit (O3/B3 in {@link #doFetch}).
+     */
+    void refreshAsyncIfStale() {
+        long claimedAt = claimFetchAttempt(true);
+        if (claimedAt == 0L) {
+            return; // inside the window, or another request already owns this window's attempt
+        }
+        try {
+            startRefreshWorker(claimedAt);
+        } catch (RuntimeException | Error e) {
+            // The claim is deliberately NOT rolled back: this window is spent and the next one
+            // retries. Rolling back would turn a thread-start failure into a spawn/claim storm
+            // against the JWKS origin (anti-amplification, see GAP_MILL). One line, no rethrow —
+            // the request already holds its key and must not fail over a refresh.
+            log.warn("jwks async refresh not started, window spent : {} : {}", url, e.toString());
+        }
+    }
+
+    /** Spawns the refresh worker on a daemon virtual thread. Own method so tests can observe it. */
+    void startRefreshWorker(long claimedAt) {
+        Thread.ofVirtual().name("jwks-refresh-" + url).start(() -> refreshClaimed(claimedAt));
+    }
+
+    /**
+     * The worker half of the HIT-path refresh. It PARTICIPATES in the existing {@link #fetchLock}
+     * single-flight (a blocking lock parks this virtual thread instead of pinning its carrier), so
+     * at most one JWKS request is ever in flight and every commit is serialized — a slow older
+     * response can never overwrite a newer whole-map replace (O3), because there is no commit path
+     * outside this lock. Holding the lock it re-checks freshness: if a synchronous
+     * {@link #loadJwks()}, a MISS refetch or the background retry has already committed a keyset
+     * AFTER this claim, the attempt is dropped rather than repeated. A same-millisecond tie counts
+     * as "already fresh" and drops the attempt — the ambiguous case resolves to FEWER origin
+     * fetches (anti-amplification, see {@link #GAP_MILL}).
+     */
+    void refreshClaimed(long claimedAt) {
+        fetchLock.lock();
+        try {
+            if (lastOkFetch >= claimedAt) {
+                return; // someone fresher already committed while we waited for the lock
+            }
+            doFetch();
+        } catch (RuntimeException e) {
+            // P3/GR-007: doFetch already logged THIS attempt's failure at ERROR — exactly one line
+            // per attempt, no second one here. Swallowed on purpose: the last-known-good keyset
+            // keeps serving, ready is untouched, lastOkFetch did not move, and an uncaught throw on
+            // a virtual thread would only add noise.
+        } finally {
+            fetchLock.unlock();
+        }
+    }
+
+    /**
+     * KRPC-JWKS-001: reserve ("claim") a fetch attempt. THE SINGLE WRITER of
+     * {@link #lastTryFetch}: one attempt advances the window exactly once, atomically, at claim
+     * time, BEFORE any I/O.
+     *
+     * @param gated {@code true} for the window-gated request paths (HIT async refresh, MISS
+     *              refetch): the claim succeeds only once {@link #GAP_MILL} has elapsed AND only
+     *              for ONE of N racing callers. {@code false} for the ungated callers (bootstrap
+     *              {@link #loadJwks()} and the background retry): they always attempt — unchanged
+     *              behaviour — and only stamp the clock.
+     * @return the claim timestamp, or {@code 0} when this caller did NOT win an attempt and must
+     *         not fetch. Losing is always the safe side: fewer origin fetches, never more.
+     */
+    long claimFetchAttempt(boolean gated) {
+        for (;;) {
+            long last = lastTryFetch;
+            long now = System.currentTimeMillis();
+            if (gated && now - last < GAP_MILL) {
+                return 0L; // still inside the window (also covers a backwards clock jump: no fetch)
+            }
+            if (LAST_TRY_FETCH.compareAndSet(this, last, now)) {
+                return now;
+            }
+            if (gated) {
+                return 0L; // a concurrent claimer took this window's attempt
+            }
+            // ungated: lost only the stamp, not the attempt — restamp and go.
+        }
+    }
+
+    /**
+     * O4 (HARDEN-B1) + anti-amplification: throttled, best-effort SYNCHRONOUS refetch for the
+     * unknown-kid MISS request path (see {@link #useKey}; the HIT path refreshes off-thread via
+     * {@link #refreshAsyncIfStale}). Both paths gate on the ONE {@link #GAP_MILL} window through
+     * {@link #claimFetchAttempt} — a caller-selectable shorter window on the MISS path is exactly
+     * the amplification surface that unification closed. Non-blocking on contention: if another
+     * thread (or the async refresh worker) already holds the fetch lock we skip (single-flight); a
+     * failed fetch is swallowed (last-known-good keyset keeps serving) and does NOT advance
+     * {@link #lastOkFetch}, so the window survives.
      */
     void maybeRefetch() {
         if (System.currentTimeMillis() - lastTryFetch < GAP_MILL) {
@@ -205,8 +312,8 @@ public class JwsVerify implements CredentialVerify {
             return; // another thread is already fetching
         }
         try {
-            if (System.currentTimeMillis() - lastTryFetch < GAP_MILL) {
-                return; // lost the race, someone just fetched
+            if (claimFetchAttempt(true) == 0L) {
+                return; // lost the race, someone just claimed/fetched this window
             }
             try {
                 doFetch();
@@ -221,11 +328,14 @@ public class JwsVerify implements CredentialVerify {
     /**
      * Force a synchronous fetch, throwing on failure. Used by bootstrap and the background retry
      * (and by tests that want eager loading). Blocking under {@link #fetchLock}; on a virtual
-     * thread the VT parks (ReentrantLock + NIO HttpClient) without pinning its carrier.
+     * thread the VT parks (ReentrantLock + NIO HttpClient) without pinning its carrier. Ungated:
+     * never throttled by {@link #GAP_MILL}, but it still stamps the window clock exactly where the
+     * attempt used to stamp it.
      */
     public void loadJwks() {
         fetchLock.lock();
         try {
+            claimFetchAttempt(false);
             doFetch();
         } finally {
             fetchLock.unlock();
@@ -234,15 +344,17 @@ public class JwsVerify implements CredentialVerify {
 
     /**
      * C4/O3/O-sec-47 (HARDEN-B1): fetch JWKS with timeout + body cap, then REBUILD the keyset map
-     * (replace, not merge). Advances {@link #lastTryFetch} on every attempt and, only on success,
-     * {@link #lastOkFetch} (and {@link #ready} on the first load). B3 (fix-round-1): a successful
-     * fetch yielding ZERO usable keys is a REVOCATION — when already ready it REPLACES the live map
-     * with an empty one and returns (fail-closed, no throw so maybeRefetch can't keep stale keys);
-     * before the first success it throws and stays not-ready. Never NPEs on null keys.
-     * Caller MUST hold {@link #fetchLock}.
+     * (replace, not merge). Advances, only on success, {@link #lastOkFetch} (and {@link #ready} on
+     * the first load); the attempt's {@link #lastTryFetch} stamp already happened at claim time
+     * (KRPC-JWKS-001: {@link #claimFetchAttempt} is the single advance point — do not re-stamp
+     * here). B3 (fix-round-1): a successful fetch yielding ZERO usable keys is a REVOCATION — when
+     * already ready it REPLACES the live map with an empty one and returns (fail-closed, no throw
+     * so maybeRefetch can't keep stale keys); before the first success it throws and stays
+     * not-ready. Never NPEs on null keys.
+     * Caller MUST hold {@link #fetchLock} AND have claimed the attempt via
+     * {@link #claimFetchAttempt}.
      */
     void doFetch() {
-        lastTryFetch = System.currentTimeMillis();
         try {
             var request = HttpRequest.newBuilder(URI.create(url))
                     .timeout(REQUEST_TIMEOUT)

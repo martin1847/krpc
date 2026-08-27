@@ -118,8 +118,9 @@ public class JwsVerify implements CredentialVerify {
 
     // KRPC-JWKS-001 fix-round-1: COMMIT CAUSALITY, not wall clock. Every successful commit in
     // doFetch() bumps this counter (always under fetchLock, so ++ needs no CAS). The async worker
-    // captures it at claim time and compares under the lock: a DIFFERENT value means some commit
-    // landed after the claim, so the attempt is dropped. Timestamps cannot express that ordering —
+    // reads it JUST BEFORE its claim (see refreshAsyncIfStale) and compares under the lock: a
+    // DIFFERENT value means some commit landed at or after the claim, so the attempt is dropped.
+    // Timestamps cannot express that ordering —
     // a backwards clock jump makes a newer commit look older (lastOkFetch < claimedAt), which sent
     // the worker off to fetch again and reopened a window for an older view to be published after
     // a newer one. Monotonic and never reset: the only comparison that matters is same/different.
@@ -225,11 +226,17 @@ public class JwsVerify implements CredentialVerify {
      * closed immediately on commit (O3/B3 in {@link #doFetch}).
      */
     void refreshAsyncIfStale() {
+        // Baseline read BEFORE the claim (fix-round-2). Every commit from THIS instant on must make
+        // the worker's re-check differ, including one that lands in the gap between here and the CAS
+        // below: reading the generation after the claim would swallow such a post-claim commit into
+        // the baseline, and the worker would then see "nothing committed since my claim" and fetch a
+        // second time (re-opening the older-view-after-newer-commit window). Reading first can only
+        // err the other way — a commit racing the claim makes the worker drop its attempt, which is
+        // the anti-amplification safe side (fewer origin fetches, see GAP_MILL).
+        long claimedGeneration = commitGeneration;
         if (claimFetchAttempt(true) == 0L) {
             return; // inside the window, or another request already owns this window's attempt
         }
-        // Captured AFTER the claim: the worker only has to recognise commits that land from here on.
-        long claimedGeneration = commitGeneration;
         try {
             startRefreshWorker(claimedGeneration);
         } catch (RuntimeException | Error e) {
@@ -253,9 +260,10 @@ public class JwsVerify implements CredentialVerify {
      * response can never overwrite a newer whole-map replace (O3), because there is no commit path
      * outside this lock.
      *
-     * <p>Holding the lock it re-checks {@link #commitGeneration} against the value captured at
-     * claim time: if a synchronous {@link #loadJwks()}, a MISS refetch or the background retry
-     * committed a keyset after this claim, the generation differs and the attempt is DROPPED
+     * <p>Holding the lock it re-checks {@link #commitGeneration} against the baseline the request
+     * thread read immediately BEFORE its claim: if a synchronous {@link #loadJwks()}, a MISS
+     * refetch or the background retry committed a keyset at or after that claim, the generation
+     * differs and the attempt is DROPPED
      * instead of repeated. The check is on commit ORDER, never on timestamps: two wall-clock
      * readings cannot tell "committed after my claim" from "the clock jumped backwards", and
      * getting that wrong both duplicates the origin fetch and re-opens the stale-overwrite window

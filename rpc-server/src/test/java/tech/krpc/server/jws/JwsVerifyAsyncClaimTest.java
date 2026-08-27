@@ -29,6 +29,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -77,7 +78,15 @@ class JwsVerifyAsyncClaimTest {
     static class ObservingJwsVerify extends JwsVerify {
         final AtomicInteger gatedClaims = new AtomicInteger();
         final AtomicInteger workerStarts = new AtomicInteger();
+        /** Counted down every time a refresh worker RETURNS (fetched or dropped). */
+        final CountDownLatch workerExited = new CountDownLatch(1);
         volatile boolean failSpawn;
+        /**
+         * When set, a WINNING gated claim parks here after the real CAS has already happened — the
+         * only way to place another commit deterministically inside the claim window and see which
+         * side of the CAS the generation baseline was read on.
+         */
+        volatile CountDownLatch pauseAfterClaimCas;
 
         ObservingJwsVerify(String url) {
             super(url);
@@ -88,18 +97,86 @@ class JwsVerifyAsyncClaimTest {
             long claimedAt = super.claimFetchAttempt(gated);
             if (gated && claimedAt != 0L) {
                 gatedClaims.incrementAndGet();
+                CountDownLatch pause = pauseAfterClaimCas;
+                if (pause != null) {
+                    try {
+                        pause.await(15, TimeUnit.SECONDS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
             }
             return claimedAt;
         }
 
         @Override
-        void startRefreshWorker(long claimedAt) {
+        void startRefreshWorker(long claimedGeneration) {
             workerStarts.incrementAndGet();
             if (failSpawn) {
                 throw new IllegalStateException("simulated refresh-worker start failure");
             }
-            super.startRefreshWorker(claimedAt);
+            super.startRefreshWorker(claimedGeneration);
         }
+
+        @Override
+        void refreshClaimed(long claimedGeneration) {
+            try {
+                super.refreshClaimed(claimedGeneration);
+            } finally {
+                workerExited.countDown();
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // R2 BLOCKER regression: a commit that lands INSIDE the claim window (after the claim CAS, while
+    // the request thread has not yet spawned its worker) must make the worker drop its attempt. That
+    // holds only if the generation baseline is read BEFORE the CAS; reading it after swallows such a
+    // commit into the baseline, and the worker fetches a second time — publishing an older endpoint
+    // view after a newer commit. Formalised from the reviewer's interleaving of the same name.
+    // ------------------------------------------------------------------------------------------
+    @Test
+    void claimThenCommitBeforeGenerationCaptureMustDropWorker() throws Exception {
+        Kp k1 = genKey("K1");
+        Kp k2 = genKey("K2");
+        startJwks(jwksDoc(k1));
+        ObservingJwsVerify verify = new ObservingJwsVerify(jwksUrl());
+        verify.loadJwks();
+        httpAttempts.set(0);
+        verify.gatedClaims.set(0);
+        verify.workerStarts.set(0);
+
+        CountDownLatch release = new CountDownLatch(1);
+        verify.pauseAfterClaimCas = release;
+        ageWindow(verify);
+        Thread hit = new Thread(() -> verify.useKey("K1"), "hit-caller");
+        hit.start();
+
+        // POSITIVE HANDSHAKE: the claim CAS really happened and the request thread is parked in the
+        // claim window — the commit below is therefore genuinely a POST-CLAIM commit.
+        awaitClaims(verify, 1);
+        assertEquals(0, verify.workerStarts.get(), "the worker must not be spawned yet");
+
+        // A newer keyset commits while the claimer sits in that window...
+        currentJwks = jwksDoc(k1, k2);
+        verify.loadJwks();
+        assertEquals(Set.of("K1", "K2"), verify.jwksCache.keySet(), "the newer load must commit");
+        // ...and the endpoint then serves the OLDER document again: a redundant refetch is visible
+        // both as a second attempt and as the newer keyset being replaced by the older view.
+        currentJwks = jwksDoc(k1);
+
+        verify.pauseAfterClaimCas = null;
+        release.countDown();
+        hit.join(15_000);
+        assertEquals(1, verify.workerStarts.get(), "exactly one worker for one claim");
+        assertTrue(verify.workerExited.await(15, TimeUnit.SECONDS),
+                "the refresh worker never finished — the assertions below would be vacuous");
+
+        assertEquals(1, httpAttempts.get(),
+                "a commit that landed INSIDE the claim window did not stop the worker: the generation "
+                        + "baseline is being read AFTER the claim CAS, so that commit was swallowed");
+        assertEquals(Set.of("K1", "K2"), verify.jwksCache.keySet(),
+                "the older endpoint view was published over the newer committed keyset");
     }
 
     // ------------------------------------------------------------------------------------------
@@ -268,6 +345,16 @@ class JwsVerifyAsyncClaimTest {
         CountDownLatch latch = new CountDownLatch(1);
         fetchEntered = latch;
         return latch;
+    }
+
+    private static void awaitClaims(ObservingJwsVerify v, int expected) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 15_000L;
+        while (v.gatedClaims.get() < expected) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new AssertionError("expected " + expected + " gated claims, saw " + v.gatedClaims.get());
+            }
+            Thread.sleep(5);
+        }
     }
 
     private void awaitAttempts(int expected) throws InterruptedException {

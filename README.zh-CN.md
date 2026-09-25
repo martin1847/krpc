@@ -1,4 +1,10 @@
-# KRPC
+<p align="center">
+  <a href="https://krpc.tech"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/krpc-logo-dark.svg">
+    <img src="docs/assets/krpc-logo.svg" alt="KRPC" width="400">
+  </picture></a>
+</p>
+<p align="center"><b>一个 Java interface → gRPC · HTTP · 类型化客户端 · MCP 工具</b></p>
 
 [English](README.md)
 
@@ -9,6 +15,13 @@ KRPC 是一个面向 JVM（JDK 21）的 contract-first、agent-native RPC 框架
 Java interface 就是 source of truth。KRPC 负责传输、JSON 序列化、`jakarta` 校验、运行时元数据和客户端生成，服务作者只写业务逻辑——不写 schema、stub 或样板代码。
 
 KRPC 依赖平台而不是重造平台：服务发现、负载均衡、可观测性、入口 TLS 和 mesh 策略交给 Kubernetes、Istio、gateway 或部署平台（[ADR-0001](docs/decisions/ADR-0001-repository-scope.md)）。它已用于电商、教育、本地生活等生产场景。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture-dark.svg">
+  <img src="docs/assets/architecture.svg" alt="KRPC 架构：一个 Java interface 同时暴露为 gRPC 面、HTTP 面、生成的客户端和 MCP 工具；服务发现、负载均衡和可观测性交给平台" width="100%">
+</picture>
+
+*源文件：[`docs/assets/architecture.svg`](docs/assets/architecture.svg)（浅色）与 [`architecture-dark.svg`](docs/assets/architecture-dark.svg)；端口与路径以 [SPEC §16.2](SPEC.md) 为准。*
 
 ## 为什么 agent 时代需要它
 
@@ -71,8 +84,6 @@ JDK 21（virtual threads 是已支持的运行时特性，不是 roadmap 项）�
 - `test-rpc-gen`：客户端代码生成示例。
 
 命令行客户端 `rpcurl` 是独立的 Rust 项目，见[使用 rpcurl 调用](#使用-rpcurl-调用)。
-
-![Architecture](./ARCHITECTURE.png)
 
 ## 环境要求
 

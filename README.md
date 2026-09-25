@@ -1,4 +1,10 @@
-# KRPC
+<p align="center">
+  <a href="https://krpc.tech"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/krpc-logo-dark.svg">
+    <img src="docs/assets/krpc-logo.svg" alt="KRPC" width="400">
+  </picture></a>
+</p>
+<p align="center"><b>One Java interface → gRPC · HTTP · typed clients · MCP tools</b></p>
 
 [简体中文](README.zh-CN.md)
 
@@ -9,6 +15,13 @@ KRPC is a contract-first, agent-native RPC framework for the JVM (JDK 21): you w
 The Java interface is the source of truth. KRPC handles transport, JSON serialization, `jakarta` validation, runtime metadata, and client generation, so service authors write business logic — not schemas, stubs, or boilerplate.
 
 KRPC leans on the platform instead of rebuilding it: service discovery, load balancing, telemetry, ingress TLS, and mesh policy stay with Kubernetes, Istio, gateway, or deployment infrastructure ([ADR-0001](docs/decisions/ADR-0001-repository-scope.md)). It is used in production in e-commerce, education, and local-service products.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture-dark.svg">
+  <img src="docs/assets/architecture.svg" alt="KRPC architecture: one Java interface exposed as a gRPC face, an HTTP face, generated clients and MCP tools; discovery, load balancing and telemetry delegated to the platform" width="100%">
+</picture>
+
+*Source: [`docs/assets/architecture.svg`](docs/assets/architecture.svg) (light) and [`architecture-dark.svg`](docs/assets/architecture-dark.svg); ports and paths follow [SPEC §16.2](SPEC.md).*
 
 ## Why the agent era needs it
 
@@ -105,8 +118,6 @@ rpcurl https://demo.krpc.tech/quickstart/Hello/hello -d '{"name":"you"}'
 - `test-rpc-gen`: client code generation examples.
 
 The command-line `rpcurl` client is a separate Rust project — see [Call With rpcurl](#call-with-rpcurl).
-
-![Architecture](./ARCHITECTURE.png)
 
 ## Requirements
 

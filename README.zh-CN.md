@@ -90,12 +90,12 @@ JDK 21（virtual threads 是已支持的运行时特性，不是 roadmap 项）�
 - JDK 21
 - Gradle
 
-当前版本：`1.0.3`（版本与支持矩阵见[支持政策](docs/support-policy.md)，编写规范见 [SPEC.md](SPEC.md)）。
+当前版本：`1.2.0`（版本与支持矩阵见[支持政策](docs/support-policy.md)，编写规范见 [SPEC.md](SPEC.md)）。
 
 ```gradle
-implementation "tech.krpc:rpc-api:1.0.3"
-implementation "tech.krpc:rpc-client:1.0.3"
-implementation "tech.krpc:rpc-server:1.0.3"
+implementation "tech.krpc:rpc-api:1.2.0"
+implementation "tech.krpc:rpc-client:1.2.0"
+implementation "tech.krpc:rpc-server:1.2.0"
 ```
 
 ## 定义 API
@@ -108,7 +108,7 @@ plugins {
 }
 
 dependencies {
-    api "tech.krpc:rpc-api:1.0.3"
+    api "tech.krpc:rpc-api:1.2.0"
 }
 ```
 
@@ -146,7 +146,7 @@ API 规则：
 ```gradle
 dependencies {
     implementation project(":your-api")
-    implementation "tech.krpc:rpc-server:1.0.3"
+    implementation "tech.krpc:rpc-server:1.2.0"
 }
 ```
 

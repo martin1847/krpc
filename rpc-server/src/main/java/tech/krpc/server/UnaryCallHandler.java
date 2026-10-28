@@ -90,11 +90,12 @@ public class UnaryCallHandler implements ServerCallHandler<InputProto, OutputPro
 
         @Override
         public void onCancel() {
+            // AUD-omp-12 (#3): mark cancelled UNCONDITIONALLY so the invoke path / observer terminal
+            // sends can short-circuit (was set only in the else branch — write-only, never read). The
+            // optional app callback still runs; call.isCancelled() stays the authoritative signal.
+            responseObserver.cancelled = true;
             if (responseObserver.onCancelHandler != null) {
                 responseObserver.onCancelHandler.run();
-            } else {
-                // Only trigger exceptions if unable to provide notification via a callback
-                responseObserver.cancelled = true;
             }
         }
 

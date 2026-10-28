@@ -20,6 +20,8 @@ import tech.krpc.server.ServerContext;
 import tech.krpc.server.ServerFilter;
 import tech.krpc.server.exe.ThreadPool;
 import tech.krpc.util.EnvUtils;
+import tech.krpc.context.KrpcOtel;
+import io.opentelemetry.api.OpenTelemetry;
 import io.grpc.Server;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
@@ -69,6 +71,16 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @Inject
     tech.krpc.server.agent.WebMethodRegistry webMethodRegistry;
 
+    @Inject
+    tech.krpc.server.agent.McpToolRegistry mcpToolRegistry;
+
+    // OTEL-001 (ADR-0006): the container's OpenTelemetry, if the consumer's stack provides one
+    // (e.g. quarkus-opentelemetry). Optional Instance — absent (isResolvable()==false) when no OTel
+    // extension is present, in which case KrpcOtel stays no-op. @Startup runs after the container is
+    // fully initialized, so the bean (when present) is resolvable here.
+    @Inject
+    Instance<OpenTelemetry> openTelemetry;
+
     @ConfigProperty(name = "rpc.server.app")//,defaultValue = NULL
     Optional<String> app;
 
@@ -78,8 +90,24 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @ConfigProperty(name = "rpc.server.defaultExecutor",defaultValue = "false")
     boolean defaultExecutor;
 
+    // D2 (2026-07-03): CVE-2026-47244 app-layer cap. env override via SmallRye's default
+    // mapping: RPC_SERVER_MAXCONCURRENTCALLSPERCONNECTION. Default 2000; 0 = unlimited
+    // (pre-1.0.4 behaviour); negative fails fast (RpcServerBuilder).
+    @ConfigProperty(name = "rpc.server.maxConcurrentCallsPerConnection",
+            defaultValue = RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION + "")
+    int maxConcurrentCallsPerConnection;
+
     @PostConstruct
     public void expose() throws Exception {
+
+        // OTEL-001 (ADR-0006): explicitly install the container's OpenTelemetry into krpc (no global
+        // probing). Resolvable only when the consumer ships an OTel extension; otherwise stay no-op.
+        if (openTelemetry.isResolvable()) {
+            KrpcOtel.install(openTelemetry.get());
+            log.info("OTel: installed container OpenTelemetry into krpc (tracing active).");
+        } else {
+            log.debug("OTel: no OpenTelemetry bean present; krpc tracing stays no-op.");
+        }
 
         initFilter();
 
@@ -94,16 +122,9 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         var app = autoAppName();
 
         if(!defaultExecutor) {
-            // instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL ( SHARED_CHANNEL_EXECUTOR/ NAME = "grpc-default-executor")
             var name = app + "-rpc";
-            var cpus = Runtime.getRuntime().availableProcessors();
-            if(cpus < 6 ){
-                // docker may be 1
-                log.info(" cpus is too small {} , change to default 6.",cpus);
-                cpus = 6;
-            }
-            executor = ThreadPool.newExecutor(name, cpus);
-            log.info("Init Executor {}({} cpus),  instead of ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name, cpus);
+            executor = ThreadPool.newExecutor(name);
+            log.info("Init virtual-thread per-task executor {}, replacing grpc ServerImplBuilder.DEFAULT_EXECUTOR_POOL", name);
         }else {
             log.info("Use CachedThreadPool ServerImplBuilder.DEFAULT_EXECUTOR_POOL grpc-default-executor.");
         }
@@ -115,8 +136,10 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
     @PreDestroy
     public void shutdown() {
         var waitTask = 0;
+        // C6 + AUD-omp-11: graceful drain via the single shutdown authority (was a bare shutdownNow()
+        // that cut in-flight RPCs). Server drains first, THEN the executor is released.
         if (null != server) {
-            server.shutdownNow();
+            RpcServerBuilder.shutdown(server, RpcServerBuilder.DEFAULT_SHUTDOWN_GRACE);
         }
         if(null != executor){
             waitTask = executor.shutdownNow().size();
@@ -165,6 +188,7 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         var proxyServerBuilder = new RpcServerBuilder.Builder(app, port);
 
         proxyServerBuilder.executor(executor);
+        proxyServerBuilder.maxConcurrentCallsPerConnection(maxConcurrentCallsPerConnection);
 
         var bm = CDI.current().getBeanManager();
         //new AnnotationLiteral<Any>() {}
@@ -218,6 +242,8 @@ public class RpcServiceExpose {//} extends SimpleBuildItem{
         var rpcServerBuilder = proxyServerBuilder.build();
         // ADR-0004 (AGENT-001 P0): hand the web-only dispatch surface to the HTTP agent endpoints.
         webMethodRegistry.init(rpcServerBuilder.webMethods(), rpcServerBuilder.webApiMeta());
+        // ADR-0004 (AGENT-001 P1): hand the agentTool subset to the MCP bridge.
+        mcpToolRegistry.init(rpcServerBuilder.mcpMethods(), rpcServerBuilder.mcpApiMeta());
         server = rpcServerBuilder.startServer();
         return i;
     }

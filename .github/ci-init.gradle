@@ -1,0 +1,35 @@
+// CI-only dependency resolution override.
+// The repo lists the Aliyun mirror (maven.aliyun.com) FIRST for fast local builds in CN;
+// from GitHub's US-hosted runners that mirror returns 502 Bad Gateway, and Gradle treats a
+// 5xx as fatal (it does NOT fall through to the mavenCentral() listed after it). This init
+// script — applied only via --init-script in CI — replaces the repositories with Maven
+// Central + the Gradle Plugin Portal so CI resolves reliably. The committed build.gradle /
+// settings.gradle are untouched, so local Aliyun-first builds are unaffected.
+allprojects {
+    repositories {
+        clear()
+        mavenCentral()
+    }
+    buildscript {
+        repositories {
+            clear()
+            gradlePluginPortal()
+            mavenCentral()
+        }
+    }
+}
+beforeSettings { settings ->
+    settings.pluginManagement {
+        repositories {
+            clear()
+            gradlePluginPortal()
+            mavenCentral()
+        }
+    }
+    settings.dependencyResolutionManagement {
+        repositories {
+            clear()
+            mavenCentral()
+        }
+    }
+}

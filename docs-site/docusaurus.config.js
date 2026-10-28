@@ -59,6 +59,10 @@ const config = {
       },
       navbar: {
         title: 'KRPC',
+        logo: {
+          alt: 'KRPC',
+          src: 'img/logo.svg',
+        },
         items: [
           {
             type: 'docSidebar',

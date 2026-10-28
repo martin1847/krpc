@@ -28,11 +28,11 @@ public final class InputProto
 
   public InputProto(InputStream in)  throws IOException {
     this();
+    // C10: do NOT treat available()==0 as EOF. available() is a best-effort hint and can legitimately
+    // return 0 for a stream that still has data (non-KnownLength streams); let the decoder decide EOF
+    // via readTag()==0. `size` is still used only to size the initial buffer (gRPC KnownLength sizes
+    // it exactly; a transient 0 just means the decoder refills from the stream — still correct).
     var size = in.available();
-    if(size == 0){
-      in.close();
-      return;
-    }
     log.debug("InputProto from  InputStream size {}",size);
     //// proto swell factor
     try (var input = new StreamDecoder(in, size)) {
@@ -61,10 +61,13 @@ public final class InputProto
             break;
           }
           default: {
-            //if (!parseUnknownField(
-            //    input, unknownFields, extensionRegistry, tag)) {
+            // AUD-omp-30: skip the unknown field by its wire type (forward-compat) instead of the
+            // pre-fix `done=true` that silently TRUNCATED every remaining field. skipField throws on
+            // a genuinely invalid wire type (malformed → error, not quiet truncation); a raw
+            // END_GROUP (no groups in this schema) stops the loop.
+            if (!input.skipField(tag)) {
               done = true;
-            //}
+            }
             break;
           }
         }

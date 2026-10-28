@@ -1,8 +1,10 @@
 package tech.krpc.server;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import tech.krpc.annotation.RpcService;
@@ -19,11 +22,14 @@ import tech.krpc.common.MethodStub;
 import tech.krpc.common.RpcConstants;
 import tech.krpc.common.RpcMetaService;
 import tech.krpc.common.meta.ApiMeta;
+import tech.krpc.context.KrpcOtel;
 import tech.krpc.filter.FilterInvokeHelper;
 import tech.krpc.util.RefUtils;
+import tech.krpc.util.EnvUtils;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.netty.NettyServerBuilder;
 import io.grpc.ServerServiceDefinition;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,12 +42,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RpcServerBuilder {
 	private final int port;
+	// D2 (2026-07-03): concurrent-call cap per HTTP/2 connection; 0 = unlimited.
+	private final int maxConcurrentCallsPerConnection;
 	private final Server server;
 
 	// ADR-0004 (AGENT-001 P0): web-only (@UnsafeWeb) dispatch surface, exposed for the
 	// HTTP discover/invoke endpoints. Hidden services are never added here.
 	private final Map<String, WebInvoker> webMethods = new HashMap<>();
 	private ApiMeta                       webApiMeta;
+	// ADR-0004 (AGENT-001 P1): MCP tool subset — only @UnsafeWeb(agentTool=true) methods.
+	private final Map<String, WebInvoker> mcpMethods = new HashMap<>();
+	private ApiMeta                       mcpApiMeta;
 //	private final static Marshaller<Object> RESPONSE_MARSHALLER = new ResponseMarshaller();
 //	private final static Marshaller<InputMessage> REQUEST_MARSHALLER =
 //			ProtoLiteUtils.marshaller(InputMessage.getDefaultInstance());
@@ -55,6 +66,9 @@ public class RpcServerBuilder {
 		private final Map<Object,List<ServerFilter>> services = new HashMap<>();
 		public static final List<BindableService> PROTO_SERVICE_LIST = new ArrayList<>();
 		Executor executor;
+		// D2 (2026-07-03): default 2000; 0 = unlimited (pre-1.0.4 behaviour).
+		private int maxConcurrentCallsPerConnection =
+				RpcConstants.DEFAULT_MAX_CONCURRENT_CALLS_PER_CONNECTION;
 
 		//public final String applicationName;
 
@@ -85,6 +99,17 @@ public class RpcServerBuilder {
 			return this;
 		}
 
+		/// D2: cap concurrent calls per HTTP/2 connection. 0 = unlimited (the only
+		/// unlimited value); a negative value is a configuration error and fails fast.
+		public Builder maxConcurrentCallsPerConnection(int max) {
+			if (max < 0) {
+				throw new IllegalArgumentException(
+						"rpc.server.maxConcurrentCallsPerConnection must be >= 0 (0 = unlimited), got " + max);
+			}
+			this.maxConcurrentCallsPerConnection = max;
+			return this;
+		}
+
 		public Builder regGlobalFilter(ServerFilter... filters) {
 			for (var filter : filters) {
 				ServerContext.regGlobalFilter(filter);
@@ -105,15 +130,45 @@ public class RpcServerBuilder {
 	
 	private RpcServerBuilder(Builder builder) throws Exception {
 		this.port = builder.port;
+		this.maxConcurrentCallsPerConnection = builder.maxConcurrentCallsPerConnection;
 		this.server = init(builder.services,builder.executor);
 	}
 	
 	private  Server init(Map<Object,List<ServerFilter>> services,Executor executor) throws Exception {
-		ServerBuilder<?> serverBuilder = ServerBuilder.forPort(port);
+		// BIND-HOST: unset/blank KRPC_BIND_HOST (or -Drpc.server.bindHost) => EXACTLY the previous
+		// wildcard bind (ServerBuilder.forPort). Set => bind that address on the Netty provider
+		// (forPort resolves to NettyServerProvider at runtime; forAddress is the same builder with a
+		// specific host). grpc-netty is compileOnly here — same as the D2 instanceof cast below.
+		String bindHost = EnvUtils.bindHost();
+		ServerBuilder<?> serverBuilder = bindHost == null
+				? ServerBuilder.forPort(port)
+				: NettyServerBuilder.forAddress(new InetSocketAddress(bindHost, port));
 		//	XdsServerBuilder.forPort(port, InsecureServerCredentials.create());
 		//System.out.println("========XDS======XDS======XDS=====");
 
 		serverBuilder.executor(executor);
+
+		// OTEL-001 (ADR-0006): install the SERVER interceptor (W3C context extraction + SERVER
+		// span, scope-propagated to the handler's virtual thread). Default ON; a no-op until an OTel
+		// SDK is installed via KrpcOtel.install (zero spans, zero wire change). Off => not registered.
+		if (KrpcOtel.enabled()) {
+			serverBuilder.intercept(new OtelServerInterceptor());
+		}
+
+		// D2 (2026-07-03): app-layer defence-in-depth vs CVE-2026-47244 (HTTP/2
+		// stream-flood DoS). maxConcurrentCallsPerConnection lives only on
+		// NettyServerBuilder, not the abstract ServerBuilder; forPort() returns the
+		// Netty provider at runtime (grpc-netty runtimeOnly). instanceof keeps this
+		// compile-safe (grpc-netty compileOnly) and avoids reflection for native.
+		if (maxConcurrentCallsPerConnection > 0) {
+			if (serverBuilder instanceof NettyServerBuilder) {
+				((NettyServerBuilder) serverBuilder)
+						.maxConcurrentCallsPerConnection(maxConcurrentCallsPerConnection);
+			} else {
+				log.warn("maxConcurrentCallsPerConnection={} ignored: server provider {} is not Netty",
+						maxConcurrentCallsPerConnection, serverBuilder.getClass().getName());
+			}
+		}
 
 		Builder.PROTO_SERVICE_LIST.forEach(it->{
 			serverBuilder.addService(it);
@@ -125,6 +180,7 @@ public class RpcServerBuilder {
 		var publicMetaService = new MServiceImpl();
 		var metaMethods = new ArrayList<RpcMetaMethod>();
 		var webMetaMethods = new ArrayList<RpcMetaMethod>();
+		var mcpMetaMethods = new ArrayList<RpcMetaMethod>();
 		services.put(metaService,Collections.emptyList());
 		services.put(publicMetaService,Collections.emptyList());
 
@@ -153,6 +209,10 @@ public class RpcServerBuilder {
 				// ADR-0004: web exposure == @UnsafeWeb. Hidden services keep the '-' prefix
 				// in their service name and are never registered into the web surface.
 				boolean web = clz.isAnnotationPresent(UnsafeWeb.class);
+				// ADR-0004 (AGENT-001 P1): agentTool is a strict subset of web — MCP tools only.
+				// AGENT-002: interface-level agentTool=true exposes every method; otherwise a
+				// method opts in individually via @UnsafeWeb.AgentTool. Default all-OFF (NS-6).
+				boolean ifaceAgentTool = web && ((UnsafeWeb) clz.getAnnotation(UnsafeWeb.class)).agentTool();
 				for(MethodStub stub : RefUtils.toRpcMethods(ServerContext.applicationName,clz)){
 					UnaryMethod methodInvokation = new UnaryMethod(clz ,serviceToInvoke, stub, filterChain);
 					//serviceDefBuilder.addMethod(stub.methodDescriptor, ServerCalls.asyncUnaryCall(methodInvokation));
@@ -161,8 +221,15 @@ public class RpcServerBuilder {
 						metaMethods.add(toMeta(stub,attr));
 					}
 					if(needMeta && web){
-						webMethods.put(webKey(stub.methodDescriptor.getFullMethodName()), methodInvokation);
+						var webKey = webKey(stub.methodDescriptor.getFullMethodName());
+						webMethods.put(webKey, methodInvokation);
 						webMetaMethods.add(toMeta(stub,attr));
+						boolean agentTool = ifaceAgentTool
+								|| stub.method.isAnnotationPresent(UnsafeWeb.AgentTool.class);
+						if(agentTool){
+							mcpMethods.put(webKey, methodInvokation);
+							mcpMetaMethods.add(toMeta(stub,attr));
+						}
 					}
 				}
 				var srv = serviceDefBuilder.build();
@@ -182,6 +249,7 @@ public class RpcServerBuilder {
 		}
 		metaService.init(buildApiMeta(metaMethods));
 		webApiMeta = buildApiMeta(webMetaMethods);
+		mcpApiMeta = buildApiMeta(mcpMetaMethods);
 		return serverBuilder.build();
 	}
 
@@ -199,6 +267,16 @@ public class RpcServerBuilder {
 	/// ADR-0004: ApiMeta containing only @UnsafeWeb services and their DTO closure.
 	public ApiMeta webApiMeta(){
 		return webApiMeta;
+	}
+
+	/// ADR-0004 (AGENT-001 P1): "Service/method" -> dispatcher for @UnsafeWeb(agentTool=true) only.
+	public Map<String, WebInvoker> mcpMethods(){
+		return mcpMethods;
+	}
+
+	/// ADR-0004 (AGENT-001 P1): ApiMeta containing only agentTool services (MCP tools/list source).
+	public ApiMeta mcpApiMeta(){
+		return mcpApiMeta;
 	}
 
 	public static ApiMeta buildApiMeta(List<RpcMetaMethod> methods){
@@ -235,6 +313,38 @@ public class RpcServerBuilder {
 
 	public Server startServer() throws IOException {
 		return server.start();
+	}
+
+	/// C6 + AUD-omp-11: default graceful-shutdown grace period. New calls stop being accepted at once;
+	/// in-flight RPCs get this long to drain before a hard shutdownNow() cuts them off.
+	public static final Duration DEFAULT_SHUTDOWN_GRACE = Duration.ofSeconds(30);
+
+	/// C6 + AUD-omp-11: instance convenience — graceful shutdown of the server this builder started.
+	public void shutdown(Duration grace) {
+		shutdown(server, grace);
+	}
+
+	/// C6 + AUD-omp-11: THE single graceful-shutdown authority. Both the spring and quarkus exposers
+	/// (and any future host) route their PreDestroy/@PreDestroy here instead of each hand-rolling a
+	/// shutdownNow() — keeping the drain contract in one place (same de-dup discipline as HARDEN-B1
+	/// JwsVerify.bootstrapAndRegister). Contract: initiate an orderly shutdown (stop accepting new
+	/// calls), await in-flight RPCs up to {@code grace}, then shutdownNow() as a backstop for anything
+	/// still running. Null/already-terminated servers are a no-op. Interruption falls through to the
+	/// hard stop so a shutdown hook can never hang.
+	public static void shutdown(Server server, Duration grace) {
+		if (server == null || server.isTerminated()) {
+			return;
+		}
+		server.shutdown();
+		try {
+			if (!server.awaitTermination(grace.toMillis(), TimeUnit.MILLISECONDS)) {
+				log.warn("RpcServer did not drain within {} — forcing shutdownNow()", grace);
+				server.shutdownNow();
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			server.shutdownNow();
+		}
 	}
 	
 }

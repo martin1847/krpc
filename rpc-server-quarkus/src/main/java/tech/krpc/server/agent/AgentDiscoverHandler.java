@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.quarkus.arc.Unremovable;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -21,6 +22,10 @@ import tech.krpc.util.JsonUtils;
  * services only. Internal/hidden services (including RpcMetaService itself) are never
  * present in this payload.
  */
+// AGENT-001 P1 prerequisite: discovered reflectively by HttpHandlerExpose
+// (getBeans(Object,Any)); Arc's default remove-unused-beans=all would strip it,
+// making /agent/discover absent in a default consumer.
+@Unremovable
 @ApplicationScoped
 public class AgentDiscoverHandler implements GetHandler {
 

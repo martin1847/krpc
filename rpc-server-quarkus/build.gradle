@@ -2,6 +2,7 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "$jandexVersion"
 }
 
+description = 'krpc on Quarkus — server integration that adds the MCP bridge exposing krpc Java services as agent MCP tools over HTTP.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 
@@ -12,6 +13,15 @@ dependencies {
 
 
     api project(':rpc-server')
+    // CLIENTDEP-ALIGN: since ext-rpc 1.1.0 its published POM carries zero tech.krpc
+    // dependencies (the old cross-repo ring — rpc-server-quarkus -> ext-rpc:1.0.3 ->
+    // rpc-client:1.0.3 — was cut at the source), so rpc-client is no longer reachable
+    // transitively through ext-rpc at all. `api project(':rpc-client')` stays for a
+    // straightforward reason: this module IS the Quarkus form of core, and core's job is to
+    // hand the client to its consumers — they now have to get rpc-client from here, not from
+    // ext-rpc. `api` (not `implementation`) is the intentional compile+runtime exposure,
+    // mirroring how rpc-server declares rpc-api/rpc-common.
+    api project(':rpc-client')
     // ADR-0004 (AGENT-001 P0): agent HTTP discover/invoke handlers ride the existing
     // http-server netty transport (GetHandler/PostHandler beans auto-registered by HttpHandlerExpose).
     api project(':http-server')
@@ -33,6 +43,11 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
     testImplementation "io.grpc:grpc-stub:${grpcVersion}"
     testImplementation "io.netty:netty-codec-http:$nettyGrpcVersion"
+    // NS-6 default-OFF contract test reflects on @ConfigProperty (MicroProfile Config, via
+    // quarkus-arc) to assert defaultValue=="false" on the mcp-enable flags. quarkus-arc is
+    // compileOnly for main and compileOnly is NOT inherited by test; this is reflection only
+    // (no CDI container is booted — the tests are plain JUnit, not @QuarkusTest).
+    testImplementation "io.quarkus:quarkus-arc:$quarkusMiniSupport"
 
 
 //    implementation platform("io.quarkus:quarkus-bom:${quarkusPlatformVersion}")
@@ -59,7 +74,18 @@ compileTestJava {
     dependsOn('jandex')
 }
 
+// AGENT-002 finding #5: stamp the real build version into the runtime jar manifest so
+// McpHandler.krpcVersion() can report it in MCP serverInfo (falls back to RpcConstants.VERSION
+// when absent, e.g. unit tests / native images that drop package metadata).
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': 'krpc-rpc-server-quarkus',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
 test {
     useJUnitPlatform()
 }
-

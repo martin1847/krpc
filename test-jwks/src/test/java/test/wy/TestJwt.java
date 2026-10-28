@@ -42,7 +42,7 @@
 //        token = "eyJhbGciOiJFUzI1NiIsImtpZCI6ImJvLXRlc3QtMjExMSJ9.eyJzdWIiOiIxMjM0IiwiYWRtIjoxLCJleHAiOjE2MzcxMzc4NDh9._TaUOVjezTIqVcsNA034CK0ogYw6N5lxmsKiqIJsxg0gyq2PpQs1cRMVErq4mmtTs_m8uiZnRBj1pmxGmIoUUw";
 //        DecodedJWT jwt = JWT.decode(token);
 //        System.out.println("=== " + jwt);
-//        JwkProvider provider = new UrlJwkProvider("https://auth.zhulinkeji.com/");//.well-known/jwks.json
+//        JwkProvider provider = new UrlJwkProvider("https://auth.example.com/");//.well-known/jwks.json
 //        //JwkProvider provider = new UrlJwkProvider(getClass().getResource("/jwks.json"));
 //        Jwk jwk = provider.get(jwt.getKeyId());
 //

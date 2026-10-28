@@ -10,7 +10,36 @@ Key boundaries read from the repository:
 
 - Services are defined as Java interfaces and DTOs, without hand-written proto files for normal service authors.
 - Service discovery, load balancing, and telemetry are delegated to Kubernetes, Istio, or deployment infrastructure.
-- The repository contains API contracts, common runtime code, Java client/server runtime modules, framework/native-image integrations, HTTP gateway support, code generation, tests, demos, and rpcurl tooling.
+- The repository contains API contracts, common runtime code, Java client/server runtime modules, framework/native-image integrations, HTTP gateway support, code generation, tests, and demos. The `rpcurl` CLI client is maintained externally in `krpc-crates` (Rust); this repo does not host an rpcurl implementation.
+
+## Repo Facts (branches, releases, mirrors)
+
+- Development and releases both happen on **`dev`** (the default branch). `main` is
+  not the release branch, and the docs site deploys **only on pushes to `dev`**
+  (`.github/workflows/docs.yml`, `docs-site/**` paths filter) — a docs-site fix
+  landed on `main` will never deploy.
+- `SPEC.md` and `skills/krpc/references/SPEC.md` are a byte-identical mirror pair:
+  any change to one must update the other in the same commit.
+- `ext-rpc-gen/` is a standalone-versioned artifact (`tech.krpc.ext:ext-rpc-gen`,
+  version in its own `build.gradle`, not the root `gradle.properties`) and is
+  excluded from krpc Central release bundles (duplicate-GAV guard); it releases
+  separately.
+- Central publishing runs through `gradle/publish-central.sh`
+  (bundle → upload → status → publish; the publish step is irreversible).
+- The test suite no longer needs a site-local database. The DB-backed `test-server`
+  tests provision their own MySQL via Testcontainers
+  (`test-server/src/test/java/test/krpc/db/MySqlTestResource.java`), so Docker is the
+  only prerequisite; with Docker down they fail in seconds with an actionable message
+  instead of hanging. In a Docker-less environment use `gradle build -x test`.
+- **Known red — `:test-server-spring:test`.** `gradle build` still does not go green,
+  for a reason unrelated to the database: `RpcClientAutoConfigure.autoRpcClientScannerConfigurer`
+  is a non-static `@Bean` returning a `BeanDefinitionRegistryPostProcessor`, so Spring
+  instantiates the config class before `@Autowired` processing and `afterPropertiesSet`
+  NPEs on a null `Environment`. Making that method `static` fixes the NPE and then
+  uncovers a second bug: `RpcServiceExposer.onApplicationEvent` blocks on
+  `server.awaitTermination()`, so `SpringApplication.run()` never returns and any
+  `@SpringBootTest` hangs forever. Both are in published modules and need a decision;
+  until then run `gradle build -x :test-server-spring:test`.
 
 ## Source Of Truth Priority
 
@@ -82,6 +111,31 @@ Ask:
 
 Default to evolving existing components until there is concrete pressure for a new component.
 
+Adding a boolean flag is the same question. Rules from the workspace-level **umbrella
+ADR-0003 "Defaults encode correct behavior"** (distinct from this repo's ADR-0003) —
+read it before choosing a default:
+
+- The default must be the correct behavior. Do not ship a correctness or strictness
+  fix as an opt-in switch. (Capability surfaces such as MCP are the separate opt-in
+  class, and stay default OFF.)
+- For a hand-written `System.getProperty` / `getenv` read: one accessor per flag,
+  resolved lazily on the first-use path inside `try`/`catch`, logging its effective
+  state once at INFO or above (WARN when it switches off a default-ON behavior;
+  DEBUG is invisible in prod and so proves nothing). Never in a static or field
+  initializer, and never copy an accessor's result into a static field —
+  native-image bakes both in at build time, and a captured copy splits the switch
+  (honoured on one path, ignored on another).
+- Container-injected config (`@ConfigProperty`, `@Value`,
+  `@ConfigurationProperties`) is exempt from the previous bullet **per read site,
+  not per flag**: a flag injected in one place and hand-read in another is still
+  bound for the hand-read part. Before calling a flag exempt, grep every read site
+  of its name — `KRPC_MCP` is injected *and* hand-read in two handlers.
+- The static-initializer half is gated: `FlagResolutionGateTest`
+  (`flagsMustNotResolveInStaticInitializers`) in `arch-test`, ADR-0005
+  freeze-ratchet, baseline only shrinks. It scans only the six `OnlyCoreModules`
+  and does not see duplicate hand-written reads, reflection, or non-`System` config
+  sources — green is not proof, and outside those modules nothing was even asked.
+
 ## Code Traceability
 
 Add a short source reference in code only for durable architectural memory:
@@ -106,7 +160,7 @@ Do not comment obvious code.
 - This is a Gradle multi-module Java repository.
 - JDK 21 is the Java baseline.
 - Virtual threads are a supported runtime feature, not a roadmap item.
-- Existing Claude guidance used `/opt/gradle/gradle/bin/gradle` for local builds; use the repo wrapper `./gradlew` only when it is known to work in the current environment.
+- Local builds: use the repo wrapper `./gradlew` or a system `gradle`.
 - Public documentation and examples must use `gradle`, not machine-specific Gradle paths.
 - Prefer `rg` for search.
 - Do not add Codex, Claude, or AI-generated signatures to commits.
@@ -117,9 +171,18 @@ Common commands:
 gradle build
 gradle test
 gradle :http-server:test --tests "tech.krpc.http.server.GrpcWebCodecTest"
+gradle :arch-test:test   # ARCH-001 architecture gate (ArchUnit, freeze-ratchet baseline; see ADR-0005)
 gradle clean
 gradle allDeps
 ```
+
+## PR Self-Check And Push Gates
+
+Before opening a PR, walk `docs/PR_SELF_CHECK.md` (every item traces to a real
+incident). Machine-checkable items are enforced by `.githooks/pre-push` —
+install once with `git config core.hooksPath .githooks`; CI re-runs the same
+script on every PR (`selfcheck` workflow), so `--no-verify` only skips the local
+reminder, not the gate.
 
 ## Validation And Completion
 

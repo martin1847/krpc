@@ -6,7 +6,7 @@ Date: 2026-05-30
 
 ## Context
 
-KRPC is a multi-module RPC framework. The README describes its goal as making RPC service development feel like writing normal language-level interfaces while using gRPC/HTTP/2 underneath. The repository currently contains API annotations and result models, shared serialization/context/filter code, Java client and server runtimes, Spring/Quarkus integrations, an HTTP gateway, generated protocol artifacts, test applications, and rpcurl tooling.
+KRPC is a multi-module RPC framework. The README describes its goal as making RPC service development feel like writing normal language-level interfaces while using gRPC/HTTP/2 underneath. The repository currently contains API annotations and result models, shared serialization/context/filter code, Java client and server runtimes, Spring/Quarkus integrations, an HTTP gateway, generated protocol artifacts, and test applications. The `rpcurl` CLI client now lives externally in `krpc-crates` (Rust); this repo no longer hosts an rpcurl implementation (the in-repo Java and Dart rpcurl clients were both retired).
 
 The repository needs a lightweight source-of-truth structure so future AI-assisted and human changes can distinguish stable architectural decisions, module ownership, and active work.
 

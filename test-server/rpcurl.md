@@ -2,7 +2,7 @@
 # 设置环境变量
 
 * QUARKUS_DATASOURCE_PASSWORD
-* kubectl port-forward service/mysql-primary -n infra 3306:3306
+* kubectl port-forward service/mysql-primary -n <your-namespace> 3306:3306
 
 ```bash
 export HOSTNAME=test-server-76fcf967d7-x4pdg

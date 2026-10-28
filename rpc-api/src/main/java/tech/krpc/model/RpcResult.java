@@ -1,6 +1,7 @@
 package tech.krpc.model;
 
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -22,6 +23,14 @@ public class RpcResult<DTO> implements Serializable {
      * 自定义业务异常码，以百为业务区间，大业务以千为区间<br>
      * 除非必要，禁止使用java Exception传递错误信息，请定义异常码<br>
      * 最小0（msg/data逻辑互斥），不支持负值
+     *
+     * <p><b>建议（非强制）：业务码从 1000 起，1000 以内留给系统。</b>gRPC status 占 0-16，
+     * 17-999 留给 krpc 将来可能新增的系统码；业务码落在 1000 以上就不会与之相撞，读到一个
+     * 四位数也能立刻判断"这是业务语义、不是传输/框架故障"。区间宽度沿用上面的约定：
+     * 以百为业务区间（1000-1099、1100-1199…），大业务以千为区间（1000-1999、2000-2999…）。
+     *
+     * <p><b>框架当前不据此判断任何行为。</b>没有校验、没有保留区检查、没有按区间路由；
+     * 小于 1000 的业务码照常工作。这是一条编号约定，不是契约——不要写依赖它的代码。
      */
     int code = 0 ;
 
@@ -41,21 +50,27 @@ public class RpcResult<DTO> implements Serializable {
         return OK == code;
     }
 
+    // C3 + AUD-omp-28: reinterpret THIS failure result as another payload type. Only valid on a
+    // failure (code>0). Calling it on an OK result was a silent contract break — the "error"
+    // carried no error. Guard it: an OK result has no error to forward.
     @JsonIgnore
     public <T> RpcResult<T> error() {
+        if (isOk()) {
+            throw new IllegalStateException("error() called on an OK result (code==0); nothing to forward");
+        }
         return (RpcResult<T>) this;
     }
 
 
+    // C3 + AUD-omp-28: on the OK branch, build a NEW RpcResult instead of mutating + returning
+    // `this`. The old code did `((RpcResult<T>)this).data = res; return this` — it re-typed the
+    // SAME object and swapped its data field, so any caller still holding the original reference
+    // silently saw its DTO replaced (aliasing). A mapping op must not mutate its receiver.
     public <T> RpcResult<T> ifOk(Function<DTO,T> dataHandler) {
         if( OK == code ){
             var res = dataHandler.apply(data);
             if(null != res) {
-                var result =  (RpcResult<T>) this;
-                result.data = res;
-                return result;
-                //return (RpcResult<T>) this;
-                //return RpcResult.ok(res);
+                return RpcResult.ok(res);
             }else {
                 return RpcResult.error(DATA_LOSS, "call ifOk But got null !!!");
             }
@@ -72,30 +87,49 @@ public class RpcResult<DTO> implements Serializable {
     }
 
 
+    // C3 + AUD-omp-28: `assert` is a no-op under production `-da`, so the ok(nonNull)/error(code>0)
+    // envelope invariants (RpcResult.java:22-24,28-36) never actually held at runtime. Enforce them
+    // unconditionally: ok(null) and error(code<=0)/error(null msg) are programming errors.
     public static <T> RpcResult<T> ok(T data){
-        assert null != data;
+        Objects.requireNonNull(data, "RpcResult.ok(data): data must be non-null (code==0 ⇒ data present)");
         RpcResult<T> res = new RpcResult<>();
         res.data = data;
         return res;
     }
 
     public static <T> RpcResult<T> error(int code, String msg) {
-        assert null != msg;
-        assert code > 0;
+        Objects.requireNonNull(msg, "RpcResult.error(code,msg): msg must be non-null");
+        if (code <= 0) {
+            throw new IllegalArgumentException("RpcResult.error(code,msg): code must be > 0 (0 is OK, negatives unsupported), got " + code);
+        }
         RpcResult<T> res = new RpcResult<>();
         res.code = code;
         res.msg = msg;
         return res;
     }
 
+    // C3 (fix-round-1): the code>0 invariant must hold on EVERY error factory, not just error(int,msg).
+    // error(CommonCode.OK) / any zero-or-negative CommonCode built a code==0 "error" — an envelope that
+    // isOk()==true yet was authored as a failure. Reject it at construction.
     public static <T> RpcResult<T> error(CommonCode it) {
+        Objects.requireNonNull(it, "RpcResult.error(CommonCode): code must be non-null");
+        if (it.value <= 0) {
+            throw new IllegalArgumentException("RpcResult.error(CommonCode): code must be > 0 (0 is OK, negatives unsupported), got " + it.name() + "=" + it.value);
+        }
         RpcResult<T> res = new RpcResult<>();
         res.code = it.value;
         res.msg = it.name();
         return res;
     }
 
+    // C3 (fix-round-1): forwarding an OK result as an "error" is the same contract break as the no-arg
+    // error() reinterpret — the forwarded envelope carries no error (code==0). Reject it here too so no
+    // error factory can mint a code<=0 failure.
     public static <T> RpcResult<T> error(RpcResult<?> error) {
+        Objects.requireNonNull(error, "RpcResult.error(RpcResult): result must be non-null");
+        if (error.code <= 0) {
+            throw new IllegalArgumentException("RpcResult.error(RpcResult): source is not a failure (code must be > 0), got code=" + error.code);
+        }
         return (RpcResult<T>) error;
     }
 

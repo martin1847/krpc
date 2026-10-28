@@ -36,7 +36,7 @@ dependencies {
 
 
 //    implementation 'io.quarkiverse.mybatis:quarkus-mybatis:0.0.10'
-    implementation "tech.krpc.ext:ext-mybatis:$extRpcVersion"
+    implementation "tech.krpc.ext:ext-mybatis:$extMybatisVersion"
 
     //1.5.2.Final  1.5.0.Beta1
     implementation 'org.mapstruct:mapstruct:1.6.3'
@@ -51,6 +51,11 @@ dependencies {
     }
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
+
+    // TESTCONTAINERS-001: throwaway MySQL for the DB-backed tests (test.krpc.db). Pulls in
+    // testcontainers core + jdbc; no JUnit extension is needed because the container lifecycle
+    // is driven by a Quarkus QuarkusTestResourceLifecycleManager (MySqlTestResource).
+    testImplementation "org.testcontainers:testcontainers-mysql:$testcontainersVersion"
 
     // https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
     testImplementation 'org.openjdk.jmh:jmh-core:1.37'

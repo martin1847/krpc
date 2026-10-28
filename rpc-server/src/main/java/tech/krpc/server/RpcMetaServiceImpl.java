@@ -15,6 +15,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -121,12 +123,70 @@ class RpcMetaServiceImpl implements RpcMetaService {
         }
         return fields.stream().filter(f -> !Modifier.isStatic(f.getModifiers()))
                 .map(f -> {
+                    checkFieldContract(f);
                     var pType = getOrAdd(dic, f.getGenericType(), input);
                     var name = f.getName();
                     var annos = toAnno(f.getDeclaredAnnotations());
                     return new Property(name, pType, annos);
                 })
                 .collect(Collectors.toList());
+    }
+
+    // META-ARRAY-001 (SPEC §4 "Collection fields"): the contract meta does not model array
+    // component types, so a Java array field yields generation that references an undeclared
+    // type (silent broken output). Policy: use List<T> for sequences. Arrays are UNSUPPORTED
+    // except the ONE exemption below; Map<K,V> is NOT RECOMMENDED (a WARN, not an error).
+    private static void checkFieldContract(Field f) {
+        // Inspect the GENERIC type: f.getType() erases T[] to Object[], which would wrongly
+        // reject a type-variable array that getOrAdd models as List<T>.
+        rejectUnsupportedArray(f.getGenericType(),
+                "DTO " + f.getDeclaringClass().getName() + " field '" + f.getName() + "'");
+        if (Map.class.isAssignableFrom(f.getType())) {
+            warnMapOnce(f.getDeclaringClass().getName(), f.getName());
+        }
+    }
+
+    // META-ARRAY-001: the single choke point for array policy, shared by the field check and the
+    // getOrAdd type paths. Rejects the array shapes the meta scan cannot model — a concrete array
+    // that is not a single-dimension primitive array (Zebra[], String[], int[][]), and a generic
+    // array with a concrete/parameterized component (List<String>[]). Type-variable arrays (T[])
+    // pass through (getOrAdd models them as List<T>); single-dimension primitive arrays are exempt.
+    private static void rejectUnsupportedArray(Type t, String context) {
+        if (t instanceof Class && ((Class<?>) t).isArray() && !isExemptPrimitiveArray((Class<?>) t)) {
+            throw arrayNotSupported(context, ((Class<?>) t).getSimpleName());
+        }
+        if (t instanceof GenericArrayType
+                && !(((GenericArrayType) t).getGenericComponentType() instanceof TypeVariable)) {
+            throw arrayNotSupported(context, t.getTypeName());
+        }
+    }
+
+    // The ONLY exempt array shape: a SINGLE-DIMENSION array of a primitive (byte[], int[], …) —
+    // the binary/scalar payload convention. Multi-dimensional arrays (int[][]: componentType is
+    // int[], not primitive) and object arrays (Zebra[], String[]) are UNSUPPORTED. `arrayType`
+    // MUST already be an array type.
+    private static boolean isExemptPrimitiveArray(Class<?> arrayType) {
+        return arrayType.getComponentType().isPrimitive();
+    }
+
+    private static IllegalStateException arrayNotSupported(String context, String arrayTypeName) {
+        return new IllegalStateException(
+                "META-ARRAY-001: " + context + " uses unsupported array type " + arrayTypeName
+                + "; use List<T> instead. The contract meta does not model array component types — "
+                + "object arrays and multi-dimensional arrays are UNSUPPORTED (single-dimension "
+                + "primitive arrays like byte[] are the only exemption). See SPEC §4 'Collection fields'.");
+    }
+
+    // META-ARRAY-001: a server build scans up to three metas (full/web/mcp), so dedup the Map
+    // WARN by declaringClass#field to avoid logging the same field up to 3×.
+    private static final Set<String> WARNED_MAP_FIELDS = ConcurrentHashMap.newKeySet();
+
+    private static void warnMapOnce(String declaringClass, String field) {
+        if (WARNED_MAP_FIELDS.add(declaringClass + "#" + field)) {
+            log.warn("META-ARRAY-001: DTO {} field '{}' uses Map<K,V>; generated client code "
+                    + "loses readability — model the shape as an explicit DTO class instead "
+                    + "(SPEC §4 'Collection fields', NOT RECOMMENDED).", declaringClass, field);
+        }
     }
 
     static PropertyType getOrAdd(HashMap<String, Dto> dic, Type t, boolean input) {
@@ -150,20 +210,27 @@ class RpcMetaServiceImpl implements RpcMetaService {
 
             return new PropertyType(rawDto, generics);
         } else if (t instanceof GenericArrayType) {
-            Dto rawDto = dic.computeIfAbsent("List", k -> new Dto(k, 1, input,null));
+            // META-ARRAY-001: T[] (type-variable component) stays modeled as List<T> for generic
+            // DTOs; a generic array with a concrete/parameterized component (List<String>[]) is
+            // rejected by the shared array policy.
+            rejectUnsupportedArray(t, "contract meta type");
             var compType = ((GenericArrayType) t).getGenericComponentType();
-            String typeName = "T";
-            if (compType instanceof TypeVariable) {
-                typeName = ((TypeVariable<?>) compType).getName();
-            }
-            var genericType = new PropertyType(dic.computeIfAbsent(typeName, k -> new Dto(k, 0, input, null,true)));
+            Dto rawDto = dic.computeIfAbsent("List", k -> new Dto(k, 1, input, null));
+            String typeName = ((TypeVariable<?>) compType).getName();
+            var genericType = new PropertyType(dic.computeIfAbsent(typeName, k -> new Dto(k, 0, input, null, true)));
             return new PropertyType(rawDto, Collections.singletonList(genericType));
             // T field;
         } else if (t instanceof TypeVariable) {
             String typeName = ((TypeVariable<?>) t).getName();
             return new PropertyType(dic.computeIfAbsent(typeName, k -> new Dto(k, 0, input, null,true)));
         } else {
-            Dto rawDto = cls2dto(dic, (Class) t, 0, input);
+            Class<?> cls = (Class<?>) t;
+            // META-ARRAY-001: backstop for arrays reaching the raw-Class branch via method arg/res
+            // or nested generics (e.g. List<Zebra[]>); direct DTO fields fail earlier (richer
+            // context) in checkFieldContract. No cheap declaring context here (findings R2 #5) —
+            // report the array type + remedy. Single-dimension primitive arrays are exempt.
+            rejectUnsupportedArray(cls, "contract meta type");
+            Dto rawDto = cls2dto(dic, cls, 0, input);
             return new PropertyType(rawDto);
         }
     }

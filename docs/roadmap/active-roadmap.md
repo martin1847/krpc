@@ -87,7 +87,9 @@ Acceptance Criteria:
 
 ## AGENT-001: Agent-Friendly Introspection And MCP Surface
 
-Status: active  (P0 delivered on `dev`, security-reviewed; P1 not started)
+Status: completed  (released in 1.1.1, 2026-07-18. P0 HTTP discover/invoke + P1 MCP bridge +
+P2 field-test wave: MCP error envelope {code,message,violations}, did-you-mean, method-level
+@UnsafeWeb.AgentTool, real serverInfo — AGENT-002, PR #27. Live sandbox: demo.krpc.tech.)
 
 Capability: Expose KRPC's runtime self-description to AI agents (discover → call)
 
@@ -97,35 +99,37 @@ Components:
 - `rpc-client` (`GeneralizeClient`)
 - `http-server` (HTTP discover/invoke endpoints)
 - `rpc-api` (`@UnsafeWeb` `agentTool` attribute, `@Doc`)
-- new runtime MCP module (P1)
+- `rpc-server-quarkus` MCP bridge (`McpHandler`/`McpSchema`/`McpToolRegistry`, P1 — a
+  thin bridge on the P0 http-server host, not a separate module; ADR-0004 revised)
 
 ADR: ADR-0004
 
 Phases (sequenced P0 → P1):
 
-- **P0 (DONE, on `dev`)** — HTTP `listApis()` discovery endpoint + generic HTTP
-  invoke endpoint (HTTP analogue of `GeneralizeClient`); `WebMethodRegistry` +
-  `UnaryMethod.invokeWeb`. Hidden services double-filtered, credential not bypassed,
-  filter chain single-pass. Security review APPROVE (0 blocking). JVM-mode only —
-  native reflection-config for the new handlers not yet added.
-  - **Caveat (bean removal):** the `AgentDiscoverHandler` / `AgentInvokeHandler`
-    beans are discovered reflectively (`HttpHandlerExpose` scans `getBeans(Object,
-    Any)`), so Quarkus Arc's default `remove-unused-beans=all` strips them as
-    unused and the HTTP server logs `Skip HTTP Server , no Handlers found.` — the
-    endpoints are then absent in a **default Quarkus consumer** (including
-    `examples/quickstart`). Reproduce the working surface with
-    `-Dquarkus.arc.remove-unused-beans=none`. The unit tests instantiate the
-    handlers with `new`, so they never exercise the container path and did not
-    catch this. Fix is folded into P1 as its prerequisite first step (below).
-- **P1** — Runtime MCP server module generated from live `ApiMeta`, Streamable
-  HTTP transport, **feature switch default OFF**. Tools = methods opted in via
-  `@UnsafeWeb(agentTool=true)` (default `false`).
-  - **Prerequisite (first step):** make the P0 handler beans survive default Arc
-    bean removal (e.g. a `rpc-server-quarkus` deployment module emitting
-    `UnremovableBeanBuildItem` / `AdditionalBeanBuildItem().setUnremovable()`,
-    `@Unremovable` on the handlers, or an explicit `Instance<GetHandler>` /
-    `Instance<PostHandler<?>>` reference), so agent endpoints are reachable in a
-    default consumer before the MCP bridge builds on them.
+- **P0 (DONE, on `dev`; bean-removal + native gaps closed on `feat/mcp-bridge`)** —
+  HTTP `listApis()` discovery endpoint + generic HTTP invoke endpoint (HTTP analogue
+  of `GeneralizeClient`); `WebMethodRegistry` + `UnaryMethod.invokeWeb`. Hidden
+  services double-filtered, credential not bypassed, filter chain single-pass.
+  Security review APPROVE (0 blocking).
+  - **Bean-removal caveat: FIXED.** `AgentDiscoverHandler`/`AgentInvokeHandler` now
+    carry `@io.quarkus.arc.Unremovable`, so they survive Arc's default
+    `remove-unused-beans=all` and the endpoints are reachable in a default consumer
+    (JVM + native), no consumer action. Container-level `@QuarkusTest` added.
+  - **Native: DONE.** `AgentInvokeRequest` reflection-config added; native build +
+    boot verified (Mandrel 25/JDK25) with the agent endpoints reachable.
+- **P1 (DELIVERED on `dev`, merged as PR #14 `9be92e6`)** — MCP Streamable
+  HTTP bridge (`POST /mcp`, spec 2025-06-18, JSON-RPC 2.0), **not** a standalone
+  module: a thin bridge on the P0 http-server host (ADR-0004 revised). `tools/list`
+  generated from live `ApiMeta`; `tools/call` via the same `invokeWeb` path
+  (credential not bypassed). Tools = `@UnsafeWeb(agentTool=true)` subset only.
+  **Feature switch `rpc.server.mcp.enabled` (env `KRPC_MCP`) default OFF** = zero new
+  surface. No third-party MCP SDK. Verified with real MCP clients (initialize via a
+  `@modelcontextprotocol/sdk` client script; tools/list + tools/call via the official
+  `@modelcontextprotocol/inspector` CLI): JVM +
+  native (Mandrel 25/JDK25); initialize + tools/list byte-identical across both,
+  tools/call differs only in the runtime timestamp — verbatim transcripts in
+  `docs/mcp-transcripts/{jvm,native}.txt`; GET/mcp→405, unsupported
+  MCP-Protocol-Version→400.
 
 Acceptance Criteria:
 
@@ -136,3 +140,33 @@ Acceptance Criteria:
 - MCP module off by default adds no runtime surface.
 - No service registry/discovery/LB added (stays within ADR-0001).
 - Authentication remains gateway-side this phase.
+
+## OTEL-001: OpenTelemetry Span Creation On KRPC's Faces
+
+Status: completed  (released in 1.1.1, 2026-07-18: ADR-0006 spans on both faces + OTEL-002
+field fixes — HTTP-face MDC binding, LogRedact, W3C forward-compat parse. Ghost-CLIENT-span
+export-boundary investigation continues with consumers; tracked outside this item.)
+
+Capability: KRPC creates SERVER/CLIENT spans and extracts/injects W3C trace context on its own
+Netty faces (gRPC + HTTP), so a consumer with a provisioned OTLP pipeline gets connected traces
+across KRPC hops without application code. Span creation via the OpenTelemetry **API only** — no
+SDK/exporter in core (the SDK arrives from the consumer's Quarkus stack; ADR-0001 / NS-3).
+
+Components:
+
+- `rpc-common` (`KrpcOtel` — flag, tracer, gRPC metadata getter/setter, rpc/http attribute keys),
+  new `opentelemetry-api` dependency
+- `rpc-server` (`OtelServerInterceptor`, registered in `RpcServerBuilder`)
+- `rpc-client` (`OtelClientInterceptor`, installed in `MethodCallProxyHandler`)
+- `http-server` (`AbstractHttpHandler` SERVER-span extraction)
+- kill switch `rpc.otel.enabled` / env `KRPC_OTEL`, default ON (no-op without an SDK)
+
+ADR: ADR-0006 (amends ADR-0003's "no spans" clause)
+
+Acceptance Criteria:
+
+- Inbound `traceparent` → SERVER span → CLIENT span → outbound `traceparent`, one header, correct
+  parent chain across a real in-process hop (test-proven).
+- No behavior change without an OTel SDK (byte-identical wire; parity test).
+- No OTel SDK/exporter in any core module's runtime classpath (NS-3).
+- Native build + boot with the OTel surface, no reflection errors (NS-7).

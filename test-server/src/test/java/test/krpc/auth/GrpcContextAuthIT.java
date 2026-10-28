@@ -112,7 +112,11 @@ class GrpcContextAuthIT {
 
         // 4. Register the real verifier (no client binding so cid is irrelevant) and stand up
         //    the production server on a free loopback port with the production VT executor.
-        ServerContext.regCredentialVerify(new JwsVerify(jwksUrl, JwsVerify.DEFAULT_COOKIE_NAME));
+        // HARDEN-B1: JwsVerify is now fail-closed until the first successful load — eager-load so
+        // the verifier is READY before the server registers it (mirrors bootstrap()).
+        var verify = new JwsVerify(jwksUrl, JwsVerify.DEFAULT_COOKIE_NAME);
+        verify.loadJwks();
+        ServerContext.regCredentialVerify(verify);
 
         rpcPort = freePort();
         executor = ThreadPool.newExecutor(APP, 6);

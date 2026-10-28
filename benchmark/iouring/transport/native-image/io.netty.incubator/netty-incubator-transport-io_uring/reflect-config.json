@@ -1,0 +1,28 @@
+[
+  {
+    "condition": {
+      "typeReachable": "io.netty.incubator.channel.uring.Native"
+    },
+    "name": "io.netty.incubator.channel.uring.IOUringServerSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.incubator.channel.uring.Native"
+    },
+    "name": "io.netty.incubator.channel.uring.IOUringSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.incubator.channel.uring.Native"
+    },
+    "name": "io.netty.incubator.channel.uring.IOUringDatagramChannel",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  }
+]

@@ -1,0 +1,56 @@
+# JAPICMP-001 (SPEC §14.2, NS-1): binary/source-compat gate on the published CONTRACT surface.
+# "The interface is the contract" is only real once a machine verifies the diff — an unchecked
+# principle is a comment. This job diffs the working tree's rpc-api + rpc-common classes against
+# the latest Central release (japicmp.baseline) and ENCODES the SPEC §14.1 version policy:
+#   patch bump  ⇒ binary-incompatible change = BUILD FAILURE
+#   minor bump  ⇒ incompatibilities allowed but require -Pjapicmp.acceptBreaking=true
+# It is a cheap, standalone JVM job — deliberately NOT folded into the slow native-smoke build.
+name: japicmp
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'rpc-api/**'
+      - 'rpc-common/**'
+      - '**/*.gradle'
+      - 'gradle.properties'
+      - 'gradle/wrapper/**'
+      - '.github/workflows/japicmp.yml'
+  pull_request:
+    # Only run when a covered module's sources or the build wiring change; skip doc-only PRs.
+    paths:
+      - 'rpc-api/**'
+      - 'rpc-common/**'
+      - '**/*.gradle'
+      - 'gradle.properties'
+      - 'gradle/wrapper/**'
+      - '.github/workflows/japicmp.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: japicmp-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  japicmp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      # --rerun-tasks: never let a cached UP-TO-DATE result stand in for a real comparison — the
+      # gate MUST execute the download + diff on every CI run (codex r1). --init-script pins Maven
+      # Central (GitHub's US runners 502 on the Aliyun mirror this repo lists first; see ci-init.gradle);
+      # the baseline jar is fetched directly from repo1.maven.org by the task, independent of this.
+      - name: japicmp binary+source-compat gate (rpc-api + rpc-common vs latest Central release)
+        run: ./gradlew --init-script .github/ci-init.gradle japicmpCheck --rerun-tasks --no-daemon

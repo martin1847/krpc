@@ -1,5 +1,5 @@
 /**
- * Zhulinkeji.com Inc.
+ * krpc.tech
  * Copyright (c) 2021-2025 All Rights Reserved.
  */
 package tech.test.krpc.dto;

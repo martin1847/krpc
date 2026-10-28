@@ -69,3 +69,7 @@ gradle/wrapper/*
 !gradle/wrapper/gradle-wrapper.properties
 !/gradlew
 !/gradlew.bat
+.classpath
+.factorypath
+.project
+.settings

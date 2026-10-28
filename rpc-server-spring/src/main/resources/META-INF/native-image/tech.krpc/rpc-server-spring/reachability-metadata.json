@@ -1,0 +1,14 @@
+{
+  "reflection": [
+    {
+      "type": "java.security.spec.ECParameterSpec",
+      "allPublicConstructors": true,
+      "allPublicMethods": true
+    },
+    {
+      "type": "tech.krpc.server.jws.Jwks",
+      "allPublicConstructors": true,
+      "allPublicMethods": true
+    }
+  ]
+}

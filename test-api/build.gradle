@@ -27,3 +27,11 @@ dependencies {
 compileTestJava {
     dependsOn('jandex')
 }
+
+// ARCH-001 rider: test-api's src/test sources are main()-based scratch/demo programs
+// (no @Test, no JUnit imports), so Gradle 9 discovers zero tests and fails the task by
+// default. There are no real tests to run here; disable the no-tests guard. This changes
+// no test behavior — it only stops the empty task from failing the build.
+test {
+    failOnNoDiscoveredTests = false
+}

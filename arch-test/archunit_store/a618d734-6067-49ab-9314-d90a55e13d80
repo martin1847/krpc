@@ -1,0 +1,52 @@
+Cycle detected: Slice common -> \
+                Slice internal -> \
+                Slice common\
+  1. Dependencies of Slice common\
+    - Class <tech.krpc.common.proto.InputMarshaller> has generic interface <io.grpc.MethodDescriptor$Marshaller<tech.krpc.internal.InputProto>> with type argument depending on <tech.krpc.internal.InputProto> in (InputMarshaller.java:0)\
+    - Class <tech.krpc.common.proto.OutputMarshaller> has generic interface <io.grpc.MethodDescriptor$Marshaller<tech.krpc.internal.OutputProto>> with type argument depending on <tech.krpc.internal.OutputProto> in (OutputMarshaller.java:0)\
+    - Constructor <tech.krpc.common.ResultWrapper.<init>(tech.krpc.internal.OutputProto)> has parameter of type <tech.krpc.internal.OutputProto> in (ResultWrapper.java:0)\
+    - Field <tech.krpc.common.MethodStub.REQUEST_MARSHALLER> has generic type <io.grpc.MethodDescriptor$Marshaller<tech.krpc.internal.InputProto>> with type argument depending on <tech.krpc.internal.InputProto> in (MethodStub.java:0)\
+    - Field <tech.krpc.common.MethodStub.RESPONSE_MARSHALLER> has generic type <io.grpc.MethodDescriptor$Marshaller<tech.krpc.internal.OutputProto>> with type argument depending on <tech.krpc.internal.OutputProto> in (MethodStub.java:0)\
+    - Field <tech.krpc.common.MethodStub.methodDescriptor> has generic type <io.grpc.MethodDescriptor<tech.krpc.internal.InputProto, tech.krpc.internal.OutputProto>> with type argument depending on <tech.krpc.internal.InputProto> in (MethodStub.java:0)\
+    - Field <tech.krpc.common.MethodStub.methodDescriptor> has generic type <io.grpc.MethodDescriptor<tech.krpc.internal.InputProto, tech.krpc.internal.OutputProto>> with type argument depending on <tech.krpc.internal.OutputProto> in (MethodStub.java:0)\
+    - Field <tech.krpc.common.ResultWrapper.output> has type <tech.krpc.internal.OutputProto> in (ResultWrapper.java:0)\
+    - Method <tech.krpc.common.MethodStub.buildMd(java.lang.String)> has generic return type <io.grpc.MethodDescriptor<tech.krpc.internal.InputProto, tech.krpc.internal.OutputProto>> with type argument depending on <tech.krpc.internal.InputProto> in (MethodStub.java:0)\
+    - Method <tech.krpc.common.MethodStub.buildMd(java.lang.String)> has generic return type <io.grpc.MethodDescriptor<tech.krpc.internal.InputProto, tech.krpc.internal.OutputProto>> with type argument depending on <tech.krpc.internal.OutputProto> in (MethodStub.java:0)\
+    - Method <tech.krpc.common.proto.InputMarshaller.parse(java.io.InputStream)> has return type <tech.krpc.internal.InputProto> in (InputMarshaller.java:0)\
+    - Method <tech.krpc.common.proto.InputMarshaller.stream(tech.krpc.internal.InputProto)> has parameter of type <tech.krpc.internal.InputProto> in (InputMarshaller.java:0)\
+    - Method <tech.krpc.common.proto.OutputMarshaller.parse(java.io.InputStream)> has return type <tech.krpc.internal.OutputProto> in (OutputMarshaller.java:0)\
+    - Method <tech.krpc.common.proto.OutputMarshaller.stream(tech.krpc.internal.OutputProto)> has parameter of type <tech.krpc.internal.OutputProto> in (OutputMarshaller.java:0)\
+    - Constructor <tech.krpc.common.ResultWrapper.<init>(int, java.lang.String)> calls method <tech.krpc.internal.OutputProto.newBuilder()> in (ResultWrapper.java:19)\
+    - Constructor <tech.krpc.common.ResultWrapper.<init>(int, java.lang.String)> calls method <tech.krpc.internal.OutputProto$Builder.setC(int)> in (ResultWrapper.java:20)\
+    - Constructor <tech.krpc.common.ResultWrapper.<init>(int, java.lang.String)> calls method <tech.krpc.internal.OutputProto$Builder.setM(java.lang.String)> in (ResultWrapper.java:21)\
+    - Constructor <tech.krpc.common.ResultWrapper.<init>(int, java.lang.String)> calls method <tech.krpc.internal.OutputProto$Builder.build()> in (ResultWrapper.java:22)\
+    - Method <tech.krpc.common.proto.InputMarshaller.stream(tech.krpc.internal.InputProto)> calls method <tech.krpc.internal.InputProto.getEValue()> in (InputMarshaller.java:33)\
+    - Method <tech.krpc.common.proto.InputMarshaller.stream(tech.krpc.internal.InputProto)> calls method <tech.krpc.internal.InputProto.hasUtf8()> in (InputMarshaller.java:34)\
+    (16 further dependencies have been omitted...)\
+  2. Dependencies of Slice internal\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls constructor <tech.krpc.common.proto.StreamDecoder.<init>(java.io.InputStream, int)> in (InputProto.java:38)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.close()> in (InputProto.java:38)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readTag()> in (InputProto.java:41)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readEnum()> in (InputProto.java:47)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls constructor <tech.krpc.common.proto.StreamDecoder.<init>(java.io.InputStream, int)> in (OutputProto.java:52)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.close()> in (OutputProto.java:52)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readStringRequireUtf8()> in (InputProto.java:53)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readTag()> in (OutputProto.java:56)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readBytes()> in (InputProto.java:60)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readInt32()> in (OutputProto.java:63)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readStringRequireUtf8()> in (OutputProto.java:67)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.skipField(int)> in (InputProto.java:68)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readStringRequireUtf8()> in (OutputProto.java:73)\
+    - Constructor <tech.krpc.internal.InputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.close()> in (InputProto.java:75)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.readBytes()> in (OutputProto.java:80)\
+    - Constructor <tech.krpc.internal.OutputProto.<init>(java.io.InputStream)> calls method <tech.krpc.common.proto.StreamDecoder.close()> in (OutputProto.java:94)\
+    - Method <tech.krpc.internal.InputProto.getBs()> gets field <tech.krpc.common.proto.MiniCodedInputStream.EMPTY_BYTE_ARRAY> in (InputProto.java:206)\
+    - Method <tech.krpc.internal.OutputProto.getBs()> gets field <tech.krpc.common.proto.MiniCodedInputStream.EMPTY_BYTE_ARRAY> in (OutputProto.java:304)
+Cycle detected: Slice common -> \
+                Slice util -> \
+                Slice common\
+  1. Dependencies of Slice common\
+    - Constructor <tech.krpc.common.MethodStub.<init>(tech.krpc.annotation.RpcService, java.lang.String, java.lang.reflect.Method)> calls method <tech.krpc.util.RefUtils.findRpcResultGenericType(java.lang.reflect.Method)> in (MethodStub.java:52)\
+  2. Dependencies of Slice util\
+    - Method <tech.krpc.util.RefUtils.toRpcMethods(java.lang.String, java.lang.Class)> has generic return type <java.util.List<tech.krpc.common.MethodStub>> with type argument depending on <tech.krpc.common.MethodStub> in (RefUtils.java:0)\
+    - Method <tech.krpc.util.RefUtils.toRpcMethods(java.lang.String, java.lang.Class)> calls constructor <tech.krpc.common.MethodStub.<init>(tech.krpc.annotation.RpcService, java.lang.String, java.lang.reflect.Method)> in (RefUtils.java:145)

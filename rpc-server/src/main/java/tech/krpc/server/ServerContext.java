@@ -54,6 +54,13 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         ServerContext.credentialVerify = credentialVerify;
     }
 
+    // HARDEN-B1: read-only accessor for the registered verifier. Lets the security regression
+    // tests assert the fail-closed contract (verifier registered + rejecting) without reflecting
+    // on a package-private field from another module.
+    public static CredentialVerify credentialVerify() {
+        return credentialVerify;
+    }
+
     public static ServerContext current() {
         return SC_KEY.get();
     }
@@ -86,15 +93,17 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         super(service, method, resDto, arg, lastChain);
         this.headers = headers;
         injectMdc(headers, HttpConst.CLIENT_ID_HEADER,CLIENT_ID);
-        // ADR-0003: parse inbound W3C traceparent, expose traceId/spanId to the log layout.
+        // ADR-0003 / OTEL-002 R2-2: validate the inbound W3C traceparent BEFORE writing any
+        // trace-related MDC. An invalid header sets none of MDC_TRACEPARENT / traceId / spanId /
+        // tracestate / x-request-id, so the no-SDK client path forwards zero traceparent downstream
+        // rather than an incoherent one — matching the HTTP face. A valid future-version header
+        // (with opaque trailing fields) is bound and forwarded verbatim.
         var traceparent = headers.get(TraceMeta.TRACEPARENT_KEY);
-        if(null != traceparent){
+        var ids = TraceMeta.parse(traceparent);
+        if(null != ids){
             MDC.put(TraceMeta.MDC_TRACEPARENT, traceparent);
-            var ids = TraceMeta.parse(traceparent);
-            if(null != ids){
-                MDC.put(TraceMeta.MDC_TRACE_ID, ids[0]);
-                MDC.put(TraceMeta.MDC_SPAN_ID, ids[1]);
-            }
+            MDC.put(TraceMeta.MDC_TRACE_ID, ids[0]);
+            MDC.put(TraceMeta.MDC_SPAN_ID, ids[1]);
             injectMdc(headers, TraceMeta.TRACESTATE,TraceMeta.TRACESTATE_KEY);
             injectMdc(headers, TraceMeta.X_REQUEST_ID,TraceMeta.REQUEST_ID);
         }
@@ -106,8 +115,19 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         return headers;
     }
 
+    /**
+     * The log/description correlation prefix: {@code ":" + traceparent}, or the EMPTY string when
+     * the caller sent no {@code traceparent}.
+     *
+     * <p>It used to return the literal {@code ":null"} in the no-trace case. That was tolerable
+     * while it only reached server logs and gRPC status descriptions, but the agent faces now
+     * surface the status description to clients verbatim, so a missing trace header would have
+     * shipped a {@code ":null,"} prefix into a public API response. Empty means callers must join
+     * conditionally -- see {@code UnaryMethod.describe}.
+     */
     public String logTrace() {
-        return ":" + headers.get(TraceMeta.TRACEPARENT_KEY);
+        var traceparent = headers.get(TraceMeta.TRACEPARENT_KEY);
+        return null == traceparent ? "" : ":" + traceparent;
     }
 
     public Metadata getResponseHeaders() {
@@ -122,7 +142,11 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
         if(verifyed){
             return;
         }
-        verifyed = true;
+        // AUD-omp-13: set verifyed=true ONLY AFTER verify() returns cleanly. Pre-fix it was set
+        // BEFORE verify(), so a thrown verify() left verifyed=true + credential=null — a later
+        // softUid() then short-circuited (verifyed) and uid() NPE'd (500) on the null credential.
+        // On failure verifyed stays false: the StatusException propagates (fail-closed) and a retry
+        // re-verifies rather than silently trusting a half-done attempt.
         if (credentialVerify != null) {
             var token = CredentialVerify.bearerToken(headers);
             var isCookie = false;
@@ -132,6 +156,7 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
             }
             credential = credentialVerify.verify(token, clientId(), isCookie);
         }
+        verifyed = true;
     }
 
     public UserCredential getCredential() {
@@ -161,6 +186,14 @@ public class ServerContext extends AbstractContext<ServerResult, InputProto, Ser
      * @return
      */
     public String uid(){
+        // AUD-omp-13: clean rejection instead of an NPE. credential is null when the call is not
+        // credential-required (checkCredential never ran / verify skipped) yet the impl calls uid().
+        // That is a caller/config error — surface it explicitly, not as an opaque NullPointerException.
+        if (credential == null) {
+            throw new IllegalStateException(
+                    "uid() requires an authenticated request — no credential resolved "
+                    + "(is the service @UnsafeWeb(requireCredential=true) / @RequireCredential?). Use softUid() when auth is optional.");
+        }
         return credential.getSubject();
     }
 

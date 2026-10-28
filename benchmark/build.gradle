@@ -1,0 +1,19 @@
+// Root aggregator for the standalone benchmark build. No toolchain provisioning:
+// compiles + runs on the invoking JDK (graalvm-25 on the BENCH-001 host), targeting
+// the JDK 21 language level (ADR-0002 baseline). The JVM the harness runs on is
+// recorded in RESULTS.md.
+subprojects {
+    apply plugin: 'java-library'
+
+    group = rootProject.group
+    version = rootProject.version
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}

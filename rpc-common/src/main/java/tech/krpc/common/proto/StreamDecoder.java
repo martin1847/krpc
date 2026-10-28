@@ -102,6 +102,34 @@ public class StreamDecoder extends MiniCodedInputStream {
         return lastTag;
     }
 
+    // AUD-omp-30: skip a field of an UNKNOWN tag by its wire type instead of silently truncating the
+    // rest of the message (the pre-fix default-case `done=true` dropped every field after an unknown
+    // one). Returns true if the field was skipped; false on an END_GROUP marker (caller stops).
+    // Throws InvalidProtocolBufferException on a genuinely invalid wire type — malformed input must
+    // surface as an error, never a quiet truncation. Groups are not used by InputProto/OutputProto,
+    // so START_GROUP is rejected as invalid rather than recursively skipped.
+    public boolean skipField(final int tag) throws IOException {
+        switch (WireFormat.getTagWireType(tag)) {
+            case WireFormat.WIRETYPE_VARINT:
+                readRawVarint64();
+                return true;
+            case WireFormat.WIRETYPE_FIXED64:
+                skipRawBytes(WireFormat.FIXED64_SIZE);
+                return true;
+            case WireFormat.WIRETYPE_LENGTH_DELIMITED:
+                skipRawBytes(readRawVarint32());
+                return true;
+            case WireFormat.WIRETYPE_FIXED32:
+                skipRawBytes(WireFormat.FIXED32_SIZE);
+                return true;
+            case WireFormat.WIRETYPE_END_GROUP:
+                return false;
+            default:
+                // START_GROUP + any undefined wire type (3,6,7): not valid for this schema.
+                throw InvalidProtocolBufferException.invalidWireType();
+        }
+    }
+
     //@Override
     //public void checkLastTagWas(final int value) throws InvalidProtocolBufferException {
     //    if (lastTag != value) {

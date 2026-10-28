@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="848" viewBox="0 0 1440 848" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Liberation Sans', Helvetica, Arial, sans-serif" role="img" aria-label="KRPC architecture: one Java interface exposed as a gRPC face, an HTTP face, typed clients and MCP tools">
+<defs>
+<marker id="m-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#8b949e"/></marker>
+<marker id="m-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#f2cc60"/></marker>
+<marker id="m-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#56d4c8"/></marker>
+<marker id="m-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#79c0ff"/></marker>
+</defs>
+<rect width="1440" height="848" fill="#0d1117"/>
+<text x="32" y="46" font-size="22" font-weight="700" fill="#e6edf3" text-anchor="start">One Java interface, every face: gRPC · HTTP · typed clients · MCP tools</text>
+<text x="1408" y="46" font-size="13" font-weight="normal" fill="#8b949e" text-anchor="end">krpc.tech</text>
+<rect x="340" y="88" width="760" height="512" rx="14" fill="#10151c" stroke="#3d444d" stroke-width="1.5"/>
+<text x="364" y="118" font-size="17" font-weight="700" fill="#e6edf3" text-anchor="start">KRPC server process</text>
+<text x="364" y="138" font-size="13" font-weight="normal" fill="#9da7b3" text-anchor="start">JDK 21 · virtual threads · Quarkus or Spring · GraalVM native image</text>
+<rect x="364" y="156" width="340" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M365 166 v92" stroke="#79c0ff" stroke-width="4" stroke-linecap="round"/>
+<text x="382" y="182" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">Contract — source of truth</text>
+<text x="382" y="205" font-size="13" font-weight="normal" fill="#9da7b3" text-anchor="start" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">@RpcService interface + DTOs</text>
+<text x="382" y="225" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">RpcResult&lt;Dto&gt; · jakarta validation</text>
+<text x="382" y="245" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">@Doc for docs · no hand-written .proto</text>
+<rect x="736" y="156" width="340" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M737 166 v92" stroke="#79c0ff" stroke-width="4" stroke-linecap="round"/>
+<text x="754" y="182" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">ApiMeta — self-description</text>
+<text x="754" y="205" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">services · methods · DTO type tree</text>
+<text x="754" y="225" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">@Doc · validation constraints</text>
+<text x="754" y="245" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">→ /agent/discover · MCP tools/list</text>
+<path d="M706 212 H734" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<rect x="364" y="308" width="340" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M365 318 v92" stroke="#56d4c8" stroke-width="4" stroke-linecap="round"/>
+<text x="382" y="334" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">gRPC face</text>
+<text x="688" y="334" font-size="13" font-weight="600" fill="#56d4c8" text-anchor="end" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">:50051</text>
+<text x="382" y="357" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">HTTP/2 · InputProto / OutputProto</text>
+<text x="382" y="377" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">JSON (or bytes) inside — not protobuf</text>
+<text x="382" y="397" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">clients · rpcurl · ingress gateway</text>
+<rect x="736" y="308" width="340" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M737 318 v92" stroke="#f2cc60" stroke-width="4" stroke-linecap="round"/>
+<text x="754" y="334" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">HTTP face</text>
+<text x="1060" y="334" font-size="13" font-weight="600" fill="#f2cc60" text-anchor="end" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">:8080</text>
+<text x="754" y="357" font-size="12" font-weight="normal" fill="#9da7b3" text-anchor="start" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">GET /agent/discover · POST /agent/invoke</text>
+<text x="754" y="377" font-size="13" font-weight="normal" fill="#9da7b3" text-anchor="start" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">POST /mcp · JSON-RPC 2.0 over HTTP</text>
+<text x="754" y="397" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">MCP bridge off by default (KRPC_MCP)</text>
+<path d="M534 268 V306" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<path d="M906 268 V306" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<rect x="364" y="458" width="712" height="52" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M365 468 v32" stroke="#79c0ff" stroke-width="4" stroke-linecap="round"/>
+<text x="382" y="480" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">One dispatch path for every face</text>
+<text x="382" y="500" font-size="13.5" font-weight="normal" fill="#9da7b3" text-anchor="start">jakarta validation · JWT credential check · filters · trace context — never bypassed for agents</text>
+<path d="M534 420 V456" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<path d="M906 420 V456" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<rect x="364" y="534" width="712" height="44" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M365 544 v24" stroke="#79c0ff" stroke-width="4" stroke-linecap="round"/>
+<text x="382" y="562" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">Your implementation</text>
+<text x="1060" y="562" font-size="13" fill="#9da7b3" text-anchor="end" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">DemoServiceImpl implements DemoService · plain business logic</text>
+<path d="M720 510 V532" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<text x="32" y="124" font-size="11" font-weight="600" fill="#8b949e" text-anchor="start" letter-spacing="1.6">CALLS THE GRPC FACE</text>
+<rect x="32" y="136" width="280" height="88" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M33 146 v68" stroke="#56d4c8" stroke-width="4" stroke-linecap="round"/>
+<text x="50" y="162" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">Generated clients</text>
+<text x="50" y="185" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">TypeScript · Dart · Python · Java</text>
+<text x="50" y="205" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">Go/k6 · codegen from the contract</text>
+<rect x="32" y="244" width="280" height="56" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M33 254 v36" stroke="#56d4c8" stroke-width="4" stroke-linecap="round"/>
+<text x="50" y="270" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">rpcurl CLI</text>
+<text x="50" y="293" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">Rust · krpc-crates</text>
+<rect x="32" y="320" width="280" height="72" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M33 330 v52" stroke="#56d4c8" stroke-width="4" stroke-linecap="round"/>
+<text x="50" y="346" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">Browser / frontend</text>
+<text x="50" y="369" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">via the ingress gateway</text>
+<text x="50" y="389" font-size="13" font-weight="normal" fill="#9da7b3" text-anchor="start" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">{gateway}/{app}/Service/method</text>
+<path d="M312 200 H326 V356 H312" fill="none" stroke="#56d4c8" stroke-width="1.8"/>
+<path d="M312 272 H326" fill="none" stroke="#56d4c8" stroke-width="1.8"/>
+<path d="M326 364 H362" fill="none" stroke="#56d4c8" stroke-width="1.8" marker-end="url(#m-teal)"/>
+<path d="M326 356 V364" fill="none" stroke="#56d4c8" stroke-width="1.8"/>
+<path d="M364 170 H314" fill="none" stroke="#79c0ff" stroke-width="1.8" marker-end="url(#m-blue)" stroke-dasharray="5 4"/>
+<text x="1128" y="124" font-size="11" font-weight="600" fill="#8b949e" text-anchor="start" letter-spacing="1.6">CALLS THE HTTP FACE</text>
+<rect x="1128" y="136" width="280" height="88" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M1129 146 v68" stroke="#f2cc60" stroke-width="4" stroke-linecap="round"/>
+<text x="1146" y="162" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">AI agent / MCP client</text>
+<text x="1146" y="185" font-size="13" font-weight="normal" fill="#9da7b3" text-anchor="start" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">tools/list · tools/call</text>
+<text x="1146" y="205" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">agentTool=true methods only</text>
+<rect x="1128" y="244" width="280" height="72" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M1129 254 v52" stroke="#f2cc60" stroke-width="4" stroke-linecap="round"/>
+<text x="1146" y="270" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">Any HTTP client</text>
+<text x="1146" y="293" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">curl · scripts · non-MCP agents</text>
+<text x="1146" y="313" font-size="13" font-weight="normal" fill="#9da7b3" text-anchor="start" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace">discover → invoke</text>
+<path d="M1128 200 H1114 V280 H1128" fill="none" stroke="#f2cc60" stroke-width="1.8"/>
+<path d="M1114 280 V364 H1078" fill="none" stroke="#f2cc60" stroke-width="1.8" marker-end="url(#m-amber)"/>
+<text x="32" y="632" font-size="11" font-weight="600" fill="#8b949e" text-anchor="start" letter-spacing="1.6">EXPOSURE — OPT-IN, LAYERED, DEFAULT-SAFE</text>
+<rect x="32" y="644" width="432" height="92" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M33 654 v72" stroke="#8b949e" stroke-width="4" stroke-linecap="round"/>
+<text x="50" y="670" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">internal (default)</text>
+<text x="50" y="693" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">no annotation → hidden with a '-' prefix</text>
+<text x="50" y="713" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">service-to-service only, never on the web</text>
+<path d="M466 690 H502" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<rect x="504" y="644" width="432" height="92" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M505 654 v72" stroke="#56d4c8" stroke-width="4" stroke-linecap="round"/>
+<text x="522" y="670" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">@UnsafeWeb</text>
+<text x="522" y="693" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">reachable by browsers and /agent/* clients</text>
+<text x="522" y="713" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">requireCredential = true adds a JWT check</text>
+<path d="M938 690 H974" fill="none" stroke="#8b949e" stroke-width="1.8" marker-end="url(#m-arrow)"/>
+<rect x="976" y="644" width="432" height="92" rx="10" fill="#161b22" stroke="#30363d"/>
+<path d="M977 654 v72" stroke="#f2cc60" stroke-width="4" stroke-linecap="round"/>
+<text x="994" y="670" font-size="16" font-weight="600" fill="#e6edf3" text-anchor="start">@UnsafeWeb(agentTool = true)</text>
+<text x="994" y="693" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">listed as an MCP tool once KRPC_MCP=true</text>
+<text x="994" y="713" font-size="14" font-weight="normal" fill="#9da7b3" text-anchor="start">@UnsafeWeb alone never creates a tool</text>
+<rect x="32" y="764" width="1376" height="56" rx="10" fill="#161b22" stroke="#30363d" stroke-dasharray="6 4"/>
+<text x="52" y="788" font-size="15" font-weight="600" fill="#e6edf3" text-anchor="start">Delegated to the platform (ADR-0001)</text>
+<text x="52" y="808" font-size="13.5" font-weight="normal" fill="#9da7b3" text-anchor="start">service discovery · load balancing · telemetry · ingress TLS · mesh policy  →  Kubernetes · Istio · gateway</text>
+</svg>

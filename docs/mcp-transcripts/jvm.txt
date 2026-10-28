@@ -1,0 +1,120 @@
+MCP real-client acceptance transcript — quickstart, JVM (fast-jar), rpc.server.mcp.enabled ON
+Captured: 2026-07-02T22:46:39Z
+Runtime: java version "25.0.3" 2026-04-21 LTS
+Server boot: KRPC_MCP=true java -jar examples/quickstart/build/quarkus-app/quarkus-run.jar
+  boot log: quickstart 1.0.3 on JVM (powered by Quarkus 3.33.2) started; HTTP Server 4 endpoints on 8080
+Clients: @modelcontextprotocol/sdk 1.29.0 (reference TS SDK, what the Inspector is built on); @modelcontextprotocol/inspector 0.22.0 (official CLI)
+Endpoint: http://localhost:8080/mcp (Streamable HTTP)
+Note: same client args as native.txt (SDK name=demo, CLI name=inspector) so the two transcripts differ ONLY in the runtime timestamp.
+============================================================================================
+
+======== CLIENT A: @modelcontextprotocol/sdk 1.29.0 — full 3-step handshake (initialize + tools/list + tools/call) ========
+$ node handshake.mjs http://localhost:8080/mcp demo
+### 1. initialize (client.connect -> InitializeResult) ###
+{
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+    "name": "krpc",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {}
+  }
+}
+
+### 2. tools/list ###
+{
+  "tools": [
+    {
+      "name": "Hello_hello",
+      "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  ]
+}
+
+### 3. tools/call Hello_hello {name:"demo"} ###
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"message\":\"Hello, demo!\",\"timestamp\":1783032399662}"
+    }
+  ],
+  "structuredContent": {
+    "message": "Hello, demo!",
+    "timestamp": 1783032399662
+  },
+  "isError": false
+}
+
+======== CLIENT B: @modelcontextprotocol/inspector 0.22.0 CLI (performs initialize implicitly on connect) ========
+$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp --transport http --method tools/list
+{
+  "tools": [
+    {
+      "name": "Hello_hello",
+      "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  ]
+}
+
+$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp --transport http --method tools/call --tool-name Hello_hello --tool-arg name=inspector
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"message\":\"Hello, inspector!\",\"timestamp\":1783032402734}"
+    }
+  ],
+  "structuredContent": {
+    "message": "Hello, inspector!",
+    "timestamp": 1783032402734
+  },
+  "isError": false
+}

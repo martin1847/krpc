@@ -50,7 +50,7 @@ publishing {
 
             pom {
                 name = project.name
-                description = 'Quarkus extension for KRPC integration.'
+                description = project.description ?: 'A module of krpc — the contract-first, agent-native gRPC/HTTP2 framework for agent-era Java microservices.'
                 url = pomMetadata.webUrl
 
                 licenses {

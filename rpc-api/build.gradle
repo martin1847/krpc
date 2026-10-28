@@ -1,4 +1,5 @@
 //version = '1.0.0'
+description = 'Contract-first krpc API — the protobuf-free annotation and DTO/metadata model shared by every krpc client and server runtime.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 java{

@@ -114,7 +114,7 @@ public class JmhRpcClient {
 
     static DemoService makeService(boolean directExecutor){
         var builder =
-                ManagedChannelBuilder.forAddress("example.testzlkjapi.com",443)
+                ManagedChannelBuilder.forAddress("grpc.example.com",443)
                         .useTransportSecurity();
         if(directExecutor){
             builder.directExecutor();

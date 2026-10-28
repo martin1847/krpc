@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="96" viewBox="0 0 400 96" role="img" aria-label="KRPC">
+  <defs>
+    <linearGradient id="k-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#0e7490"/>
+    </linearGradient>
+  </defs>
+  <!-- mark -->
+  <g transform="translate(8 8) scale(0.625)">
+    <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#k-bg)"/>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+      <path d="M38 30 V98" stroke="#ffffff"/>
+      <path d="M40 64 L84 30" stroke="#ffffff"/>
+      <path d="M40 64 L84 98" stroke="#ffffff"/>
+      <path d="M40 64 H98" stroke="#fbbf24"/>
+      <path d="M84 48 L100 64 L84 80" stroke="#fbbf24"/>
+    </g>
+  </g>
+  <!-- wordmark: monoline geometric letters, cap height 40, stroke 9 -->
+  <g fill="none" stroke="#0f172a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" transform="translate(112 28)">
+    <!-- K -->
+    <path d="M6 0 V40"/>
+    <path d="M36 0 L8 22"/>
+    <path d="M14 18 L36 40"/>
+    <!-- R -->
+    <path d="M58 40 V0 H74 A12 12 0 0 1 74 24 H58"/>
+    <path d="M70 24 L86 40"/>
+    <!-- P -->
+    <path d="M108 40 V0 H124 A12 12 0 0 1 124 24 H108"/>
+    <!-- C -->
+    <path d="M186 8 A20 20 0 1 0 186 32"/>
+  </g>
+  <!-- tagline -->
+  <text x="112" y="88" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Liberation Sans', Helvetica, Arial, sans-serif" font-size="13" letter-spacing="1.2" fill="#475569">ONE INTERFACE · gRPC · HTTP · MCP</text>
+</svg>

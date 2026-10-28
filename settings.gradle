@@ -21,6 +21,11 @@ include 'rpc-api','rpc-common','rpc-client','rpc-server','rpc-server-quarkus','h
 include 'rpc-client-spring','rpc-server-spring'
 include 'ext-rpc-gen'
 
+// arch-test is a test-only, UNPUBLISHED architecture gate (ARCH-001). Like
+// examples/quickstart above it applies no upload.gradle, so it produces no Maven
+// publication and never matches the central-bundle glob. Publish module set unchanged.
+include 'arch-test'
+
 // Examples are NOT published: quickstart applies no upload.gradle, so it produces
 // no Maven publication and the central-bundle glob (top-level */build/central-staging)
 // never matches examples/quickstart. Publish module set is unchanged.

@@ -1,0 +1,20 @@
+// BENCH-001 — STANDALONE benchmark build. Deliberately NOT included in the repo
+// root settings.gradle: `gradle build` / the release bundle at repo root never
+// sees this tree. Run it explicitly from benchmark/ (see benchmark/README.md).
+//
+// Multi-runtime by construction (maintainer steering 2026-07-06): the server
+// under test lives in a runtime-tagged module `server-<runtime>/`. Adding a new
+// runtime = add a sibling `server-spring/` etc. and reuse `contract/` + `driver/`
+// + the RESULTS.md format unchanged. This round ships only `server-quarkus/`.
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'krpc-benchmark'
+
+include 'contract'
+include 'server-quarkus'
+include 'driver'

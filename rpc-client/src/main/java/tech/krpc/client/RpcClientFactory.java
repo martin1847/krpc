@@ -87,19 +87,22 @@ public class RpcClientFactory {
     }
 
 
-    public void setDefaultCacheManager(Object cacheManager) {
-        if(cacheManager instanceof CacheManager){
-            setCacheManager((CacheManager) cacheManager);
-        }else {
-            setCacheManager(new SimpleLRUCache());
-        }
-    }
-
-
     public void close(){
         if(null!=channel){
+            // C6-client (HARDEN-B2): graceful shutdown drains in-flight RPCs; shutdownNow() alone
+            // cancelled them and could leak the gRPC executor threads on a busy channel. Fall back
+            // to a forced shutdown only if the bounded await elapses.
             log.info("**** shutdown channel...");
-            channel.shutdownNow();
+            channel.shutdown();
+            try {
+                if (!channel.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    log.warn("channel did not terminate in 5s, forcing shutdownNow");
+                    channel.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                channel.shutdownNow();
+            }
         }
     }
 

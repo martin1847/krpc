@@ -1,12 +1,30 @@
 
+description = 'krpc server runtime core — exposes plain Java interfaces as agent-native gRPC and HTTP microservices with runtime discover/invoke.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
+// B1 (OTEL-001 / ADR-0006): a test source set whose runtimeClasspath EXCLUDES every OTel SDK
+// artifact (only opentelemetry-api via rpc-common). Proves the no-SDK fast path on a genuinely
+// SDK-free classpath — GlobalOpenTelemetry.get() is a real no-op here, not a resetForTest() fake.
+sourceSets {
+    noSdkTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    noSdkTestImplementation.extendsFrom implementation, api
+    noSdkTestRuntimeOnly.extendsFrom runtimeOnly
+}
 
 dependencies {
 
     api project(':rpc-api')
     api project(':rpc-common')
     implementation "io.grpc:grpc-stub:${grpcVersion}"
+    // D2 (2026-07-03): NettyServerBuilder.maxConcurrentCallsPerConnection is Netty-only
+    // (not on the abstract io.grpc.ServerBuilder). compileOnly for the instanceof cast;
+    // consumers already pull grpc-netty at runtime (rpc-server-quarkus/-spring runtimeOnly).
+    compileOnly "io.grpc:grpc-netty:${grpcVersion}"
     implementation "io.netty:netty-common:$nettyGrpcVersion"
 //    implementation "io.grpc:grpc-xds:${grpcVersion}"
 
@@ -28,6 +46,41 @@ dependencies {
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
-//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    // HARDEN-B1: jws is the auth trust root — plain JUnit5 unit tests, no Quarkus boot / no DB.
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "io.grpc:grpc-netty:${grpcVersion}"
+    // OTEL-001: in-process transport hop + OTel SDK test exporter (test scope only — no SDK in
+    // core runtime, NS-3). rpc-client on the test classpath drives the real client interceptor.
+    testImplementation "io.grpc:grpc-inprocess:${grpcVersion}"
+    testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    testImplementation project(':rpc-client')
+    // META-ARRAY-001: real logback backend on the main test classpath so the Map-field WARN
+    // (RpcMetaServiceImpl.checkFieldContract) is capturable via a ListAppender.
+    testImplementation "ch.qos.logback:logback-classic:1.5.18"
+
+    // B1: SDK-free source set — opentelemetry-api only (via rpc-common), NO sdk / sdk-testing.
+    noSdkTestImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    noSdkTestRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    noSdkTestImplementation "io.grpc:grpc-netty:${grpcVersion}"
+    noSdkTestImplementation "io.grpc:grpc-stub:${grpcVersion}"
+    noSdkTestImplementation project(':rpc-client')
+    // logback: real MDCAdapter so the ADR-0003 MDC parity assertion is exercisable.
+    noSdkTestRuntimeOnly "ch.qos.logback:logback-classic:1.5.18"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register('noSdkTest', Test) {
+    description = 'OTEL-001 B1: runs the no-SDK fast-path tests on an OTel-SDK-free classpath.'
+    group = 'verification'
+    testClassesDirs = sourceSets.noSdkTest.output.classesDirs
+    classpath = sourceSets.noSdkTest.runtimeClasspath
+    useJUnitPlatform()
+}
+
+tasks.named('check') {
+    dependsOn 'noSdkTest'
 }

@@ -1,4 +1,5 @@
 
+description = 'krpc client runtime — a JDK 21 gRPC/HTTP2 client for calling krpc microservices from plain Java, no generated stubs.'
 apply from: "$rootProject.projectDir/gradle/upload.gradle"
 
 
@@ -19,4 +20,19 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
     testRuntimeOnly "io.grpc:grpc-netty:${grpcVersion}"
+
+    // HARDEN-B2: client correctness regressions — plain JUnit5, no live server/MySQL.
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "io.grpc:grpc-stub:${grpcVersion}"
+    // OTEL-001: OTel SDK test exporter (test scope only — no SDK in core runtime, NS-3).
+    testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+    // OTEL-001: logback-classic provides a real MDCAdapter (LogbackMDCAdapter) so the ADR-0003 MDC
+    // traceparent path is exercisable in the coexistence/parity test. slf4j-simple and the no-binding
+    // fallback both ship a NOPMDCAdapter (MDC inert), which would silently skip the MDC assertion.
+    testRuntimeOnly "ch.qos.logback:logback-classic:1.5.18"
+}
+
+test {
+    useJUnitPlatform()
 }

@@ -1,0 +1,16 @@
+# GitGuardian / ggshield config — known-FAKE test fixtures only.
+# Everything listed here is throwaway material committed on purpose (test keys,
+# sample JWTs signed by test-only keys for local demos). Real credentials never
+# belong anywhere in this repo, including test trees.
+version: 2
+secret:
+  ignored_paths:
+    # test-key module: its entire purpose is key fixtures
+    - "test-jwks/**"
+    # public-only JWKS test resource
+    - "rpc-server/src/test/resources/jwks.json"
+    # JWT auth tests with embedded test-signed tokens
+    - "**/src/test/java/**/TestJwt.java"
+    # rpcurl walkthroughs with sample cookies/JWTs for the local test server
+    - "test-server/rpcurl.md"
+    - "test-server-spring/rpcurl.md"

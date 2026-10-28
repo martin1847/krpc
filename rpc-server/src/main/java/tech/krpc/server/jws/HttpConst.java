@@ -17,7 +17,7 @@ public interface HttpConst {
     String CLIENT_ID_HEADER = "c-id";
 
 
-    //https://redmine.btrpc.com/projects/bt/wiki/%E5%85%A8%E5%B1%80header
+    // Global client metadata header (caller-supplied, opaque to the server).
     String CLIENT_META_HEADER = "c-meta";
 
     String AUTHORIZATION_HEADER = "authorization";

@@ -1,0 +1,130 @@
+MCP real-client acceptance transcript — quickstart, GraalVM NATIVE (Mandrel 25 / JDK 25), rpc.server.mcp.enabled ON
+Captured: 2026-07-02T22:47:12Z
+Native runner: examples/quickstart/build/quickstart-1.0.3-runner
+  file: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=93f7d0e3857abaac7dac0a2b84af2fbf0dc184d6, for GNU/Linux 3.7.0, stripped
+Build (SPEC §12/§13 recipe): ./gradlew :examples:quickstart:build -Dquarkus.native.enabled=true \
+    -Dquarkus.native.container-build=true \
+    -Dquarkus.native.builder-image=quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25 \
+    -Dquarkus.package.jar.enabled=false -x test
+Run: docker run -e KRPC_MCP=true -p 8080:8080 --entrypoint /work/quickstart-1.0.3-runner ubi9/ubi-minimal (linux/arm64)
+Native boot proof (from container stdout — note 'native', sub-50ms start):
+    2026-07-02 22:46:56,140 INFO  [tech.krpc.http.server.ext.HttpHandlerExpose] (main) ***** 【 DEV 】 HTTP Server 4 endpoints  on 8080
+    2026-07-02 22:46:56,143 INFO  [io.quarkus] (main) quickstart 1.0.3 native (powered by Quarkus 3.33.2) started in 0.042s. 
+    2026-07-02 22:46:56,143 INFO  [io.quarkus] (main) Installed features: [cdi, ext-rpc, hibernate-validator]
+Clients: @modelcontextprotocol/sdk 1.29.0 (reference TS SDK); @modelcontextprotocol/inspector 0.22.0 (official CLI)
+Endpoint: http://localhost:8080/mcp (Streamable HTTP)
+Native reflection: no new metadata needed beyond the AgentInvokeRequest entry from the P0 fix —
+  the MCP path (JsonUtils Map/List parse + Jackson Map serialize) reuses already-registered types; boot + handshake clean.
+Note: same client args as jvm.txt (SDK name=demo, CLI name=inspector) so the two transcripts differ ONLY in the runtime timestamp.
+============================================================================================
+
+======== CLIENT A: @modelcontextprotocol/sdk 1.29.0 — full 3-step handshake (initialize + tools/list + tools/call) ========
+$ node handshake.mjs http://localhost:8080/mcp demo
+### 1. initialize (client.connect -> InitializeResult) ###
+{
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+    "name": "krpc",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {}
+  }
+}
+
+### 2. tools/list ###
+{
+  "tools": [
+    {
+      "name": "Hello_hello",
+      "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  ]
+}
+
+### 3. tools/call Hello_hello {name:"demo"} ###
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"message\":\"Hello, demo!\",\"timestamp\":1783032432836}"
+    }
+  ],
+  "structuredContent": {
+    "message": "Hello, demo!",
+    "timestamp": 1783032432836
+  },
+  "isError": false
+}
+
+======== CLIENT B: @modelcontextprotocol/inspector 0.22.0 CLI (performs initialize implicitly on connect) ========
+$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp --transport http --method tools/list
+{
+  "tools": [
+    {
+      "name": "Hello_hello",
+      "description": "Returns a greeting for the given name.\n\n(krpc: the call returns an RpcResult envelope {code,message,data}; code 0 = success. structuredContent is the unwrapped data.)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  ]
+}
+
+$ npx @modelcontextprotocol/inspector --cli http://localhost:8080/mcp --transport http --method tools/call --tool-name Hello_hello --tool-arg name=inspector
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"message\":\"Hello, inspector!\",\"timestamp\":1783032434958}"
+    }
+  ],
+  "structuredContent": {
+    "message": "Hello, inspector!",
+    "timestamp": 1783032434958
+  },
+  "isError": false
+}

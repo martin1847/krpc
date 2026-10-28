@@ -33,6 +33,15 @@ public interface Handler<ParamDTO> {
         return "/"+ Character.toLowerCase(c) + name.substring(1);
     }
 
+    /**
+     * ADR-0004 (AGENT-001 P1): a handler may opt out of registration at boot (e.g. a
+     * feature-flag-gated endpoint). Default true. When false, HttpHandlerExpose does not
+     * register the path — the endpoint is byte-level absent, not a runtime 404.
+     */
+    default boolean enabled(){
+        return true;
+    }
+
     byte[] handle(ParamDTO param, List<AsciiHeader> resHeader, HttpHeaders requestHeaders);
 
 

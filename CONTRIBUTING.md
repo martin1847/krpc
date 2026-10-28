@@ -57,8 +57,11 @@ JDK 21 is the baseline. Full build/test/release reference is in
 [SPEC §12](SPEC.md#12-build-test-release). The common local commands:
 
 ```bash
-gradle clean build -x test    # -x test: integration tests need an internal MySQL
-                              # host absent in clean environments and will hang
+gradle clean build -x :test-server-spring:test   # tests included; needs Docker (the
+                              # DB-backed tests start their own MySQL via
+                              # Testcontainers). The exclusion is a known-red Spring
+                              # module — see the Repo Facts section of AGENTS.md
+gradle clean build -x test    # only for environments without Docker
 gradle allDeps                # dependency report
 ```
 

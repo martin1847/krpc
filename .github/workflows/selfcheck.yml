@@ -1,0 +1,16 @@
+# Re-runs .githooks/pre-push on every PR. The local hook is a fast reminder
+# (bypassable via --no-verify); this job is the actual gate — same script, no drift.
+name: selfcheck
+on:
+  pull_request:
+
+jobs:
+  selfcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run diff-scoped selfcheck gates
+        run: |
+          bash .githooks/pre-push --range "origin/${{ github.base_ref }}..HEAD" "refs/heads/${{ github.base_ref }}"

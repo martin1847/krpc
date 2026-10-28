@@ -76,8 +76,19 @@ public class JwsCredential implements UserCredential{
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<String> getAudience() {
-        return (List<String>) payload.get(PublicClaims.AUDIENCE);
+        // advisory (HARDEN-B1 fix-round-1): RFC 7519 allows `aud` to be EITHER a JSON array OR a
+        // single string. A single-string aud used to hit a ClassCastException here (escaping as
+        // UNKNOWN when requiredAudiences is enabled). Accept both shapes; anything else ⇒ no aud.
+        var aud = payload.get(PublicClaims.AUDIENCE);
+        if (aud instanceof List) {
+            return (List<String>) aud;
+        }
+        if (aud instanceof String s) {
+            return List.of(s);
+        }
+        return null;
     }
 
     @Override

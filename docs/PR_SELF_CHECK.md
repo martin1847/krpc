@@ -8,9 +8,25 @@ the same script via the `selfcheck` workflow).
 Hook-enforced (listed for awareness only):
 
 - [ ] SPEC mirror: `SPEC.md` ≡ `skills/krpc/references/SPEC.md`, same commit. *(hook ①)*
-- [ ] docs-site changes land on `dev`, never straight to `main`. *(hook ②)*
+- [ ] docs-site changes land on `dev`, never straight to `main`. A main-target
+      integration is allowed only when its complete proposed-tip `docs-site`
+      subtree exactly matches trusted local `refs/remotes/origin/dev`. Main-only
+      additions, edits, renames, and deletions still block. *(hook ②)*
 - [ ] SPEC stays under the line cap (`SPEC_MAX_LINES` in the hook); compress prose
       rather than raising it. *(hook ③)*
+
+Gate ② correction (maintainer-approved, 2026-10-28): the blanket branch rejection
+also blocked integrations of content already on `dev`, although they introduce
+no unpublished site content. Content equality, not the source branch/PR name or
+a caller override, is the exception. The check remains diff-scoped: main-target
+ranges without site changes keep passing when the development ref is available.
+Missing/non-commit development refs and invalid comparisons are errors, not
+passes. Fetch `origin`'s `dev` into `refs/remotes/origin/dev` before a local
+main-target check; the hook never fetches. Existing CI selfcheck explicitly
+fetches that ref and checks checkout `HEAD` (including PR merge refs), so
+base-only site differences in a merge result cannot hide behind a clean source
+tip. Run `bash .githooks/pre-push-test.sh` for the isolated regression probes,
+including the original main-only `url`/`baseUrl` deployment incident.
 
 Human/agent judgment required — a hook cannot catch these:
 

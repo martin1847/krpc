@@ -77,14 +77,50 @@ check_spec_mirror() {
 # ② docs-site changes pushed to main never deploy.
 #   Source: 2026-07-21 baseUrl incident — fix landed on main, site stayed broken;
 #   .github/workflows/docs.yml triggers only on dev pushes.
-#   Negative probe: `.githooks/pre-push --range <range-touching-docs-site> refs/heads/main`
-#   → BLOCKED; same range with refs/heads/dev → clean.
+#   Content-preserving integrations may copy the already-published dev subtree.
+#   Negative probes and PR merge-ref coverage: bash .githooks/pre-push-test.sh
 check_docs_site_branch() {
-  local range="$1" remote_ref="$2"
+  local range="$1" remote_ref="$2" dev tip status
   [ "$remote_ref" = "refs/heads/main" ] || return 0
-  git diff --name-only "$range" -- 'docs-site/*' 2>/dev/null | grep -q . || return 0
-  printf 'pre-push: BLOCKED — this push targets main but touches docs-site/**.\n' >&2
-  printf '  The docs site deploys only on dev pushes (docs.yml); land docs-site changes on dev.\n' >&2
+  # Fixed remote-tracking ref: neither hooks.baseline nor source branch names
+  # establish that docs content has reached development.
+  if ! dev=$(git rev-parse --verify -q 'refs/remotes/origin/dev^{commit}'); then
+    printf 'pre-push: ERROR — cannot resolve trusted refs/remotes/origin/dev to a commit.\n' >&2
+    printf '  Fetch origin dev into refs/remotes/origin/dev, then rerun; the hook never fetches.\n' >&2
+    FAIL=1
+    return 1
+  fi
+  if git diff --quiet --no-ext-diff --no-textconv --ignore-submodules=none "$range" -- docs-site; then
+    return 0
+  else
+    status=$?
+  fi
+  if [ "$status" != 1 ]; then
+    printf 'pre-push: ERROR — cannot evaluate docs-site changes in range %s.\n' "$range" >&2
+    printf '  Supply a valid base..tip range with both commits available locally.\n' >&2
+    FAIL=1
+    return 1
+  fi
+  tip="${range##*..}"
+  if ! tip=$(git rev-parse --verify -q "$tip^{commit}"); then
+    printf 'pre-push: ERROR — cannot resolve proposed docs-site tip in %s.\n' "$range" >&2
+    FAIL=1
+    return 1
+  fi
+  if git diff --quiet --no-ext-diff --no-textconv --ignore-submodules=none "$dev" "$tip" -- docs-site; then
+    printf 'pre-push: ALLOWED — docs-site content at proposed tip matches origin/dev exactly.\n'
+    return 0
+  else
+    status=$?
+  fi
+  if [ "$status" = 1 ]; then
+    printf 'pre-push: BLOCKED — main-target docs-site content differs from trusted origin/dev.\n' >&2
+    printf '  The site deploys only on dev pushes (docs.yml). Land changes on dev first;\n' >&2
+    printf '  integrate only when the complete docs-site subtree matches origin/dev.\n' >&2
+  else
+    printf 'pre-push: ERROR — cannot compare proposed docs-site content with origin/dev.\n' >&2
+    printf '  Check that both commit trees are available locally, then rerun.\n' >&2
+  fi
   FAIL=1
 }
 
@@ -134,7 +170,14 @@ else
     [ "$local_sha" = "$ZERO" ] && continue
     if [ "$remote_sha" = "$ZERO" ]; then
       base=$(git merge-base "$BASELINE" "$local_sha" 2>/dev/null || true)
-      [ -n "$base" ] || continue
+      if [ -z "$base" ]; then
+        if [ "$remote_ref" = "refs/heads/main" ]; then
+          printf 'pre-push: ERROR — cannot determine new-main comparison base from %s.\n' "$BASELINE" >&2
+          printf '  Make the baseline and proposed commit available locally, then rerun.\n' >&2
+          FAIL=1
+        fi
+        continue
+      fi
       check_range "$base..$local_sha" "$remote_ref"
     else
       check_range "$remote_sha..$local_sha" "$remote_ref"

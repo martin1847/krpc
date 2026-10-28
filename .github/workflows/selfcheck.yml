@@ -11,6 +11,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Check shell syntax and gate regressions
+        run: |
+          bash -n .githooks/pre-push
+          bash -n .githooks/pre-push-test.sh
+          bash .githooks/pre-push-test.sh
       - name: Run diff-scoped selfcheck gates
         run: |
+          git fetch --no-tags origin '+refs/heads/dev:refs/remotes/origin/dev'
+          # HEAD is checkout's PR merge result, not merely the source branch tip.
           bash .githooks/pre-push --range "origin/${{ github.base_ref }}..HEAD" "refs/heads/${{ github.base_ref }}"
